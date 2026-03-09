@@ -1,0 +1,3 @@
+[submodule "external/motor"]
+	path = external/motor
+	url = https://github.com/oreisacher/Motor
