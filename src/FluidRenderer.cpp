@@ -24,6 +24,10 @@ FluidRenderer::FluidRenderer(const FluidSimulation* sim) {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)offsetof(Particle, velocity));
     glEnableVertexAttribArray(1);
     glVertexAttribDivisor(1, 1);
+
+    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)offsetof(Particle, pressure));
+    glEnableVertexAttribArray(2);
+    glVertexAttribDivisor(2, 1);
 }
 
 void FluidRenderer::update() {
