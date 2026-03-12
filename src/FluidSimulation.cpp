@@ -9,8 +9,10 @@
 #include <random>
 #include <iostream>
 #include "glm/gtx/norm.hpp"
+#include <chrono>
+#include <omp.h>
 
-FluidSimulation::FluidSimulation(int particleCount, int xMin, int yMin, int xMax, int yMax) {
+FluidSimulation::FluidSimulation(int particleCount, float xMin, float yMin, float xMax, float yMax) {
     // Setup particles
     particles.reserve(particleCount);
 
@@ -30,7 +32,7 @@ FluidSimulation::FluidSimulation(int particleCount, int xMin, int yMin, int xMax
             particles.push_back({
                 { x, y },
                 glm::vec2(0.0),
-                1
+                1,
             });
 
             count++;
@@ -38,9 +40,16 @@ FluidSimulation::FluidSimulation(int particleCount, int xMin, int yMin, int xMax
     }
 
     // Update h
-    // h = 2.0f * std::min(stepSizeX, stepSizeY);
-    h = 20.0f;
+    // h = 25.0f;
+    h = 1.8f * std::min(stepSizeX, stepSizeY);
+    h2 = h * h;
+    h3 = pow(h, 3);
+    h5 = pow(h, 5);
+    h6 = pow(h, 6);
+    h8 = pow(h, 8);
+
     std::cout << "H: " << h << std::endl;
+    std::cout << stepSizeX << " " << stepSizeY << std::endl;
 
     // Setup grid
     grid.cellSize = h;
@@ -51,9 +60,10 @@ FluidSimulation::FluidSimulation(int particleCount, int xMin, int yMin, int xMax
 
     // Reset density
     calculateDensityPressure();
-    p_0 = particles[particleCount / 2].density;
+    // p_0 = particles[particleCount / 2].density;
+    p_0 = 1.0f / (h * h);
     std::cout << "P_0: " << p_0 << std::endl;
-    p_0 = 0.0001f;
+    // p_0 = 0.0004f;
 }
 
 void FluidSimulation::update(float deltaTime) {
@@ -67,6 +77,7 @@ void FluidSimulation::update(float deltaTime) {
     // Determine density for each particle
     // Determine pressure for each particle
     //  Eq. 12
+
     calculateDensityPressure();
 
     calculateSPHForces();
@@ -86,6 +97,7 @@ void FluidSimulation::update(float deltaTime) {
     // calculateSurfaceTensionForce();
 
     // Determine external forces
+    applyMouseForce();
 
     // Determine acceleration
     //  Eq. 8
@@ -102,14 +114,32 @@ const Particle* FluidSimulation::getData() const {
     return particles.data();
 }
 
-void FluidSimulation::updateBoundaries(int width, int height) {
+void FluidSimulation::updateBoundaries(float width, float height) {
+    std::cout << "New simulation size: " << width << "x" << height << std::endl;
     this->width = width;
     this->height = height;
 }
 
+void FluidSimulation::updateMousePos(float x, float y) {
+    this->mouseX = x;
+    this->mouseY = y;
+}
+
+void FluidSimulation::updateMouseForceDirection(float direction) {
+    this->mouseForceDirection = direction;
+}
+
+void FluidSimulation::updateMouseRadius(float radius) {
+    this->mouseRadius = radius;
+}
+
+float FluidSimulation::getMouseRadius() const { return mouseRadius; }
+
 void FluidSimulation::calculateDensityPressure() {
+    #pragma omp parallel for
     for (int i = 0 ; i < particles.size() ; i++) {
         Particle& p = particles[i];
+
         p.density = 0.0f;
 
         for (auto o : grid.getNeighbors(p.position)) {
@@ -118,11 +148,12 @@ void FluidSimulation::calculateDensityPressure() {
         }
 
         p.pressure = k * (p.density - p_0);
-        p.pressure = std::max(0.0f, p.pressure);
+        // p.pressure = std::max(0.0f, p.pressure);
     }
 }
 
 void FluidSimulation::calculateSPHForces() {
+    #pragma omp parallel for
     for (int i = 0 ; i < particles.size() ; i++) {
         Particle& p = particles[i];
 
@@ -146,7 +177,9 @@ void FluidSimulation::calculateSPHForces() {
 
         p.pressureForce *= -1.0f;
         p.viscosityForce *= mu;
-        p.surfaceTensionForce = -1.0f * tension * c * (n / glm::length(n));
+
+        if (glm::length(n) > 10.0f)
+            p.surfaceTensionForce = -1.0f * tension * c * (n / glm::length(n));
     }
 }
 
@@ -204,18 +237,42 @@ void FluidSimulation::calculateSurfaceTensionForce() {
             c += other.mass * (1.0f / other.density) * poly6LaplacianKernel2D(p.position - other.position);
         }
 
-        if (glm::length(n) > 0.2f)
+        std::cout << glm::length(n) << std::endl;
+        if (glm::length(n) > 0.1f)
             p.surfaceTensionForce = -1.0f * tension * c * (n / glm::length(n));
     }
 }
 
-void FluidSimulation::updateParticles(float deltaTime) {
-    for (auto& p : particles) {
-        glm::vec2 force = p.pressureForce + p.viscosityForce;// + p.surfaceTensionForce; // + glm::vec2(0.0f, -9.81f);
-        glm::vec2 acceleration = force / p.density;// + glm::vec2(0.0f, -60.0f);
+void FluidSimulation::applyMouseForce() {
+    #pragma omp parallel for
+    for (int i = 0; i < particles.size(); i++) {
+        Particle& p = particles[i];
 
-        p.velocity += acceleration * deltaTime;
-        p.position += 1.5f * p.velocity * deltaTime;
+        glm::vec2 dir = p.position - glm::vec2(mouseX, mouseY);
+        float dist2 = glm::length2(dir);
+
+        if (dist2 < mouseRadius * mouseRadius) {
+            float dist = std::sqrt(dist2);
+
+            glm::vec2 forceDir = (dist > 0.0001f) ? dir / dist : glm::vec2(0.0f);
+
+            float falloff = 1.0f - (dist / mouseRadius);
+            p.velocity += mouseForceDirection * forceDir * mouseRadius * falloff;
+        }
+    }
+}
+
+void FluidSimulation::updateParticles(float deltaTime) {
+    #pragma omp parallel for
+    for (int i = 0; i < particles.size(); i++) {
+        Particle& p = particles[i];
+
+        glm::vec2 force = p.pressureForce + p.viscosityForce + p.surfaceTensionForce;
+        glm::vec2 acceleration = force / p.density + glm::vec2(0.0f, -9.81f);
+
+        p.velocity += acceleration * (0.5f * deltaTime);
+        p.position += p.velocity * deltaTime;
+        p.velocity += acceleration * (0.5f * deltaTime);
 
         // Simple boundaries
         if (p.position.x < 0) {
@@ -252,11 +309,11 @@ float FluidSimulation::poly6Kernel3D(float r) const {
 }
 
 float FluidSimulation::poly6Kernel2D(glm::vec2 dist) const {
-    float h2 = h * h;
     float r2 = glm::length2(dist);
 
     if (r2 <= h2) {
-        return 4.0f / (std::numbers::pi * pow(h, 8)) * pow(h2 - r2, 3);
+        float x = h2 - r2;
+        return 4.0f / (std::numbers::pi * h8) * x * x * x;
     }
 
     return 0.0f;
@@ -266,8 +323,8 @@ glm::vec2 FluidSimulation::poly6KernelGradient2D(glm::vec2 dist) const {
     float r2 = glm::length2(dist);
 
     if (r2 > 0 && r2 < h * h) {
-        float x = h * h - r2;
-        float factor = -24.0f / (std::numbers::pi * pow(h, 8)) * x * x;
+        float x = h2- r2;
+        float factor = -24.0f / (std::numbers::pi * h8) * x * x;
         return factor * dist;
     }
 
@@ -275,11 +332,10 @@ glm::vec2 FluidSimulation::poly6KernelGradient2D(glm::vec2 dist) const {
 }
 
 float FluidSimulation::poly6LaplacianKernel2D(glm::vec2 dist) const {
-    float h2 = h * h;
     float r2 = glm::length2(dist);
 
     if (r2 <= h2) {
-        return -48.0f / (std::numbers::pi * pow(h, 8)) * (h2 - r2) * (h2 - 3.0 * r2);
+        return -48.0f / (std::numbers::pi * h8) * (h2 - r2) * (h2 - 3.0 * r2);
     }
 
     return 0.0f;
@@ -287,7 +343,8 @@ float FluidSimulation::poly6LaplacianKernel2D(glm::vec2 dist) const {
 
 float FluidSimulation::spikyKernel3D(float r) const {
     if (r >= 0.0f && r <= h) {
-        return (15.0f / (std::numbers::pi * pow(h, 6))) * pow(h - r, 3);
+        float x = h - r;
+        return (15.0f / (std::numbers::pi * h6)) * x * x * x;
     }
 
     return 0.0f;
@@ -297,7 +354,8 @@ float FluidSimulation::spikyKernel2D(glm::vec2 dist) const {
     float r = std::abs(glm::length(dist));
 
     if (r <= h) {
-        return 10.0f / (std::numbers::pi * pow(h, 5)) * pow(h - r, 3);
+        float x = h - r;
+        return 10.0f / (std::numbers::pi * h5) * x * x * x;
     }
 
     return 0.0f;
@@ -308,7 +366,7 @@ glm::vec2 FluidSimulation::spikyKernelGradient2D(glm::vec2 dist) const {
 
     if (r > 0 && r < h) {
         float x = h - r;
-        float factor = (-30.0f / (std::numbers::pi * pow(h, 5))) * x * x;
+        float factor = (-30.0f / (std::numbers::pi * h5)) * x * x;
         return factor * (dist / r);
     }
 
@@ -318,9 +376,9 @@ glm::vec2 FluidSimulation::spikyKernelGradient2D(glm::vec2 dist) const {
 float FluidSimulation::viscosityKernel2D(float r) const {
     if (r >= 0.0f && r <= h) {
         return
-            (15.0f / (2.0f * std::numbers::pi * pow(h, 3)))
-        *   (   -pow(r, 3) / (2.0f * pow(h, 3))
-                + pow(r, 2) / pow(h, 2)
+            (15.0f / (2.0f * std::numbers::pi * h3))
+        *   (   -(r * r * r) / (2.0f * h3)
+                + (r * r) / h2
                 + h / (2.0f * r)
                 - 1
             );
@@ -333,7 +391,7 @@ float FluidSimulation::viscosityLaplacianKernel2D(glm::vec2 dist) const {
     float r = glm::length(dist);
 
     if (r <= h) {
-        return (45.0f / (std::numbers::pi * pow(h, 6))) * (h - r);
+        return (45.0f / (std::numbers::pi * h6)) * (h - r);
     }
 
     return 0.0f;

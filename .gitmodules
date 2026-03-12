@@ -1,3 +1,6 @@
 [submodule "external/motor"]
 	path = external/motor
 	url = https://github.com/oreisacher/Motor
+[submodule "external/imgui"]
+	path = external/imgui
+	url = https://github.com/ocornut/imgui.git

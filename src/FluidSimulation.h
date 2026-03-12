@@ -70,14 +70,19 @@ struct SpatialGrid {
 
 class FluidSimulation {
 public:
-    FluidSimulation(int particleCount, int xMin, int yMin, int xMax, int yMax);
+    FluidSimulation(int particleCount, float xMin, float yMin, float xMax, float yMax);
 
     void update(float deltaTime);
 
     int getParticleCount() const;
     const Particle* getData() const;
 
-    void updateBoundaries(int width, int height);
+    void updateBoundaries(float width, float height);
+    void updateMousePos(float x, float y);
+    void updateMouseForceDirection(float direction);
+    void updateMouseRadius(float radius);
+
+    float getMouseRadius() const;
 
 private:
     // Calculations
@@ -87,6 +92,8 @@ private:
     void calculatePressureForce();
     void calculateViscosityForce();
     void calculateSurfaceTensionForce();
+
+    void applyMouseForce();
 
     void updateParticles(float deltaTime);
 
@@ -108,7 +115,12 @@ private:
     std::vector<Particle> particles;
 
     // Boundaries
-    int width = 100, height = 100;
+    float width = 1, height = 1;
+
+    // Mouse
+    float mouseX, mouseY;
+    float mouseForceDirection = 0.0f;
+    float mouseRadius = 0.1f;
 
     float h = 0.0f;
     float p_0 = 1000.0f;
@@ -119,14 +131,21 @@ private:
     // float tension = 2.0f;
 
     // Without gravity
-    float k = 9000.0f;
-    float mu = 2.0f;
+    // float k = 0.5f;
+    // float mu = 0.05f;
+    // float tension = 0.01f;
 
     // With gravity
-    // float k = 20000.0f;
-    // float mu = 50.0f;
+    float k = 1.0f;
+    float mu = 0.1f;
+    float tension = 0.1f;
 
-    float tension = 2.0f;
+    // Cache
+    float h2;
+    float h3;
+    float h5;
+    float h6;
+    float h8;
 };
 
 #endif //FLUIDSIMSPH_FLUIDSIMULATION_H
