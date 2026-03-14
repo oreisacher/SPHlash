@@ -131,14 +131,14 @@ private:
     // float tension = 2.0f;
 
     // Without gravity
-    // float k = 0.5f;
-    // float mu = 0.05f;
-    // float tension = 0.01f;
+    float k = 0.7f;
+    float mu = 0.3f;
+    float tension = 0.000f;
 
     // With gravity
-    float k = 1.0f;
-    float mu = 0.1f;
-    float tension = 0.1f;
+    // float k = 1.0f;
+    // float mu = 0.1f;
+    // float tension = 0.1f;
 
     // Cache
     float h2;

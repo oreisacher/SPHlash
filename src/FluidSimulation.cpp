@@ -148,7 +148,7 @@ void FluidSimulation::calculateDensityPressure() {
         }
 
         p.pressure = k * (p.density - p_0);
-        // p.pressure = std::max(0.0f, p.pressure);
+        p.pressure = std::max(0.0f, p.pressure);
     }
 }
 
@@ -268,7 +268,7 @@ void FluidSimulation::updateParticles(float deltaTime) {
         Particle& p = particles[i];
 
         glm::vec2 force = p.pressureForce + p.viscosityForce + p.surfaceTensionForce;
-        glm::vec2 acceleration = force / p.density + glm::vec2(0.0f, -9.81f);
+        glm::vec2 acceleration = force / p.density;// + glm::vec2(0.0f, -9.81f);
 
         p.velocity += acceleration * (0.5f * deltaTime);
         p.position += p.velocity * deltaTime;
@@ -331,11 +331,25 @@ glm::vec2 FluidSimulation::poly6KernelGradient2D(glm::vec2 dist) const {
     return glm::vec2(0.0f);
 }
 
+// float FluidSimulation::poly6LaplacianKernel2D(glm::vec2 dist) const {
+//     float r2 = glm::length2(dist);
+//
+//     if (r2 <= h2) {
+//         return -48.0f / (std::numbers::pi * h8) * (h2 - r2) * (h2 - 3.0 * r2);
+//     }
+//
+//     return 0.0f;
+// }
+
 float FluidSimulation::poly6LaplacianKernel2D(glm::vec2 dist) const {
     float r2 = glm::length2(dist);
 
-    if (r2 <= h2) {
-        return -48.0f / (std::numbers::pi * h8) * (h2 - r2) * (h2 - 3.0 * r2);
+    if (r2 < h2 && r2 > 0.0f) {
+        float term1 = 24.0f / (static_cast<float>(std::numbers::pi) * h8);
+        float term2 = h2 - r2;
+        float term3 = 4.0f * r2 - h2;
+
+        return term1 * term2 * term3;
     }
 
     return 0.0f;

@@ -1,0 +1,54 @@
+//
+// Created by ruut on 3/14/26.
+//
+
+#include "SimulationPanel.h"
+
+#include "imgui.h"
+#include "../Rendering/FluidRenderer.h"
+
+SimulationPanel::SimulationPanel(const std::string& name, GLuint texture) : UIPanel(name), texture(texture) { }
+
+void SimulationPanel::draw() {
+    if (!visible)
+        return;
+
+    ImGui::Begin(name.c_str());
+
+    ImVec2 size = ImGui::GetContentRegionAvail();
+
+    if (viewportSize.x != size.x || viewportSize.y != size.y) {
+        viewportSize = { size.x, size.y };
+        resized = true;
+    }
+
+    ImGui::Image(
+        (void *)(intptr_t)texture,
+        size,
+        ImVec2(0, 1),
+        ImVec2(1, 0)
+    );
+
+    ImGui::End();
+}
+
+glm::vec2 SimulationPanel::getSize() const { return viewportSize; }
+bool SimulationPanel::wasResized() const { return resized; }
+void SimulationPanel::clearResizeFlag() { resized = false; }
+
+int SimulationPanel::isMouseClicked() const {
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        return 1;
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+        return 2;
+    return 0;
+}
+
+glm::vec2 SimulationPanel::getMousePosition() const {
+    if (ImGui::IsItemHovered()) {
+        auto mouse = ImGui::GetMousePos();
+        return { mouse.x, mouse.y };
+    }
+
+    return { -1, -1 };
+}

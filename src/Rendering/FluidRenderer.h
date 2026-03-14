@@ -5,18 +5,24 @@
 #ifndef FLUIDSIMSPH_FLUIDRENDERER_H
 #define FLUIDSIMSPH_FLUIDRENDERER_H
 
-#include "FluidSimulation.h"
+#include "Framebuffer.h"
+#include "../FluidSimulation.h"
 #include "glad/gl.h"
 
 class FluidRenderer {
 public:
     FluidRenderer(const FluidSimulation* simulation);
+    ~FluidRenderer();
 
-    void update();
-    void render();
+    void render() const;
+
+    GLuint getTextureId() const;
+    void setSize(int width, int height) const;
 
 private:
     const FluidSimulation* simulation;
+
+    Framebuffer* framebuffer;
     GLuint vao, vbo;
 };
 
