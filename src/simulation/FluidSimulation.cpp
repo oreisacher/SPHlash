@@ -24,10 +24,14 @@ FluidSimulation::FluidSimulation(int particleCount, float xMin, float yMin, floa
 
     int count = 0;
 
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dist(-0.01f, 0.01f);
+
     for (int r = 0; r < rows && count < particleCount; r++) {
         for (int c = 0; c < cols && count < particleCount; c++) {
-            float x = xMin + c * stepSizeX;
-            float y = yMin + r * stepSizeY;
+            float x = xMin + c * stepSizeX + dist(gen);
+            float y = yMin + r * stepSizeY + dist(gen);
 
             particles.push_back({
                 { x, y },
@@ -41,7 +45,7 @@ FluidSimulation::FluidSimulation(int particleCount, float xMin, float yMin, floa
 
     // Update h
     // h = 25.0f;
-    h = 1.8f * std::min(stepSizeX, stepSizeY);
+    h = 2.0f * std::min(stepSizeX, stepSizeY);
     h2 = h * h;
     h3 = pow(h, 3);
     h5 = pow(h, 5);
@@ -115,22 +119,23 @@ const Particle* FluidSimulation::getData() const {
 }
 
 void FluidSimulation::updateBoundaries(float width, float height) {
-    std::cout << "New simulation size: " << width << "x" << height << std::endl;
     this->width = width;
     this->height = height;
 }
 
 void FluidSimulation::updateMousePos(float x, float y) {
     this->mouseX = x;
-    this->mouseY = y;
+
+    // Flip y position as simulation as y0 at the bottom and not the top
+    this->mouseY = height - y;
 }
 
 void FluidSimulation::updateMouseForceDirection(float direction) {
     this->mouseForceDirection = direction;
 }
 
-void FluidSimulation::updateMouseRadius(float radius) {
-    this->mouseRadius = radius;
+void FluidSimulation::updateMouseRadius(float direction) {
+    this->mouseRadius += 0.01f * direction;
 }
 
 float FluidSimulation::getMouseRadius() const { return mouseRadius; }

@@ -2,11 +2,20 @@
 // Created by ruut on 3/9/26.
 //
 
-#include "FluidRenderer.h"
+#define GLAD_GL_IMPLEMENTATION
 
-#include "../FluidSimulation.h"
+#include <glad/gl.h>
+#include "FluidRenderer.h"
+#include "../simulation/FluidSimulation.h"
+#include "GLFW/glfw3.h"
+#include "utils/Logger.h"
 
 FluidRenderer::FluidRenderer(const FluidSimulation* sim) {
+    if (!initialized) {
+        LOG_ERROR("Renderer is not initialized. Call `Renderer::Init()` before use.")
+        return;
+    }
+
     this->simulation = sim;
 
     // Setup framebuffer
@@ -37,6 +46,18 @@ FluidRenderer::FluidRenderer(const FluidSimulation* sim) {
 
 FluidRenderer::~FluidRenderer() {
     delete framebuffer;
+}
+
+void FluidRenderer::Init() {
+    if (!gladLoadGL(glfwGetProcAddress)) {
+        LOG_FATAL("Failed to initialize GLAD");
+        return;
+    }
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+
+    initialized = true;
 }
 
 void FluidRenderer::render() const {

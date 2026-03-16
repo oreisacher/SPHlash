@@ -80,7 +80,7 @@ public:
     void updateBoundaries(float width, float height);
     void updateMousePos(float x, float y);
     void updateMouseForceDirection(float direction);
-    void updateMouseRadius(float radius);
+    void updateMouseRadius(float direction);
 
     float getMouseRadius() const;
 

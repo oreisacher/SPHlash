@@ -6,8 +6,8 @@
 #define FLUIDSIMSPH_FRAMEBUFFER_H
 
 #include <vector>
-#include "../../external/motor/external/glfw/src/internal.h"
 #include "glm/vec2.hpp"
+#include "glad/gl.h"
 
 class Framebuffer {
 public:

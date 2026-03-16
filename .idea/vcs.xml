@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/imgui" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/motor" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/motor/external/assimp" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/motor/external/glfw" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/motor/external/glm" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/motor/external/json" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/motor/external/stb" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/motor/external/zstd" vcs="Git" />
+  </component>
+</project>

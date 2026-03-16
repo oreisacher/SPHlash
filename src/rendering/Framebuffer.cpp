@@ -3,7 +3,6 @@
 //
 
 #include "Framebuffer.h"
-#include "glad/gl.h"
 
 Framebuffer::Framebuffer(int width, int height) : width(width), height(height) {
     glGenFramebuffers(1, &fbo);

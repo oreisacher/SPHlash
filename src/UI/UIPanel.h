@@ -12,6 +12,8 @@ public:
     UIPanel(const std::string& name);
 
     virtual ~UIPanel() = default;
+
+    virtual void update(double deltaTime) = 0;
     virtual void draw() = 0;
 
     std::string getName() const;
