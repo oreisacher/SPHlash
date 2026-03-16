@@ -7,6 +7,7 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "rendering/Shader.h"
 #include "rendering/Window.h"
+#include "simulation/FluidSimulationGPU.h"
 #include "ui/FPSPanel.h"
 #include "ui/SettingsPanel.h"
 #include "ui/UIManager.h"
@@ -24,12 +25,15 @@ int main() {
     Window::Init();
     Window window(WINDOW_SIZE_X, WINDOW_SIZE_Y, "Fluid Simulation");
 
+    FluidRenderer::Init();
+
     // Simulation
     FluidSimulation simulation(1000, 0.1f, 0.1f, 0.5f, 0.5f);
     simulation.updateBoundaries(window.getWidth() * SIM_UNITS_PER_PIXEL, window.getHeight() * SIM_UNITS_PER_PIXEL);
 
+    FluidSimulationGPU simGPU(100, 0.1f, 0.1f, 0.5f, 0.5f);
+
     // Rendering
-    FluidRenderer::Init();
     FluidRenderer renderer(&simulation);
 
     UIManager ui(window.getNativeWindow());
@@ -52,11 +56,41 @@ int main() {
     shader.setMat4("projection", glm::ortho(0.0f, 1.0f, 0.0f, 1.0f, -1.0f, 1.0f));
     shader.setFloat("size", 0.007f);
 
+    Shader compute({
+        { "assets/shaders/simple.compute", Shader::COMPUTE }
+    });
+
+    compute.compile();
+    compute.bind();
+
+    GLuint ssbo;
+    glGenBuffers(1, &ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+
+    const int count = 1024;
+    glBufferData(GL_SHADER_STORAGE_BUFFER, count * sizeof(float), nullptr, GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
+
+    glUseProgram(compute.getId());
+    glDispatchCompute(count / 16, 1, 1);
+    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+
+    float* ptr = (float*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+
+    for(int i = 0; i < 10; i++)
+        std::cout << ptr[i] << std::endl;
+
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+    shader.bind();
+
     while (!window.shouldClose()) {
         // Simulation
         // simulation.update(Motor::Time.getDeltaTime());
         // simulation.update(0.016);  // Force 60 fps
-        simulation.update(0.0008333333); // Force 120 fps
+        simulation.update(0.008333333); // Force 120 fps
 
         // Render simulation into texture
         renderer.render();

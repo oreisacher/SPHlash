@@ -16,6 +16,7 @@ public:
     enum Type {
         VERTEX,
         FRAGMENT,
+        COMPUTE,
 
         COUNT
     };

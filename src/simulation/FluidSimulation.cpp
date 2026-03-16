@@ -46,6 +46,7 @@ FluidSimulation::FluidSimulation(int particleCount, float xMin, float yMin, floa
 
     // Update h
     settings.h = 2.0f * std::min(stepSizeX, stepSizeY);
+    grid.cellSize = settings.h;
 
     // Reset density
     settings.p_0 = 1000.0f;
@@ -59,35 +60,9 @@ void FluidSimulation::update(float deltaTime) {
         grid.insert(i, particles[i].position);
     }
 
-    // Determine density for each particle
-    // Determine pressure for each particle
-    //  Eq. 12
-
     calculateDensityPressure();
-
     calculateSPHForces();
-
-    // Determine pressure force for each particle
-    //  Eq. 10
-    //  W_Spiky
-    // calculatePressureForce();
-
-    // Determine viscosity force for each particle
-    //  Eq. 14
-    //  W_Viscosity
-    // calculateViscosityForce();
-
-    // Determine surface tension force for each particle
-    //  Eq. 19
-    // calculateSurfaceTensionForce();
-
-    // Determine external forces
     applyMouseForce();
-
-    // Determine acceleration
-    //  Eq. 8
-
-    // Update velocity
     updateParticles(deltaTime);
 }
 
@@ -174,66 +149,6 @@ void FluidSimulation::calculateSPHForces() {
         p.viscosityForce *= settings.mu;
 
         if (glm::length(n) > 10.0f)
-            p.surfaceTensionForce = -1.0f * settings.tension * c * (n / glm::length(n));
-    }
-}
-
-void FluidSimulation::calculatePressureForce() {
-    for (int i = 0 ; i < particles.size() ; i++) {
-        Particle& p = particles[i];
-
-        p.pressureForce = glm::vec2(0.0f);
-
-        for (auto o : grid.getNeighbors(p.position)) {
-            if (i == o) continue;
-
-            Particle& other = particles[o];
-
-            p.pressureForce += other.mass * ((p.pressure + other.pressure) / (2.0f * other.density)) * spikyKernelGradient2D(p.position - other.position);
-        }
-
-        p.pressureForce *= -1.0f;
-    }
-}
-
-void FluidSimulation::calculateViscosityForce() {
-    for (int i = 0 ; i < particles.size() ; i++) {
-        Particle& p = particles[i];
-
-        p.viscosityForce = glm::vec2(0.0f);
-
-        for (auto o : grid.getNeighbors(p.position)) {
-            if (i == o) continue;
-
-            Particle& other = particles[o];
-
-            p.viscosityForce += other.mass * ((other.velocity - p.velocity) / other.density) * viscosityLaplacianKernel2D(p.position - other.position);
-        }
-
-        p.viscosityForce *= settings.mu;
-    }
-}
-
-void FluidSimulation::calculateSurfaceTensionForce() {
-    for (int i = 0 ; i < particles.size() ; i++) {
-        Particle& p = particles[i];
-
-        p.surfaceTensionForce = glm::vec2(0.0f);
-
-        glm::vec2 n = glm::vec2(0.0f);
-        float c = 0.0f;
-
-        for (auto o : grid.getNeighbors(p.position)) {
-            if (i == o) continue;
-
-            Particle& other = particles[o];
-
-            n += other.mass * (1.0f / other.density) * poly6KernelGradient2D(p.position - other.position);
-            c += other.mass * (1.0f / other.density) * poly6LaplacianKernel2D(p.position - other.position);
-        }
-
-        std::cout << glm::length(n) << std::endl;
-        if (glm::length(n) > 0.1f)
             p.surfaceTensionForce = -1.0f * settings.tension * c * (n / glm::length(n));
     }
 }
@@ -330,16 +245,6 @@ glm::vec2 FluidSimulation::poly6KernelGradient2D(glm::vec2 dist) const {
 
     return glm::vec2(0.0f);
 }
-
-// float FluidSimulation::poly6LaplacianKernel2D(glm::vec2 dist) const {
-//     float r2 = glm::length2(dist);
-//
-//     if (r2 <= h2) {
-//         return -48.0f / (std::numbers::pi * h8) * (h2 - r2) * (h2 - 3.0 * r2);
-//     }
-//
-//     return 0.0f;
-// }
 
 float FluidSimulation::poly6LaplacianKernel2D(glm::vec2 dist) const {
     float r2 = glm::length2(dist);

@@ -6,6 +6,8 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <GL/glext.h>
+
 #include "glm/gtc/type_ptr.hpp"
 #include "utils/Logger.h"
 
@@ -84,6 +86,7 @@ int Shader::compile() {
         switch (type) {
             case Type::VERTEX: shaderType = GL_VERTEX_SHADER; break;
             case Type::FRAGMENT: shaderType = GL_FRAGMENT_SHADER; break;
+            case Type::COMPUTE: shaderType = GL_COMPUTE_SHADER; break;
             default: LOG_ERROR("Unknown shader type"); return 0;
         }
 

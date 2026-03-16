@@ -104,12 +104,7 @@ public:
 private:
     // Calculations
     void calculateDensityPressure();
-
     void calculateSPHForces();
-    void calculatePressureForce();
-    void calculateViscosityForce();
-    void calculateSurfaceTensionForce();
-
     void applyMouseForce();
 
     void updateParticles(float deltaTime);

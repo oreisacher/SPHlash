@@ -45,6 +45,8 @@ add_executable(FluidSimSPH
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
+        src/simulation/FluidSimulationGPU.cpp
+        src/simulation/FluidSimulationGPU.h
 )
 
 add_library(imgui
@@ -83,7 +85,7 @@ target_link_libraries(FluidSimSPH
     PRIVATE nlohmann_json::nlohmann_json
 )
 
-add_custom_command(TARGET FluidSimSPH POST_BUILD
+add_custom_target(CopyAssets ALL
     COMMENT "Copying assets to build directory..."
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets
