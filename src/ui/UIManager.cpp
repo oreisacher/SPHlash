@@ -63,14 +63,14 @@ void UIManager::draw() const {
         ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
 
         ImGuiID dock_main = dockspace_id;
-        ImGuiID dock_left, dock_right, dock_bottom;
+        ImGuiID dock_right, dock_right_top, dock_right_bottom;
 
-        dock_left   = ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Left,   0.20f, nullptr, &dock_main);
-        dock_right  = ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Right,  0.20f, nullptr, &dock_main);
-        dock_bottom = ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Down,   0.25f, nullptr, &dock_main);
+        dock_right  = ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Right,  0.40f, nullptr, &dock_main);
+        dock_right_top = ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Up,  0.80f, nullptr, &dock_right_bottom);
 
         ImGui::DockBuilderDockWindow("Simulation", dock_main);
-        ImGui::DockBuilderDockWindow("FPS", dock_right);
+        ImGui::DockBuilderDockWindow("Settings", dock_right_top);
+        ImGui::DockBuilderDockWindow("FPS", dock_right_bottom);
 
         ImGui::DockBuilderFinish(dockspace_id);
     }

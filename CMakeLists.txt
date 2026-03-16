@@ -21,29 +21,30 @@ add_executable(FluidSimSPH
     src/simulation/FluidSimulation.h
     src/rendering/FluidRenderer.cpp
     src/rendering/FluidRenderer.h
-    src/UI/UIPanel.cpp
-    src/UI/UIPanel.h
-    src/UI/TestPanel.cpp
-    src/UI/TestPanel.h
-    src/UI/UIManager.cpp
-    src/UI/UIManager.h
-    src/UI/SimulationPanel.cpp
-    src/UI/SimulationPanel.h
+    src/ui/UIPanel.cpp
+    src/ui/UIPanel.h
+    src/ui/UIManager.cpp
+    src/ui/UIManager.h
+    src/ui/SimulationPanel.cpp
+    src/ui/SimulationPanel.h
     src/rendering/Framebuffer.cpp
     src/rendering/Framebuffer.h
     src/rendering/Window.cpp
     src/rendering/Window.h
     src/rendering/Shader.cpp
     src/rendering/Shader.h
-    src/UI/FPSPanel.cpp
-    src/UI/FPSPanel.h
+    src/ui/FPSPanel.cpp
+    src/ui/FPSPanel.h
     src/utils/Time.cpp
     src/utils/Time.h
     src/utils/Logger.cpp
     src/utils/Logger.h
+    src/ui/SettingsPanel.cpp
+    src/ui/SettingsPanel.h
 
     # External
     external/glad/src/gl.c
+    external/ImGuiFileDialog/ImGuiFileDialog.cpp
 )
 
 add_library(imgui
@@ -64,10 +65,14 @@ find_package(OpenMP REQUIRED)
 
 add_subdirectory("external/glfw")
 add_subdirectory("external/glm")
+add_subdirectory("external/json")
+
+target_compile_definitions(FluidSimSPH PRIVATE USE_STD_FILESYSTEM)
 
 target_include_directories(FluidSimSPH PUBLIC
     src
     external/glad/include
+    external/ImGuiFileDialog
 )
 
 target_link_libraries(FluidSimSPH
@@ -75,6 +80,7 @@ target_link_libraries(FluidSimSPH
     PRIVATE imgui
     PRIVATE glfw
     PRIVATE glm
+    PRIVATE nlohmann_json::nlohmann_json
 )
 
 add_custom_command(TARGET FluidSimSPH POST_BUILD

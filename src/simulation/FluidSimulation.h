@@ -16,6 +16,8 @@ struct Particle {
     glm::vec2 velocity;
     float mass;
 
+    glm::vec2 startPosition;
+
     // Per-Frame data
     float density;
     float pressure;
@@ -68,6 +70,17 @@ struct SpatialGrid {
     float cellSize;
 };
 
+struct SimulationSettings {
+    float h = 20.0f;
+    float p_0 = 0.0f;
+    float k = 0.7f;
+    float mu = 0.3f;
+    float tension = 0.001f;
+
+    bool enableGravity = false;
+    float gravity = -9.878;
+};
+
 class FluidSimulation {
 public:
     FluidSimulation(int particleCount, float xMin, float yMin, float xMax, float yMax);
@@ -77,12 +90,16 @@ public:
     int getParticleCount() const;
     const Particle* getData() const;
 
+    void reset();
+
     void updateBoundaries(float width, float height);
     void updateMousePos(float x, float y);
     void updateMouseForceDirection(float direction);
     void updateMouseRadius(float direction);
 
     float getMouseRadius() const;
+
+    SimulationSettings* getSimulationSettings();
 
 private:
     // Calculations
@@ -122,8 +139,11 @@ private:
     float mouseForceDirection = 0.0f;
     float mouseRadius = 0.1f;
 
-    float h = 0.0f;
-    float p_0 = 1000.0f;
+    // float h = 0.0f;
+    // float p_0 = 1000.0f;
+
+    // Settings
+    SimulationSettings settings;
 
     // Constants
     // float k = 2000.0f;
@@ -131,9 +151,9 @@ private:
     // float tension = 2.0f;
 
     // Without gravity
-    float k = 0.7f;
-    float mu = 0.3f;
-    float tension = 0.000f;
+    // float k = 0.7f;
+    // float mu = 0.3f;
+    // float tension = 0.001f;
 
     // With gravity
     // float k = 1.0f;
@@ -141,11 +161,11 @@ private:
     // float tension = 0.1f;
 
     // Cache
-    float h2;
-    float h3;
-    float h5;
-    float h6;
-    float h8;
+    // float h2;
+    // float h3;
+    // float h5;
+    // float h6;
+    // float h8;
 };
 
 #endif //FLUIDSIMSPH_FLUIDSIMULATION_H

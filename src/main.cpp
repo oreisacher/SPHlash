@@ -7,10 +7,10 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "rendering/Shader.h"
 #include "rendering/Window.h"
-#include "UI/FPSPanel.h"
-#include "UI/TestPanel.h"
-#include "UI/UIManager.h"
-#include "UI/SimulationPanel.h"
+#include "ui/FPSPanel.h"
+#include "ui/SettingsPanel.h"
+#include "ui/UIManager.h"
+#include "ui/SimulationPanel.h"
 #include "utils/Time.h"
 
 #define GLAD_GL_IMPLEMENTATION
@@ -25,7 +25,7 @@ int main() {
     Window window(WINDOW_SIZE_X, WINDOW_SIZE_Y, "Fluid Simulation");
 
     // Simulation
-    FluidSimulation simulation(1000, 0.1f, 0.1f, 0.9f, 0.9f);
+    FluidSimulation simulation(1000, 0.1f, 0.1f, 0.5f, 0.5f);
     simulation.updateBoundaries(window.getWidth() * SIM_UNITS_PER_PIXEL, window.getHeight() * SIM_UNITS_PER_PIXEL);
 
     // Rendering
@@ -38,6 +38,7 @@ int main() {
     auto vp = new SimulationPanel("Simulation", renderer.getTextureId());
     ui.addPanel(vp);
     ui.addPanel(new FPSPanel("FPS"));
+    ui.addPanel(new SettingsPanel("Settings", &simulation));
 
     // Setup Shader
     Shader shader({
@@ -55,7 +56,7 @@ int main() {
         // Simulation
         // simulation.update(Motor::Time.getDeltaTime());
         // simulation.update(0.016);  // Force 60 fps
-        simulation.update(0.008333333); // Force 120 fps
+        simulation.update(0.0008333333); // Force 120 fps
 
         // Render simulation into texture
         renderer.render();
