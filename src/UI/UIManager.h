@@ -23,6 +23,7 @@ public:
 
 private:
     std::pmr::vector<UIPanel*> panels;
+    bool dockLayoutInitialized = false;
 };
 
 #endif //FLUIDSIMSPH_UIMANAGER_H

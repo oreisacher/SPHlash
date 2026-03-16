@@ -7,6 +7,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "imgui_internal.h"
 
 UIManager::UIManager(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
@@ -50,7 +51,29 @@ void UIManager::draw() const {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID);
+    ImGuiID dockspace_id = ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID);
+
+    // Set initial layout
+    static bool layoutInitialized = false;
+    if (!layoutInitialized) {
+        layoutInitialized = true;
+
+        ImGui::DockBuilderRemoveNode(dockspace_id);
+        ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+        ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
+
+        ImGuiID dock_main = dockspace_id;
+        ImGuiID dock_left, dock_right, dock_bottom;
+
+        dock_left   = ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Left,   0.20f, nullptr, &dock_main);
+        dock_right  = ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Right,  0.20f, nullptr, &dock_main);
+        dock_bottom = ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Down,   0.25f, nullptr, &dock_main);
+
+        ImGui::DockBuilderDockWindow("Simulation", dock_main);
+        ImGui::DockBuilderDockWindow("FPS", dock_right);
+
+        ImGui::DockBuilderFinish(dockspace_id);
+    }
 
     for (auto& panel : panels)
         panel->draw();
