@@ -29,13 +29,17 @@ public:
 private:
     std::vector<ParticleGPU> particles;
     std::vector<HashEntry> hashData;
+    std::vector<uint32_t> histogramData;
+    std::vector<uint32_t> offsetData;
 
-    GLuint particleSSBO, hashDataSSBO;
+    GLuint particleSSBO, hashDataSSBO, histogramDataSSBO, offsetDataSSBO;
 
-    Shader* hashParticlesShader;
+    Shader* hashParticlesShader, *histogramShader, *offsetShader;
 
     void initParticlesSSBO();
     void initHashDataSSBO();
+    void initHistogramDataSSBO();
+    void initOffsetDataSSBO();
 };
 
 #endif //FLUIDSIMSPH_FLUIDSIMULATIONGPU_H

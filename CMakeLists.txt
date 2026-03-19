@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 4.1)
-project(FluidSimSPH)
+
+set(CMAKE_C_COMPILER /usr/bin/gcc-14)
+set(CMAKE_CXX_COMPILER /usr/bin/g++-14)
+set(CMAKE_CUDA_HOST_COMPILER /usr/bin/g++-14)
+
+project(FluidSimSPH LANGUAGES CXX C CUDA)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_ARCHITECTURES native)
 
 # Pull git submodules
 find_package(Git QUIET)
@@ -41,12 +48,14 @@ add_executable(FluidSimSPH
     src/utils/Logger.h
     src/ui/SettingsPanel.cpp
     src/ui/SettingsPanel.h
+    src/kernel.cu
+    src/simulation/FluidSimulationGPU.cpp
+    src/simulation/FluidSimulationGPU.h
 
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
-        src/simulation/FluidSimulationGPU.cpp
-        src/simulation/FluidSimulationGPU.h
+        src/kernel.h
 )
 
 add_library(imgui
@@ -63,7 +72,7 @@ target_include_directories(imgui PUBLIC
     external/imgui/backends
 )
 
-find_package(OpenMP REQUIRED)
+find_package(CUDAToolkit REQUIRED)
 
 add_subdirectory("external/glfw")
 add_subdirectory("external/glm")
@@ -78,11 +87,17 @@ target_include_directories(FluidSimSPH PUBLIC
 )
 
 target_link_libraries(FluidSimSPH
-    PRIVATE OpenMP::OpenMP_CXX
     PRIVATE imgui
     PRIVATE glfw
     PRIVATE glm
     PRIVATE nlohmann_json::nlohmann_json
+    PRIVATE CUDA::cudart
+)
+
+set_target_properties(FluidSimSPH PROPERTIES
+    CUDA_SEPARATE_COMPILATION ON
+    CUDA_STANDARD 17
+    CUDA_STANDARD_REQUIRED ON
 )
 
 add_custom_target(CopyAssets ALL

@@ -2,6 +2,8 @@
 #include <iostream>
 #include <random>
 
+#include "kernel.h"
+#include "../../../../../opt/cuda/targets/x86_64-linux/include/cuda_runtime_api.h"
 #include "rendering/FluidRenderer.h"
 #include "simulation/FluidSimulation.h"
 #include "glm/gtc/type_ptr.hpp"
@@ -31,7 +33,21 @@ int main() {
     FluidSimulation simulation(1000, 0.1f, 0.1f, 0.5f, 0.5f);
     simulation.updateBoundaries(window.getWidth() * SIM_UNITS_PER_PIXEL, window.getHeight() * SIM_UNITS_PER_PIXEL);
 
-    FluidSimulationGPU simGPU(100, 0.1f, 0.1f, 0.5f, 0.5f);
+    FluidSimulationGPU simGPU(256, 0.1f, 0.1f, 0.5f, 0.5f);
+
+    // CUDA TESTING
+    int h_a[5] = { 1, 2, 3, 4, 5 };
+
+    int* d_a;
+    cudaMalloc(reinterpret_cast<void**>(&d_a), 5 * sizeof(int));
+    cudaMemcpy(d_a, h_a, 5 * sizeof(int), cudaMemcpyHostToDevice);
+    launchAdd(d_a);
+    cudaMemcpy(h_a, d_a, 5 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaFree(d_a);
+
+    for (int a : h_a) {
+        std::cout << a << std::endl;
+    }
 
     // Rendering
     FluidRenderer renderer(&simulation);
@@ -79,8 +95,8 @@ int main() {
 
     float* ptr = (float*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
 
-    for(int i = 0; i < 10; i++)
-        std::cout << ptr[i] << std::endl;
+    // for(int i = 0; i < 10; i++)
+        // std::cout << ptr[i] << std::endl;
 
     glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 

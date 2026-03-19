@@ -31,5 +31,8 @@ void main() {
     // Calc hash of cell. Compute with signed integers to avoid negative cell coords problems > Convert to uint later
     int hash = cell.x * 73856093 ^ cell.y * 19349663;
 
+    // Truncate to 16 bit > 4 Passes for radix sort
+    hash &= 0xFFFF;
+
     hashData[id] = uvec2(uint(hash), id);
 }
