@@ -4,13 +4,17 @@
 
 #include "FluidSimulationGPU.h"
 
+#include <cuda_runtime_api.h>
 #include <iostream>
 #include <ostream>
 #include <random>
+
+#include "cuda/FluidSimulation.h"
 #include "glad/gl.h"
 
 FluidSimulationGPU::FluidSimulationGPU(int particleCount, float xMin, float yMin, float xMax, float yMax) {
     // Setup particles
+    this->particleCount = particleCount;
     particles.resize(particleCount);
 
     std::random_device rd;
@@ -26,134 +30,133 @@ FluidSimulationGPU::FluidSimulationGPU(int particleCount, float xMin, float yMin
         particles[i].properties = { mass, 0.0, 0.0, 0.0 };
     }
 
+    // Determine h
+    float avgSpacing = std::sqrt(((xMax - xMin) * (yMax - yMin)) / (particleCount));
+    settings.h = 2.0f * avgSpacing;
+
     initParticlesSSBO();
 
     // Setup hash data
-    hashData.resize(particleCount);
+    hashes.resize(particleCount);
+    hashIndices.resize(particleCount);
+    cellStart.resize(particleCount);
+    std::fill(cellStart.begin(), cellStart.end(), -1);
+    cellEnd.resize(particleCount);
+    std::fill(cellEnd.begin(), cellEnd.end(), -1);
+
     initHashDataSSBO();
 
-    // Setup hash shader
-    hashParticlesShader = new Shader({{ "assets/shaders/hashParticles.glsl", Shader::Type::COMPUTE}});
-    hashParticlesShader->compile();
-    hashParticlesShader->bind();
-    hashParticlesShader->setFloat("cellSize", 0.016); // TODO - Replace with real value
-    hashParticlesShader->setInt("numParticles", particleCount);
-
-    hashParticlesShader->bind();
-
     // Test dispatch
-    glDispatchCompute(particleCount / 16, 1, 1);
-    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+    launchHashParticlesKernel(d_particles, d_hashes, d_hashIndices, settings.h, particleCount, particleCount);
+    cudaMemcpy(hashes.data(), d_hashes, hashes.size() * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+    cudaMemcpy(hashIndices.data(), d_hashIndices, hashIndices.size() * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+    sortIndicesByHash(d_hashes, d_hashIndices, particleCount);
+    launchFindHashCellBoundariesKernel(d_hashes, d_cellStart, d_cellEnd, particleCount);
 
-    // Setup histogram
-    uint histogramCount = 16 * std::max(1, particleCount / 256);
-    histogramData.resize(histogramCount);
-    initHistogramDataSSBO();
-
-    // Setup histogram shader
-    histogramShader = new Shader({{ "assets/shaders/histogram.glsl", Shader::Type::COMPUTE}});
-    histogramShader->compile();
-    histogramShader->bind();
-    histogramShader->setInt("numParticles", particleCount);
-    histogramShader->setInt("shift", 0);
-
-    glDispatchCompute(std::max(1, particleCount / 256), 1, 1);
-    glMemoryBarrier(GL_ALL_BARRIER_BITS);
-
-    // Setup offset
-    offsetData.resize(particleCount);
-    initOffsetDataSSBO();
-
-    // Setup offset shader
-    offsetShader = new Shader({{ "assets/shaders/globalScan.glsl", Shader::Type::COMPUTE}});
-    offsetShader->compile();
-    offsetShader->bind();
-    offsetShader->setInt("numWorkgroups", histogramCount);
-
-    glDispatchCompute(1, 16, 1);
-    glMemoryBarrier(GL_ALL_BARRIER_BITS);
-
-    // Hashing dispatch
-    // uint32_t* ptr = (uint32_t*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-    //
-    // int c = 0;
-    // for(int i = 0; i < 16; i++) {
-    //     std::cout << ptr[i] << std::endl;
-    //     c += ptr[i];
-    // }
-    // std::cout << "Count: " << c << std::endl;
-    //
-    // glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    for (int i = 0 ; i < particleCount ; i++) {
+        particles[i].properties.w = hashes[i];
+    }
 }
 
 FluidSimulationGPU::~FluidSimulationGPU() {
-    delete hashParticlesShader;
+    cudaFree(d_particles);
+    cudaFree(d_hashes);
+    cudaFree(d_hashIndices);
+    cudaFree(d_cellStart);
+    cudaFree(d_cellEnd);
 }
 
 void FluidSimulationGPU::update(float deltaTime) {
     // Hash particle position
-    glDispatchCompute(particles.size() / 16, 1, 1);
-    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+    launchHashParticlesKernel(d_particles, d_hashes, d_hashIndices, settings.h, particleCount, particleCount);
 
     // Sort by hash to group particles -> Radix sort
+    sortIndicesByHash(d_hashes, d_hashIndices, particleCount);
 
     // Build lookup table
+    launchFindHashCellBoundariesKernel(d_hashes, d_cellStart, d_cellEnd, particleCount);
 
     // Actual Simulation
+    launchDensityPressureKernel(d_particles, d_hashIndices, d_cellStart, d_cellEnd, settings.h, particleCount, settings.k, settings.p_0);
+    // SPH CALCULATION
+    // MOVEMENT
+}
+
+void FluidSimulationGPU::reset() {
+    // for (int i = 0 ; i < particles.size(); i++) {
+        // particles[i].position = particles[i].startPosition;
+        // particles[i].velocity = { 0.0, 0.0 };
+    // }
+}
+
+void FluidSimulationGPU::updateBoundaries(float width, float height) {
+    this->width = width;
+    this->height = height;
 }
 
 void FluidSimulationGPU::initParticlesSSBO() {
-    glGenBuffers(1, &particleSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleSSBO);
+    cudaMalloc(reinterpret_cast<void**>(&d_particles), particles.size() * sizeof(ParticleGPU));
+    cudaMemcpy(d_particles, particles.data(), particles.size() * sizeof(ParticleGPU), cudaMemcpyHostToDevice);
 
-    glBufferData(
-        GL_SHADER_STORAGE_BUFFER,
-        particles.size() * sizeof(ParticleGPU),
-        particles.data(),
-        GL_DYNAMIC_DRAW
-    );
-
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particleSSBO);
+    // glGenBuffers(1, &particleSSBO);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleSSBO);
+    //
+    // glBufferData(
+    //     GL_SHADER_STORAGE_BUFFER,
+    //     particles.size() * sizeof(ParticleGPU),
+    //     particles.data(),
+    //     GL_DYNAMIC_DRAW
+    // );
+    //
+    // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particleSSBO);
 }
 
 void FluidSimulationGPU::initHashDataSSBO() {
-    glGenBuffers(1, &hashDataSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, hashDataSSBO);
+    cudaMalloc(reinterpret_cast<void**>(&d_hashes), hashes.size() * sizeof(uint32_t));
+    cudaMalloc(reinterpret_cast<void**>(&d_hashIndices), hashIndices.size() * sizeof(uint32_t));
+    cudaMalloc(reinterpret_cast<void**>(&d_cellStart), cellStart.size() * sizeof(int32_t));
+    cudaMalloc(reinterpret_cast<void**>(&d_cellEnd), cellEnd.size() * sizeof(int32_t));
 
-    glBufferData(
-        GL_SHADER_STORAGE_BUFFER,
-        hashData.size() * sizeof(HashEntry),
-        hashData.data(),
-        GL_DYNAMIC_DRAW
-    );
+    cudaMemcpy(d_cellStart, cellStart.data(), cellStart.size() * sizeof(int32_t), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_cellEnd, cellEnd.data(), cellEnd.size() * sizeof(int32_t), cudaMemcpyHostToDevice);
 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, hashDataSSBO);
+    // glGenBuffers(1, &hashDataSSBO);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, hashDataSSBO);
+    //
+    // glBufferData(
+    //     GL_SHADER_STORAGE_BUFFER,
+    //     hashData.size() * sizeof(HashEntry),
+    //     hashData.data(),
+    //     GL_DYNAMIC_DRAW
+    // );
+    //
+    // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, hashDataSSBO);
 }
 
 void FluidSimulationGPU::initHistogramDataSSBO() {
-    glGenBuffers(1, &histogramDataSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, histogramDataSSBO);
-
-    glBufferData(
-        GL_SHADER_STORAGE_BUFFER,
-        histogramData.size() * sizeof(uint32_t),
-        histogramData.data(),
-        GL_DYNAMIC_DRAW
-    );
-
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, histogramDataSSBO);
+    // glGenBuffers(1, &histogramDataSSBO);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, histogramDataSSBO);
+    //
+    // glBufferData(
+    //     GL_SHADER_STORAGE_BUFFER,
+    //     histogramData.size() * sizeof(uint32_t),
+    //     histogramData.data(),
+    //     GL_DYNAMIC_DRAW
+    // );
+    //
+    // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, histogramDataSSBO);
 }
 
 void FluidSimulationGPU::initOffsetDataSSBO() {
-    glGenBuffers(1, &offsetDataSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, offsetDataSSBO);
-
-    glBufferData(
-        GL_SHADER_STORAGE_BUFFER,
-        offsetData.size() * sizeof(uint32_t),
-        offsetData.data(),
-        GL_DYNAMIC_DRAW
-    );
-
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, offsetDataSSBO);
+    // glGenBuffers(1, &offsetDataSSBO);
+    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, offsetDataSSBO);
+    //
+    // glBufferData(
+    //     GL_SHADER_STORAGE_BUFFER,
+    //     offsetData.size() * sizeof(uint32_t),
+    //     offsetData.data(),
+    //     GL_DYNAMIC_DRAW
+    // );
+    //
+    // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, offsetDataSSBO);
 }

@@ -48,14 +48,14 @@ add_executable(FluidSimSPH
     src/utils/Logger.h
     src/ui/SettingsPanel.cpp
     src/ui/SettingsPanel.h
-    src/kernel.cu
     src/simulation/FluidSimulationGPU.cpp
     src/simulation/FluidSimulationGPU.h
+        src/cuda/FluidSimulation.cu
 
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
-        src/kernel.h
+        src/cuda/FluidSimulation.h
 )
 
 add_library(imgui

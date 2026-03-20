@@ -9,9 +9,10 @@
 #include "imgui.h"
 #include "nlohmann/json.hpp"
 #include "ImGuiFileDialog.h"
+#include "simulation/FluidSimulationGPU.h"
 
-SettingsPanel::SettingsPanel(const std::string& name, FluidSimulation* simulation) : UIPanel(name), simulation(simulation) {
-    settings = simulation->getSimulationSettings();
+SettingsPanel::SettingsPanel(const std::string& name, FluidSimulationGPU* simulation) : UIPanel(name), simulation(simulation) {
+    settings = &simulation->settings;
 }
 
 void SettingsPanel::update(double deltaTime) { }
@@ -94,7 +95,7 @@ void SettingsPanel::SaveSettings(const std::string& path) const {
     file << json.dump(4);
 }
 
-void SettingsPanel::LoadSettings(const std::string& path) const {
+void SettingsPanel::LoadSettings(const std::string& path) {
     std::ifstream file(path);
     if (!file.is_open())
         return;

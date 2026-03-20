@@ -12,6 +12,8 @@
 #include <chrono>
 #include <omp.h>
 
+#include "FluidSimulationGPU.h"
+
 FluidSimulation::FluidSimulation(int particleCount, float xMin, float yMin, float xMax, float yMax) {
     // Setup particles
     particles.reserve(particleCount);

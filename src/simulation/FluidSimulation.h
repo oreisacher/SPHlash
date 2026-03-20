@@ -9,6 +9,8 @@
 #include <iostream>
 #include <unordered_map>
 #include <vector>
+
+#include "FluidSimulationGPU.h"
 #include "glm/vec2.hpp"
 
 struct Particle {
@@ -70,16 +72,16 @@ struct SpatialGrid {
     float cellSize;
 };
 
-struct SimulationSettings {
-    float h = 20.0f;
-    float p_0 = 0.0f;
-    float k = 0.7f;
-    float mu = 0.3f;
-    float tension = 0.001f;
-
-    bool enableGravity = false;
-    float gravity = -9.878;
-};
+// struct SimulationSettings {
+//     float h = 20.0f;
+//     float p_0 = 0.0f;
+//     float k = 0.7f;
+//     float mu = 0.3f;
+//     float tension = 0.001f;
+//
+//     bool enableGravity = false;
+//     float gravity = -9.878;
+// };
 
 class FluidSimulation {
 public:

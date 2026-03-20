@@ -4,7 +4,7 @@
 
 in vec2 Velocity;
 in vec2 TexCoord;
-in float Pressure;
+in vec4 Properties;
 
 out vec4 FragColor;
 
@@ -30,6 +30,13 @@ vec3 hsv2rgb(vec3 c)
 
     rgb = rgb * rgb * (3.0 - 2.0 * rgb);
     return c.z * mix(vec3(1.0), rgb, c.y);
+}
+
+vec3 indexToColor(float i) {
+    float r = fract(sin(float(i) * 12.9898) * 43758.5453);
+    float g = fract(sin(float(i) * 78.233)  * 43758.5453);
+    float b = fract(sin(float(i) * 39.425)  * 43758.5453);
+    return vec3(r, g, b);
 }
 
 void main() {

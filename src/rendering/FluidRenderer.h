@@ -6,12 +6,12 @@
 #define FLUIDSIMSPH_FLUIDRENDERER_H
 
 #include "Framebuffer.h"
-#include "../simulation/FluidSimulation.h"
 #include "glad/gl.h"
+#include "simulation/FluidSimulationGPU.h"
 
 class FluidRenderer {
 public:
-    FluidRenderer(const FluidSimulation* simulation);
+    FluidRenderer(const FluidSimulationGPU* simulation);
     ~FluidRenderer();
 
     static void Init();
@@ -22,7 +22,7 @@ public:
     void setSize(int width, int height) const;
 
 private:
-    const FluidSimulation* simulation;
+    const FluidSimulationGPU* simulation;
 
     static inline bool initialized = false;
 
