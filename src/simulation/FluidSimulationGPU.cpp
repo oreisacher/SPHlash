@@ -5,6 +5,7 @@
 #include "FluidSimulationGPU.h"
 
 #include <cuda_runtime_api.h>
+#include <cuda_gl_interop.h>
 #include <iostream>
 #include <ostream>
 #include <random>
@@ -26,6 +27,7 @@ FluidSimulationGPU::FluidSimulationGPU(int particleCount, float xMin, float yMin
 
     for (int i = 0 ; i < particleCount ; i++) {
         particles[i].position = { distX(gen), distY(gen), 0.0, 0.0 };
+        particles[i].startPosition = particles[i].position,
         particles[i].velocity = { 0.0, 0.0, 0.0, 0.0 };
         particles[i].properties = { mass, 0.0, 0.0, 0.0 };
     }
@@ -47,28 +49,38 @@ FluidSimulationGPU::FluidSimulationGPU(int particleCount, float xMin, float yMin
     initHashDataSSBO();
 
     // Test dispatch
-    launchHashParticlesKernel(d_particles, d_hashes, d_hashIndices, settings.h, particleCount, particleCount);
-    cudaMemcpy(hashes.data(), d_hashes, hashes.size() * sizeof(uint32_t), cudaMemcpyDeviceToHost);
-    cudaMemcpy(hashIndices.data(), d_hashIndices, hashIndices.size() * sizeof(uint32_t), cudaMemcpyDeviceToHost);
-    sortIndicesByHash(d_hashes, d_hashIndices, particleCount);
-    launchFindHashCellBoundariesKernel(d_hashes, d_cellStart, d_cellEnd, particleCount);
-
-    for (int i = 0 ; i < particleCount ; i++) {
-        particles[i].properties.w = hashes[i];
-    }
+    // launchHashParticlesKernel(d_particles, d_hashes, d_hashIndices, settings.h, particleCount, particleCount);
+    // cudaMemcpy(hashes.data(), d_hashes, hashes.size() * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+    // cudaMemcpy(hashIndices.data(), d_hashIndices, hashIndices.size() * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+    // sortIndicesByHash(d_hashes, d_hashIndices, particleCount);
+    // launchFindHashCellBoundariesKernel(d_hashes, d_cellStart, d_cellEnd, particleCount);
+    //
+    // for (int i = 0 ; i < particleCount ; i++) {
+    //     particles[i].properties.w = hashes[i];
+    // }
 }
 
 FluidSimulationGPU::~FluidSimulationGPU() {
-    cudaFree(d_particles);
+    // cudaFree(d_particles);
     cudaFree(d_hashes);
     cudaFree(d_hashIndices);
     cudaFree(d_cellStart);
     cudaFree(d_cellEnd);
 }
 
-void FluidSimulationGPU::update(float deltaTime) {
+void FluidSimulationGPU::update(const float deltaTime) {
+    ParticleGPU* d_particles = nullptr;
+    size_t numBytes = 0;
+
+    cudaGraphicsMapResources(1, &particleResource);
+    cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_particles), &numBytes, particleResource);
+
+    // Reset old data
+    cudaMemset(d_cellStart, -1, particleCount * sizeof(int32_t));
+    cudaMemset(d_cellEnd,   -1, particleCount * sizeof(int32_t));
+
     // Hash particle position
-    launchHashParticlesKernel(d_particles, d_hashes, d_hashIndices, settings.h, particleCount, particleCount);
+    launchHashParticlesKernel(d_particles, d_hashes, d_hashIndices, settings.h, particleCount);
 
     // Sort by hash to group particles -> Radix sort
     sortIndicesByHash(d_hashes, d_hashIndices, particleCount);
@@ -78,15 +90,26 @@ void FluidSimulationGPU::update(float deltaTime) {
 
     // Actual Simulation
     launchDensityPressureKernel(d_particles, d_hashIndices, d_cellStart, d_cellEnd, settings.h, particleCount, settings.k, settings.p_0);
-    // SPH CALCULATION
-    // MOVEMENT
+
+    // SPH forces
+    launchSphForcesKernel(d_particles, d_hashIndices, d_cellStart, d_cellEnd, settings.h, particleCount, settings.mu, settings.tension);
+
+    // Update particle positions
+    launchUpdateParticlesKernel(d_particles, particleCount, deltaTime, width, height, settings.gravity);
+
+    cudaGraphicsUnmapResources(1, &particleResource, nullptr);
 }
 
 void FluidSimulationGPU::reset() {
-    // for (int i = 0 ; i < particles.size(); i++) {
-        // particles[i].position = particles[i].startPosition;
-        // particles[i].velocity = { 0.0, 0.0 };
-    // }
+    ParticleGPU* d_particles = nullptr;
+    size_t numBytes = 0;
+
+    cudaGraphicsMapResources(1, &particleResource);
+    cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_particles), &numBytes, particleResource);
+
+    launchResetParticlesKernel(d_particles, particleCount);
+
+    cudaGraphicsUnmapResources(1, &particleResource, nullptr);
 }
 
 void FluidSimulationGPU::updateBoundaries(float width, float height) {
@@ -94,9 +117,17 @@ void FluidSimulationGPU::updateBoundaries(float width, float height) {
     this->height = height;
 }
 
+void FluidSimulationGPU::setupVBOConnection(GLuint vbo) {
+    cudaGraphicsGLRegisterBuffer(
+        &particleResource,
+        vbo,
+        cudaGraphicsMapFlagsWriteDiscard
+    );
+}
+
 void FluidSimulationGPU::initParticlesSSBO() {
-    cudaMalloc(reinterpret_cast<void**>(&d_particles), particles.size() * sizeof(ParticleGPU));
-    cudaMemcpy(d_particles, particles.data(), particles.size() * sizeof(ParticleGPU), cudaMemcpyHostToDevice);
+    // cudaMalloc(reinterpret_cast<void**>(&d_particles), particles.size() * sizeof(ParticleGPU));
+    // cudaMemcpy(d_particles, particles.data(), particles.size() * sizeof(ParticleGPU), cudaMemcpyHostToDevice);
 
     // glGenBuffers(1, &particleSSBO);
     // glBindBuffer(GL_SHADER_STORAGE_BUFFER, particleSSBO);

@@ -49,6 +49,7 @@ int main() {
 
     // Rendering
     FluidRenderer renderer(&simGPU);
+    simGPU.setupVBOConnection(renderer.getParticleVBO());
 
     UIManager ui(window.getNativeWindow());
 
@@ -68,13 +69,17 @@ int main() {
     shader.bind();
 
     shader.setMat4("projection", glm::ortho(0.0f, 1.0f, 0.0f, 1.0f, -1.0f, 1.0f));
-    shader.setFloat("size", 0.007f);
+    shader.setFloat("size", 0.003f);
 
     while (!window.shouldClose()) {
         // Simulation
         // simulation.update(Motor::Time.getDeltaTime());
         // simulation.update(0.016);  // Force 60 fps
-        simGPU.update(0.008333333); // Force 120 fps
+        // simGPU.update(0.008333333); // Force 120 fps
+        simGPU.update(0.0005);
+        simGPU.update(0.0005);
+        simGPU.update(0.0005);
+        simGPU.update(0.0005);
 
         // Render simulation into texture
         renderer.render();

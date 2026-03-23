@@ -11,8 +11,14 @@
 
 struct ParticleGPU {
     float4 position;     // vec4 to avoid padding issues
+    float4 startPosition;
     float4 velocity;
     float4 properties;   // x: mass, y: density, z: pressure, w: unused
+
+    // SPH Forces
+    float4 pressureForce;
+    float4 viscosityForce;
+    float4 surfaceTensionForce;
 };
 
 struct HashEntry {
@@ -41,6 +47,7 @@ public:
     void reset();
 
     void updateBoundaries(float width, float height);
+    void setupVBOConnection(GLuint vbo);
 
     int particleCount;
     std::vector<ParticleGPU> particles;
@@ -52,15 +59,16 @@ private:
     std::vector<int32_t> cellStart;
     std::vector<int32_t> cellEnd;
 
-    ParticleGPU* d_particles;
+    // ParticleGPU* d_particles;
     // HashEntry* d_hashData;
     uint32_t* d_hashes;
     uint32_t* d_hashIndices;
     int32_t* d_cellStart;
     int32_t* d_cellEnd;
 
-
     GLuint particleSSBO, hashDataSSBO, histogramDataSSBO, offsetDataSSBO;
+
+    cudaGraphicsResource* particleResource;
 
     Shader* hashParticlesShader, *histogramShader, *offsetShader;
 

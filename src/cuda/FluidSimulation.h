@@ -14,8 +14,7 @@ void launchHashParticlesKernel(
     std::uint32_t* hashes,
     uint32_t* hashIndices,
     float cellSize,
-    int numParticles,
-    int hashTableSize
+    int numParticles
 );
 
 void sortIndicesByHash(
@@ -40,6 +39,31 @@ void launchDensityPressureKernel(
     int numParticles,
     float k,
     float p_0
+);
+
+void launchSphForcesKernel(
+    ParticleGPU* particles,
+    uint32_t* hashIndices,
+    int32_t* cellStart,
+    int32_t* cellEnd,
+    float h,
+    int numParticles,
+    float mu,
+    float tension
+);
+
+void launchUpdateParticlesKernel(
+    ParticleGPU* particles,
+    int numParticles,
+    float deltaTime,
+    float width,
+    float height,
+    float gravity
+);
+
+void launchResetParticlesKernel(
+    ParticleGPU* particles,
+    int numParticles
 );
 
 #endif //FLUIDSIMSPH_HASHPARTICLES_H

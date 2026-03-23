@@ -62,7 +62,7 @@ void FluidRenderer::Init() {
 
 void FluidRenderer::render() const {
     // Update particles data
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Particle) * simulation->particleCount, simulation->particles.data());
+    // glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Particle) * simulation->particleCount, simulation->particles.data());
 
     // Render into framebuffer
     framebuffer->bind();
@@ -80,3 +80,5 @@ void FluidRenderer::setSize(int width, int height) const {
     if (size.x != width || size.y != height)
         framebuffer->resize(width, height);
 }
+
+GLuint FluidRenderer::getParticleVBO() const { return vbo; }

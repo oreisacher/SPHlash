@@ -21,6 +21,8 @@ public:
     GLuint getTextureId() const;
     void setSize(int width, int height) const;
 
+    GLuint getParticleVBO() const;
+
 private:
     const FluidSimulationGPU* simulation;
 
