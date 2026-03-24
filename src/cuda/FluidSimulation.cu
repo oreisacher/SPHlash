@@ -362,6 +362,7 @@ __global__ void densityPressureFixedGridKernel(
 
     particles[pi].properties.y = density;
     particles[pi].properties.z = max(k * (density - p_0), 0.0);     // Check if allowed to max here
+    particles[pi].properties.w = 0;
 }
 
 __global__ void sphForcesKernel(

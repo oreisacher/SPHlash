@@ -26,23 +26,35 @@ void ParticlesPanel::draw() {
 
     if (showParticles) {
         ImGui::InputInt("Particle", &selectedParticle);
+        shader->setInt("selectedParticleID", selectedParticle);
 
         glBindBuffer(GL_ARRAY_BUFFER, particlesVBO);
         ParticleGPU* data = static_cast<ParticleGPU*>(glMapBuffer(GL_ARRAY_BUFFER, GL_READ_ONLY));
 
+        auto length = [](const float4& v) {
+            return std::sqrt(v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w);
+        };
+
         ImGui::Text(std::format("Position: {:.3f} {:.3f} {:.3f}", data[selectedParticle].position.x, data[selectedParticle].position.y, data[selectedParticle].position.z).c_str());
-        ImGui::Text(std::format("Velocity: {:.3f} {:.3f} {:.3f}", data[selectedParticle].velocity.x, data[selectedParticle].velocity.y, data[selectedParticle].velocity.z).c_str());
+        ImGui::Text(std::format("Velocity: {:.3f} {:.3f} {:.3f} ({:.3f})", data[selectedParticle].velocity.x, data[selectedParticle].velocity.y, data[selectedParticle].velocity.z, length(data[selectedParticle].velocity)).c_str());
         ImGui::Separator();
         ImGui::Text(std::format("Mass: {:.3f}", data[selectedParticle].properties.x).c_str());
         ImGui::Text(std::format("Density: {}", data[selectedParticle].properties.y).c_str());
         ImGui::Text(std::format("Pressure: {}", data[selectedParticle].properties.z).c_str());
+        ImGui::Text(std::format("A: {}", data[selectedParticle].properties.w).c_str());
         ImGui::Separator();
         ImGui::Text(std::format("Pressure Force: {:.3f} {:.3f} {:.3f}", data[selectedParticle].pressureForce.x, data[selectedParticle].pressureForce.y, data[selectedParticle].pressureForce.z).c_str());
         ImGui::Text(std::format("Viscosity Force: {:.3f} {:.3f} {:.3f}", data[selectedParticle].viscosityForce.x, data[selectedParticle].viscosityForce.y, data[selectedParticle].viscosityForce.z).c_str());
         ImGui::Text(std::format("Surface Tension Force: {:.3f} {:.3f} {:.3f}", data[selectedParticle].surfaceTensionForce.x, data[selectedParticle].surfaceTensionForce.y, data[selectedParticle].surfaceTensionForce.z).c_str());
 
         glUnmapBuffer(GL_ARRAY_BUFFER);
+    } else {
+        shader->setInt("selectedParticleID", -1);
     }
 
     ImGui::End();
+}
+
+void ParticlesPanel::setShader(Shader* shader) {
+    this->shader = shader;
 }

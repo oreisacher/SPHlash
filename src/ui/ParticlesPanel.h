@@ -7,6 +7,7 @@
 
 #include "UIPanel.h"
 #include "glad/gl.h"
+#include "rendering/Shader.h"
 
 class ParticlesPanel : public UIPanel {
 public:
@@ -15,11 +16,15 @@ public:
     void update(double deltaTime) override;
     void draw() override;
 
+    void setShader(Shader* shader);
+
 private:
     GLuint particlesVBO;
     int particleCount;
     bool showParticles = false;
     int selectedParticle = 0;
+
+    Shader* shader;
 };
 
 #endif //FLUIDSIMSPH_PARTICLESPANEL_H

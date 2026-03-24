@@ -2,8 +2,7 @@
 // Created by ruut on 3/14/26.
 //
 
-#include "SimulationPanel.h"
-
+#include "ui/SimulationPanel.h"
 #include "imgui.h"
 #include "../rendering/FluidRenderer.h"
 
@@ -36,6 +35,8 @@ void SimulationPanel::draw() {
         auto imageMin = ImGui::GetItemRectMin();
         mousePosition = { mouse.x - imageMin.x, mouse.y - imageMin.y };
         mouseScroll = ImGui::GetIO().MouseWheel;
+    } else {
+        mousePosition = { -100, -100 };
     }
 
     ImGui::End();

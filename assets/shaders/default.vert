@@ -10,6 +10,7 @@ uniform float size;
 out vec2 Velocity;
 out vec2 TexCoord;
 out vec4 Properties;
+flat out int ID;
 
 const vec2 positions[4] = vec2[4](
     vec2(-1.0,  1.0),
@@ -29,6 +30,7 @@ void main() {
     Velocity = aVel;
     TexCoord = uvs[gl_VertexID];
     Properties = aProperties;
+    ID = gl_InstanceID;
 
     gl_Position = projection * vec4(size * positions[gl_VertexID] + aPos, 0.0f, 1.0f);
 }

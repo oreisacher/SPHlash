@@ -21,8 +21,19 @@ public:
     void update(double deltaTime) const;
     void draw() const;
 
+    template<typename T>
+    T* getPanel() {
+        for (auto panel : panels) {
+            if (auto correct = dynamic_cast<T*>(panel)) {
+                return correct;
+            }
+        }
+
+        return nullptr;
+    }
+
 private:
-    std::pmr::vector<UIPanel*> panels;
+    std::vector<UIPanel*> panels;
     bool dockLayoutInitialized = false;
 };
 

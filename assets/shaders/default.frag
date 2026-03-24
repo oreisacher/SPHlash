@@ -5,8 +5,11 @@
 in vec2 Velocity;
 in vec2 TexCoord;
 in vec4 Properties;
+flat in int ID;
 
 out vec4 FragColor;
+
+uniform int selectedParticleID = -1;
 
 vec3 velocityToHSV(vec2 v, float maxSpeed)
 {
@@ -45,9 +48,14 @@ void main() {
 
     if (dist > 0.5)
         discard;
-//
-//    FragColor = vec4(Properties.w / 100f, 0.0f, 0.0f, 1.0f);
-//    FragColor = vec4(hsv2rgb(velocityToHSV(Velocity, 10.0)), 1.0f);
+
+    if (selectedParticleID == ID) {
+        FragColor = vec4(1.0f);
+        return;
+    }
+
     FragColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
-//    FragColor = vec4(indexToColor(Properties.w), 1.0f);
+//        FragColor = vec4(Properties.w / 50f, 0.0f, 0.0f, 1.0f);
+    //    FragColor = vec4(hsv2rgb(velocityToHSV(Velocity, 10.0)), 1.0f);
+    //    FragColor = vec4(indexToColor(Properties.w), 1.0f);
 }

@@ -59,6 +59,8 @@ int main() {
     shader.setMat4("projection", glm::ortho(0.0f, 1.0f, 0.0f, 1.0f, -1.0f, 1.0f));
     shader.setFloat("size", 0.002f);
 
+    ui.getPanel<ParticlesPanel>()->setShader(&shader);
+
     while (!window.shouldClose()) {
         // Simulation
         // simulation.update(Motor::Time.getDeltaTime());
