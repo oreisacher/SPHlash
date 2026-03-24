@@ -31,6 +31,8 @@ struct SimulationSettings {
     float p_0 = 1000.0f;
     float k = 0.7f;
     float mu = 0.3f;
+
+    float tensionThreshold = 0.1f;
     float tension = 0.001f;
 
     bool enableGravity = false;
@@ -74,11 +76,6 @@ private:
 
     // Boundaries
     float width = 1, height = 1;
-
-    void initParticlesSSBO();
-    void initHashDataSSBO();
-    void initHistogramDataSSBO();
-    void initOffsetDataSSBO();
 };
 
 #endif //FLUIDSIMSPH_FLUIDSIMULATIONGPU_H

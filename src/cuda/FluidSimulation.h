@@ -10,7 +10,7 @@
 struct ParticleGPU;
 
 void launchHashParticlesKernel(
-    ParticleGPU* particles,
+    const ParticleGPU* particles,
     std::uint32_t* hashes,
     uint32_t* hashIndices,
     float cellSize,
@@ -24,7 +24,7 @@ void sortIndicesByHash(
 );
 
 void launchFindHashCellBoundariesKernel(
-    uint32_t* hashes,
+    const uint32_t* hashes,
     int32_t* cellStart,
     int32_t* cellEnd,
     int numParticles
@@ -32,9 +32,9 @@ void launchFindHashCellBoundariesKernel(
 
 void launchDensityPressureKernel(
     ParticleGPU* particles,
-    uint32_t* hashIndices,
-    int32_t* cellStart,
-    int32_t* cellEnd,
+    const uint32_t* hashIndices,
+    const int32_t* cellStart,
+    const int32_t* cellEnd,
     float h,
     int numParticles,
     float k,
@@ -43,12 +43,13 @@ void launchDensityPressureKernel(
 
 void launchSphForcesKernel(
     ParticleGPU* particles,
-    uint32_t* hashIndices,
-    int32_t* cellStart,
-    int32_t* cellEnd,
+    const uint32_t* hashIndices,
+    const int32_t* cellStart,
+    const int32_t* cellEnd,
     float h,
     int numParticles,
     float mu,
+    float tensionThreshold,
     float tension
 );
 

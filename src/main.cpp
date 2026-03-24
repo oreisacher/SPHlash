@@ -16,9 +16,9 @@
 
 #define GLAD_GL_IMPLEMENTATION
 
-#define WINDOW_SIZE_X 600
+#define WINDOW_SIZE_X 1000
 #define WINDOW_SIZE_Y 600
-#define SIM_UNITS_PER_PIXEL (1.0 / WINDOW_SIZE_X)
+#define SIM_UNITS_PER_PIXEL (1.0 / 600)
 
 int main() {
     // Window creation
@@ -31,21 +31,7 @@ int main() {
     // FluidSimulation simulation(1000, 0.1f, 0.1f, 0.5f, 0.5f);
     // simulation.updateBoundaries(window.getWidth() * SIM_UNITS_PER_PIXEL, window.getHeight() * SIM_UNITS_PER_PIXEL);
 
-    FluidSimulationGPU simGPU(10000, 0.1f, 0.1f, 0.6f, 0.6f);
-
-    // CUDA TESTING
-    // int h_a[5] = { 1, 2, 3, 4, 5 };
-
-    // int* d_a;
-    // cudaMalloc(reinterpret_cast<void**>(&d_a), 5 * sizeof(int));
-    // cudaMemcpy(d_a, h_a, 5 * sizeof(int), cudaMemcpyHostToDevice);
-    // launchAdd(d_a);
-    // cudaMemcpy(h_a, d_a, 5 * sizeof(int), cudaMemcpyDeviceToHost);
-    // cudaFree(d_a);
-    //
-    // for (int a : h_a) {
-    //     std::cout << a << std::endl;
-    // }
+    FluidSimulationGPU simGPU(100000, 0.1f, 0.1f, 0.6f, 0.6f);
 
     // Rendering
     FluidRenderer renderer(&simGPU);
@@ -76,10 +62,10 @@ int main() {
         // simulation.update(Motor::Time.getDeltaTime());
         // simulation.update(0.016);  // Force 60 fps
         // simGPU.update(0.008333333); // Force 120 fps
-        simGPU.update(0.0005);
-        simGPU.update(0.0005);
-        simGPU.update(0.0005);
-        simGPU.update(0.0005);
+        simGPU.update(0.0001);
+        // simGPU.update(0.0005);
+        // simGPU.update(0.0005);
+        // simGPU.update(0.0005);
 
         // Render simulation into texture
         renderer.render();
