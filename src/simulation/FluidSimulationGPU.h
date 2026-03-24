@@ -56,17 +56,28 @@ public:
     SimulationSettings settings;
 
 private:
+    // Spatial Hash
     std::vector<uint32_t> hashes;
     std::vector<uint32_t> hashIndices;
     std::vector<int32_t> cellStart;
     std::vector<int32_t> cellEnd;
 
+    // Fixed Grid
+    int* d_particleCellIndex;
+    int* d_particleIndex;
+    int* d_cellStart;
+    int* d_cellEnd;
+
+    int gridSizeX = 1;
+    int gridSizeY = 1;
+    int totalCells = 1;
+
     // ParticleGPU* d_particles;
     // HashEntry* d_hashData;
     uint32_t* d_hashes;
     uint32_t* d_hashIndices;
-    int32_t* d_cellStart;
-    int32_t* d_cellEnd;
+    // int32_t* d_cellStart;
+    // int32_t* d_cellEnd;
 
     GLuint particleSSBO, hashDataSSBO, histogramDataSSBO, offsetDataSSBO;
 

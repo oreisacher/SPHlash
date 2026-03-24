@@ -46,7 +46,8 @@ void main() {
     if (dist > 0.5)
         discard;
 //
-//    FragColor = vec4(length(Velocity) / 0.04f, 0.0f, 1.0f, 1.0f);
+//    FragColor = vec4(Properties.w / 100f, 0.0f, 0.0f, 1.0f);
 //    FragColor = vec4(hsv2rgb(velocityToHSV(Velocity, 10.0)), 1.0f);
     FragColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+//    FragColor = vec4(indexToColor(Properties.w), 1.0f);
 }

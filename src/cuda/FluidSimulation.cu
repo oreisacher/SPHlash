@@ -158,6 +158,33 @@ __global__ void hashParticlesKernel(
     hashIndices[id] = id;
 }
 
+__global__ void computeCellIndexKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    int* particleCellIndex,
+    int* particleIndex,
+    const float cellSize,
+    const int2 gridResolution
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (id >= numParticles)
+        return;
+
+    // Get cell of particle
+    int gx = particles[id].position.x / cellSize;
+    int gy = particles[id].position.y / cellSize;
+
+    gx = max(0, min(gx, gridResolution.x - 1));
+    gy = max(0, min(gy, gridResolution.y - 1));
+
+    int cellIndex = gx + gy * gridResolution.x;
+
+    particleCellIndex[id] = cellIndex;
+    particleIndex[id] = id;
+    // particles[id].properties.w = cellIndex;
+}
+
 __global__ void findHashCellBoundariesKernel(
     const uint32_t* hashes,
     int32_t* cellStart,
@@ -184,6 +211,34 @@ __global__ void findHashCellBoundariesKernel(
 
     if (id == numParticles - 1) {
         cellEnd[currentHash] = id + 1;
+    }
+}
+
+__global__ void findCellStartEndKernel(
+    const int numParticles,
+    const int* particleCellIndex,
+    int* cellStart,
+    int* cellEnd
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (id >= numParticles)
+        return;
+
+    const int cell = particleCellIndex[id];
+
+    if (id == 0) {
+        cellStart[cell] = id;
+    } else {
+        int prevCell = particleCellIndex[id - 1];
+        if (cell != prevCell) {
+            cellStart[cell] = id;
+            cellEnd[prevCell] = id;
+        }
+    }
+
+    if (id == numParticles - 1) {
+        cellEnd[cell] = id;
     }
 }
 
@@ -243,6 +298,70 @@ __global__ void densityPressureKernel(
 
     particles[id].properties.y = density;
     particles[id].properties.z = max(k * (density - p_0), 0.0);     // Check if allowed to max here
+}
+
+__global__ void densityPressureFixedGridKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const int* particleIndex,
+    const int* cellStart,
+    const int* cellEnd,
+    const int2 gridResolution,
+    const float h,
+    const float k,
+    const float p_0
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (id >= numParticles)
+        return;
+
+    int pi = particleIndex[id];
+    float4 pos = particles[pi].position;
+
+    int gx = pos.x / h;
+    int gy = pos.y / h;
+
+    float density = 0.0f;
+
+    // Find neighbors
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            int nx = gx + dx;
+            int ny = gy + dy;
+
+            if (nx < 0 || ny < 0 || nx >= gridResolution.x || ny >= gridResolution.y)
+                continue;
+
+            int neighborCell = nx + ny * gridResolution.x;
+
+            int start = cellStart[neighborCell];
+
+            // Cell with no particles
+            if (start == -1)
+                continue;
+
+            int end = cellEnd[neighborCell];
+
+            for (int j = start ; j < end; j++) {
+                int pj = particleIndex[j];
+
+                const float2 diff = make_float2(
+                    pos.x - particles[pj].position.x,
+                    pos.y - particles[pj].position.y
+                );
+
+                // Check if within radius
+                float distSq = diff.x * diff.x + diff.y * diff.y;
+                if (distSq < h * h) {
+                    density += particles[pj].properties.x * poly6Kernel2D(diff, h);
+                }
+            }
+        }
+    }
+
+    particles[pi].properties.y = density;
+    particles[pi].properties.z = max(k * (density - p_0), 0.0);     // Check if allowed to max here
 }
 
 __global__ void sphForcesKernel(
@@ -307,6 +426,99 @@ __global__ void sphForcesKernel(
                 float distSq = diff.x * diff.x + diff.y * diff.y;
                 if (distSq < h * h) {
                     const ParticleGPU* other = &particles[neighborId];
+
+                    // Pressure
+                    const float scalar = other->properties.x * ((particle->properties.z + other->properties.z) / (2.0f * other->properties.y));
+                    particle->pressureForce += scalar * spikyKernel2DGradient(diff, h);
+
+                    // Viscosity
+                    const float4 viscTerm = other->properties.x * ((other->velocity - particle->velocity) / other->properties.y);
+                    particle->viscosityForce += viscosityLaplacianKernel2D(diff, h) * viscTerm;
+
+                    // Surface tension
+                    n += other->properties.x * (1.0f / other->properties.y) * poly6Kernel2DGradient(diff, h);
+                    c += other->properties.x * (1.0f / other->properties.y) * poly6Kernel2DLaplacian(diff, h);
+                }
+            }
+        }
+    }
+
+    particle->pressureForce = -1.0f * particle->pressureForce;
+    particle->viscosityForce = mu * particle->viscosityForce;
+
+    float lenN = sqrtf(n.x * n.x + n.y * n.y);
+    if (lenN > tensionThreshold) {
+        particle->surfaceTensionForce = -1.0f * tension * c * (n / lenN);
+    }
+}
+
+__global__ void sphForcesFixedGridKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const int* particleIndex,
+    const int* cellStart,
+    const int* cellEnd,
+    const int2 gridResolution,
+    const float h,
+    const float mu,
+    const float tensionThreshold,
+    const float tension
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (id >= numParticles)
+        return;
+
+    int pi = particleIndex[id];
+    ParticleGPU* particle = &particles[pi];
+
+    float4 pos = particle->position;
+    int gx = pos.x / h;
+    int gy = pos.y / h;
+
+    particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    particle->surfaceTensionForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+    float4 n = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    float c = 0.0f;
+
+    // Find neighbors
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            int nx = gx + dx;
+            int ny = gy + dy;
+
+            if (nx < 0 || ny < 0 || nx >= gridResolution.x || ny >= gridResolution.y)
+                continue;
+
+            int neighborCell = nx + ny * gridResolution.x;
+
+            int start = cellStart[neighborCell];
+
+            // Cell with no particles
+            if (start == -1)
+                continue;
+
+            int end = cellEnd[neighborCell];
+
+            for (int j = start ; j < end; j++) {
+                int pj = particleIndex[j];
+
+                // Skip self
+                if (pi == pj)
+                    continue;
+
+                const float4 diff = make_float4(
+                    pos.x - particles[pj].position.x,
+                    pos.y - particles[pj].position.y,
+                    0.0f, 0.0f
+                );
+
+                // Check if within radius
+                float distSq = diff.x * diff.x + diff.y * diff.y;
+                if (distSq < h * h) {
+                    ParticleGPU* other = &particles[pj];
 
                     // Pressure
                     const float scalar = other->properties.x * ((particle->properties.z + other->properties.z) / (2.0f * other->properties.y));
@@ -410,6 +622,22 @@ void launchHashParticlesKernel(
     );
 }
 
+void launchComputeCellIndexKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    int* particleCellIndex,
+    int* particleIndex,
+    const float cellSize,
+    const int2 gridResolution
+) {
+    int threadsPerBlock = 256;
+    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
+
+    computeCellIndexKernel<<<blocks, threadsPerBlock>>>(
+        numParticles, particles, particleCellIndex, particleIndex, cellSize, gridResolution
+    );
+}
+
 void sortIndicesByHash(
     uint32_t* hashes,
     uint32_t* hashIndices,
@@ -426,6 +654,19 @@ void sortIndicesByHash(
     );
 }
 
+void sortIndicesByCellId(
+    const int numParticles,
+    int* particleCellIndex,
+    int* particleIndex
+) {
+    thrust::sort_by_key(
+        thrust::device,
+        particleCellIndex,
+        particleCellIndex + numParticles,
+        particleIndex
+    );
+}
+
 void launchFindHashCellBoundariesKernel(
     const uint32_t* hashes,
     int32_t* cellStart,
@@ -437,6 +678,20 @@ void launchFindHashCellBoundariesKernel(
 
     findHashCellBoundariesKernel<<<blocks, threadsPerBlock>>>(
         hashes, cellStart, cellEnd, numParticles
+    );
+}
+
+void launchFindCellStartEndKernel(
+    const int numParticles,
+    const int* particleCellIndex,
+    int* cellStart,
+    int* cellEnd
+) {
+    int threadsPerBlock = 256;
+    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
+
+    findCellStartEndKernel<<<blocks, threadsPerBlock>>>(
+        numParticles, particleCellIndex, cellStart, cellEnd
     );
 }
 
@@ -458,6 +713,25 @@ void launchDensityPressureKernel(
     );
 }
 
+void launchDensityPressureFixedGridKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const int* particleIndex,
+    const int* cellStart,
+    const int* cellEnd,
+    const int2 gridResolution,
+    const float h,
+    const float k,
+    const float p_0
+) {
+    int threadsPerBlock = 256;
+    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
+
+    densityPressureFixedGridKernel<<<blocks, threadsPerBlock>>>(
+        numParticles, particles, particleIndex, cellStart, cellEnd, gridResolution, h, k, p_0
+    );
+}
+
 void launchSphForcesKernel(
     ParticleGPU* particles,
     const uint32_t* hashIndices,
@@ -474,6 +748,26 @@ void launchSphForcesKernel(
 
     sphForcesKernel<<<blocks, threadsPerBlock>>>(
         particles, hashIndices, cellStart, cellEnd, h, numParticles, mu, tensionThreshold, tension
+    );
+}
+
+void launchSphForcesFixedGridKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const int* particleIndex,
+    const int* cellStart,
+    const int* cellEnd,
+    const int2 gridResolution,
+    const float h,
+    const float mu,
+    const float tensionThreshold,
+    const float tension
+) {
+    int threadsPerBlock = 256;
+    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
+
+    sphForcesFixedGridKernel<<<blocks, threadsPerBlock>>>(
+        numParticles, particles, particleIndex, cellStart, cellEnd, gridResolution, h, mu, tensionThreshold, tension
     );
 }
 
