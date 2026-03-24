@@ -30,7 +30,7 @@ struct SimulationSettings {
     float h = 20.0f;
     float p_0 = 1000.0f;
     float k = 0.7f;
-    float mu = 0.3f;
+    float mu = 0.1f;
 
     float tensionThreshold = 0.1f;
     float tension = 0.001f;
@@ -47,6 +47,10 @@ public:
     void update(float deltaTime);
 
     void reset();
+
+    void updateMousePos(float x, float y);
+    void updateMouseForceDirection(float direction);
+    void updateMouseRadius(float direction);
 
     void updateBoundaries(float width, float height);
     void setupVBOConnection(GLuint vbo);
@@ -87,6 +91,11 @@ private:
 
     // Boundaries
     float width = 1, height = 1;
+
+    // Mouse
+    float mouseX, mouseY;
+    float mouseForceDirection = 0.0f;
+    float mouseRadius = 0.1f;
 };
 
 #endif //FLUIDSIMSPH_FLUIDSIMULATIONGPU_H

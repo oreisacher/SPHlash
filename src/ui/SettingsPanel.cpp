@@ -28,6 +28,7 @@ void SettingsPanel::draw() {
         ImGui::InputFloat("P_0", &settings->p_0);
         ImGui::InputFloat("k", &settings->k);
         ImGui::InputFloat("mu", &settings->mu);
+        ImGui::InputFloat("Tension Threshold", &settings->tensionThreshold);
         ImGui::InputFloat("Tension", &settings->tension);
     }
 

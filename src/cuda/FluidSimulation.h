@@ -100,6 +100,14 @@ void launchSphForcesFixedGridKernel(
     const float tension
 );
 
+void launchApplyMouseForceKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const float2 mousePosition,
+    const float mouseRadius,
+    const float mouseForceDirection
+);
+
 void launchUpdateParticlesKernel(
     ParticleGPU* particles,
     int numParticles,

@@ -96,16 +96,86 @@ void FluidSimulationGPU::update(const float deltaTime) {
     cudaMemset(d_cellEnd,   -1, particleCount * sizeof(int32_t));
 
     // --- Fixed Grid ---
-    launchComputeCellIndexKernel(particleCount, d_particles, d_particleCellIndex, d_particleIndex, settings.h, { gridSizeX, gridSizeY });
-    sortIndicesByCellId(particleCount, d_particleCellIndex, d_particleIndex);
-    launchFindCellStartEndKernel(particleCount, d_particleCellIndex, d_cellStart, d_cellEnd);
-    launchDensityPressureFixedGridKernel(particleCount, d_particles, d_particleIndex, d_cellStart, d_cellEnd, { gridSizeX, gridSizeY }, settings.h, settings.k, settings.p_0);
-    launchSphForcesFixedGridKernel(particleCount, d_particles, d_particleIndex, d_cellStart, d_cellEnd, { gridSizeX, gridSizeY }, settings.h, settings.mu, settings.tensionThreshold, settings.tension);
-    launchUpdateParticlesKernel(d_particles, particleCount, deltaTime, width, height, settings.gravity);
+    nvtxRangePush("CellIndices");
+    launchComputeCellIndexKernel(
+        particleCount,
+        d_particles,
+        d_particleCellIndex,
+        d_particleIndex,
+        settings.h,
+        { gridSizeX, gridSizeY }
+    );
+    nvtxRangePop();
+
+    nvtxRangePush("Sort Cells");
+    sortIndicesByCellId(
+        particleCount,
+        d_particleCellIndex,
+        d_particleIndex
+    );
+    nvtxRangePop();
+
+    nvtxRangePush("Cell Start End");
+    launchFindCellStartEndKernel(
+        particleCount,
+        d_particleCellIndex,
+        d_cellStart,
+        d_cellEnd
+    );
+    nvtxRangePop();
+
+    nvtxRangePush("Density");
+    launchDensityPressureFixedGridKernel(
+        particleCount,
+        d_particles,
+        d_particleIndex,
+        d_cellStart,
+        d_cellEnd,
+        { gridSizeX, gridSizeY },
+        settings.h,
+        settings.k,
+        settings.p_0
+    );
+    nvtxRangePop();
+
+    nvtxRangePush("SPH");
+    launchSphForcesFixedGridKernel(
+        particleCount,
+        d_particles,
+        d_particleIndex,
+        d_cellStart,
+        d_cellEnd,
+        { gridSizeX, gridSizeY },
+        settings.h,
+        settings.mu,
+        settings.tensionThreshold,
+        settings.tension
+    );
+    nvtxRangePop();
+
+    nvtxRangePush("Mouse Force");
+    launchApplyMouseForceKernel(
+        particleCount,
+        d_particles,
+        { mouseX, mouseY },
+        mouseRadius,
+        mouseForceDirection
+    );
+    nvtxRangePop();
+
+    nvtxRangePush("Update");
+    launchUpdateParticlesKernel(
+        d_particles,
+        particleCount,
+        deltaTime,
+        width,
+        height,
+        settings.enableGravity ? settings.gravity : 0.0f
+    );
+    nvtxRangePop();
 
     // -- Spatial Hashing ---
     // // Hash particle position
-    // nvtxRangePush("Hashing");
     // launchHashParticlesKernel(d_particles, d_hashes, d_hashIndices, settings.h, particleCount);
     // nvtxRangePop();
     //
@@ -146,6 +216,19 @@ void FluidSimulationGPU::reset() {
     launchResetParticlesKernel(d_particles, particleCount);
 
     cudaGraphicsUnmapResources(1, &particleResource, nullptr);
+}
+
+void FluidSimulationGPU::updateMousePos(float x, float y) {
+    this->mouseX = x;
+    this->mouseY = height - y;
+}
+
+void FluidSimulationGPU::updateMouseForceDirection(float direction) {
+    this->mouseForceDirection = direction;
+}
+
+void FluidSimulationGPU::updateMouseRadius(float direction) {
+    this->mouseRadius += 0.01f * direction;
 }
 
 void FluidSimulationGPU::updateBoundaries(float width, float height) {

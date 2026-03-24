@@ -545,6 +545,36 @@ __global__ void sphForcesFixedGridKernel(
     }
 }
 
+__global__ void applyMouseForceKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const float2 mousePosition,
+    const float mouseRadius,
+    const float mouseForceDirection
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (id >= numParticles)
+        return;
+
+    ParticleGPU* particle = &particles[id];
+
+    const float4 dir = make_float4(
+        particle->position.x - mousePosition.x,
+        particle->position.y - mousePosition.y,
+        0.0f, 0.0f
+    );
+
+    const float len2 = dir.x * dir.x + dir.y * dir.y;
+
+    if (len2 < mouseRadius * mouseRadius) {
+        const float len = sqrtf(len2);
+        const float4 forceDir = (len > 0.0001f) ? dir / len : make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        const float falloff = 1.0f - (len / mouseRadius);
+        particle->velocity += mouseForceDirection * mouseRadius * falloff * forceDir;
+    }
+}
+
 __global__ void updateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
@@ -768,6 +798,21 @@ void launchSphForcesFixedGridKernel(
 
     sphForcesFixedGridKernel<<<blocks, threadsPerBlock>>>(
         numParticles, particles, particleIndex, cellStart, cellEnd, gridResolution, h, mu, tensionThreshold, tension
+    );
+}
+
+void launchApplyMouseForceKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const float2 mousePosition,
+    const float mouseRadius,
+    const float mouseForceDirection
+) {
+    int threadsPerBlock = 256;
+    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
+
+    applyMouseForceKernel<<<blocks, threadsPerBlock>>>(
+        numParticles, particles, mousePosition, mouseRadius, mouseForceDirection
     );
 }
 

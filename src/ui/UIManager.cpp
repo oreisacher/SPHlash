@@ -3,7 +3,7 @@
 //
 
 #include "../rendering/Framebuffer.h"
-#include "UIManager.h"
+#include "ui/UIManager.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -63,14 +63,16 @@ void UIManager::draw() const {
         ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
 
         ImGuiID dock_main = dockspace_id;
-        ImGuiID dock_right, dock_right_top, dock_right_bottom;
+        ImGuiID dock_right, dock_right_top, dock_right_bottom, dock_right_middle;
 
         dock_right  = ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Right,  0.40f, nullptr, &dock_main);
         dock_right_top = ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Up,  0.80f, nullptr, &dock_right_bottom);
+        dock_right_top = ImGui::DockBuilderSplitNode(dock_right_top, ImGuiDir_Up,  0.50f, nullptr, &dock_right_middle);
 
         ImGui::DockBuilderDockWindow("Simulation", dock_main);
         ImGui::DockBuilderDockWindow("Settings", dock_right_top);
         ImGui::DockBuilderDockWindow("FPS", dock_right_bottom);
+        ImGui::DockBuilderDockWindow("Particles", dock_right_middle);
 
         ImGui::DockBuilderFinish(dockspace_id);
     }
