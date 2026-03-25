@@ -32,7 +32,7 @@ int main() {
     // FluidSimulation simulation(1000, 0.1f, 0.1f, 0.5f, 0.5f);
     // simulation.updateBoundaries(window.getWidth() * SIM_UNITS_PER_PIXEL, window.getHeight() * SIM_UNITS_PER_PIXEL);
 
-    FluidSimulationGPU simGPU(10000, 0.0f, 0.0f, 1.0f, 1.0f);
+    FluidSimulationGPU simGPU(10000, 0.3f, 0.3f, 0.7f, 0.7f);
 
     // Rendering
     FluidRenderer renderer(&simGPU);
@@ -66,10 +66,10 @@ int main() {
         // simulation.update(Motor::Time.getDeltaTime());
         // simulation.update(0.016);  // Force 60 fps
         // simGPU.update(0.008333333); // Force 120 fps
-        simGPU.update(0.001);
-        simGPU.update(0.001);
-        simGPU.update(0.001);
-        simGPU.update(0.001);
+        simGPU.update(0.0005);
+        simGPU.update(0.0005);
+        simGPU.update(0.0005);
+        simGPU.update(0.0005);
 
         // Render simulation into texture
         renderer.render();

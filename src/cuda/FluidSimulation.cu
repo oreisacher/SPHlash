@@ -77,7 +77,7 @@ __device__ float4 poly6Kernel2DGradient(float4 dist, float h) {
     if (r2 > 0 && r2 < h2) {
         float x = h2 - r2;
         float h8 = h2 * h2 * h2 * h2;
-        float factor = -24.0f / (CUDART_PI_F * h8) * x * x;
+        float factor = (-24.0f / (CUDART_PI_F * h8)) * x * x;
         return make_float4(factor * dist.x, factor * dist.y, 0.0f, 0.0f);
     }
 
@@ -103,7 +103,7 @@ __device__ float poly6Kernel2DLaplacian(float4 dist, float h) {
 __device__ float4 spikyKernel2DGradient(float4 dist, float h) {
     float r = sqrt(dist.x * dist.x + dist.y * dist.y);
 
-    if (r > 0 && r < h) {
+    if (r < h) {
         float x = h - r;
         float h5 = h * h * h * h * h;
         float factor = (-30.0f / (CUDART_PI_F * h5)) * x * x;
@@ -132,35 +132,9 @@ __device__ float viscosityLaplacianKernel2D(float4 dist, float h) {
 
 // --- Simulation Steps ---
 #pragma region SimulationSteps
-__global__ void hashParticlesKernel(
-    const ParticleGPU* particles,
-    uint32_t* hashes,
-    uint32_t* hashIndices,
-    const float cellSize,
-    const int numParticles
-) {
-    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
-
-    if (id >= numParticles)
-        return;
-
-    // Get cell of particle
-    const int2 cell = make_int2(
-        static_cast<int>(floorf((particles[id].position.x + 1000.0f) / cellSize)),
-        static_cast<int>(floorf((particles[id].position.y + 1000.0f) / cellSize))
-    );
-
-    // Calc hash of cell
-    uint32_t hash = static_cast<uint32_t>(cell.x * 73856093) ^ static_cast<uint32_t>(cell.y * 19349663);
-    hash %= numParticles;
-
-    hashes[id] = hash;
-    hashIndices[id] = id;
-}
-
 __global__ void computeCellIndexKernel(
     const int numParticles,
-    ParticleGPU* particles,
+    const ParticleGPU* particles,
     int* particleCellIndex,
     int* particleIndex,
     const float cellSize,
@@ -183,35 +157,6 @@ __global__ void computeCellIndexKernel(
     particleCellIndex[id] = cellIndex;
     particleIndex[id] = id;
     // particles[id].properties.w = cellIndex;
-}
-
-__global__ void findHashCellBoundariesKernel(
-    const uint32_t* hashes,
-    int32_t* cellStart,
-    int32_t* cellEnd,
-    const int numParticles
-) {
-    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
-
-    if (id >= numParticles)
-        return;
-
-    const uint32_t currentHash = hashes[id];
-
-    // Check if first hash or the prev hash is different
-    if (id == 0 || currentHash != hashes[id - 1]) {
-        // Mark start of new hash area
-        cellStart[currentHash] = id;
-
-        // Mark end of previous hash area
-        if (id > 0) {
-            cellEnd[hashes[id - 1]] = id;
-        }
-    }
-
-    if (id == numParticles - 1) {
-        cellEnd[currentHash] = id + 1;
-    }
 }
 
 __global__ void findCellStartEndKernel(
@@ -238,66 +183,8 @@ __global__ void findCellStartEndKernel(
     }
 
     if (id == numParticles - 1) {
-        cellEnd[cell] = id;
+        cellEnd[cell] = id + 1;
     }
-}
-
-__global__ void densityPressureKernel(
-    ParticleGPU* particles,
-    const uint32_t* hashIndices,
-    const int32_t* cellStart,
-    const int32_t* cellEnd,
-    const float h,
-    const int numParticles,
-    const float k,
-    const float p_0
-) {
-    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
-
-    if (id >= numParticles)
-        return;
-
-    // Get current cell of particle
-    const int2 cell = make_int2(
-        static_cast<int>(floorf((particles[id].position.x + 1000.0f) / h)),
-        static_cast<int>(floorf((particles[id].position.y + 1000.0f) / h))
-    );
-
-    float density = 0.0f;
-
-    for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-            // Calculate neighbor hash
-            const int2 neighborCell = make_int2(cell.x + x, cell.y + y);
-            uint32_t hash = static_cast<uint32_t>(neighborCell.x * 73856093) ^ static_cast<uint32_t>(neighborCell.y * 19349663);
-            hash %= numParticles;
-
-            const int start = cellStart[hash];
-
-            if (start == -1)
-                continue; // Cell empty
-
-            const int end = cellEnd[hash];
-
-            for (int j = start ; j < end; j++) {
-                const uint32_t neighborId = hashIndices[j];
-
-                const float2 diff = make_float2(
-                    particles[id].position.x - particles[neighborId].position.x,
-                    particles[id].position.y - particles[neighborId].position.y
-                );
-
-                // Check if within radius
-                float distSq = diff.x * diff.x + diff.y * diff.y;
-                if (distSq < h * h) {
-                    density += particles[neighborId].properties.x * poly6Kernel2D(diff, h);
-                }
-            }
-        }
-    }
-
-    particles[id].properties.y = density;
-    particles[id].properties.z = max(k * (density - p_0), 0.0);     // Check if allowed to max here
 }
 
 __global__ void densityPressureFixedGridKernel(
@@ -321,6 +208,9 @@ __global__ void densityPressureFixedGridKernel(
 
     int gx = pos.x / h;
     int gy = pos.y / h;
+
+    gx = max(0, min(gx, gridResolution.x - 1));
+    gy = max(0, min(gy, gridResolution.y - 1));
 
     float density = 0.0f;
 
@@ -361,96 +251,8 @@ __global__ void densityPressureFixedGridKernel(
     }
 
     particles[pi].properties.y = density;
-    particles[pi].properties.z = max(k * (density - p_0), 0.0);     // Check if allowed to max here
-    particles[pi].properties.w = 0;
-}
-
-__global__ void sphForcesKernel(
-    ParticleGPU* particles,
-    const uint32_t* hashIndices,
-    const int32_t* cellStart,
-    const int32_t* cellEnd,
-    const float h,
-    const int numParticles,
-    const float mu,
-    const float tensionThreshold,
-    const float tension
-) {
-    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
-
-    if (id >= numParticles)
-        return;
-
-    // Reset old values
-    ParticleGPU* particle = &particles[id];
-    particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    particle->surfaceTensionForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-
-    float4 n = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    float c = 0.0f;
-
-    // Get current cell of particle
-    const int2 cell = make_int2(
-        static_cast<int>(floorf((particle->position.x + 1000.0f) / h)),
-        static_cast<int>(floorf((particle->position.y + 1000.0f) / h))
-    );
-
-    for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-            // Calculate neighbor hash
-            const int2 neighborCell = make_int2(cell.x + x, cell.y + y);
-            uint32_t hash = static_cast<uint32_t>(neighborCell.x * 73856093) ^ static_cast<uint32_t>(neighborCell.y * 19349663);
-            hash %= numParticles;
-
-            const int start = cellStart[hash];
-
-            if (start == -1)
-                continue; // Cell empty
-
-            const int end = cellEnd[hash];
-
-            for (int j = start ; j < end; j++) {
-                const uint32_t neighborId = hashIndices[j];
-
-                // Skip self
-                if (id == neighborId)
-                    continue;
-
-                const float4 diff = make_float4(
-                    particle->position.x - particles[neighborId].position.x,
-                    particle->position.y - particles[neighborId].position.y,
-                    0.0, 0.0
-                );
-
-                // Check if within radius
-                float distSq = diff.x * diff.x + diff.y * diff.y;
-                if (distSq < h * h) {
-                    const ParticleGPU* other = &particles[neighborId];
-
-                    // Pressure
-                    const float scalar = other->properties.x * ((particle->properties.z + other->properties.z) / (2.0f * other->properties.y));
-                    particle->pressureForce += scalar * spikyKernel2DGradient(diff, h);
-
-                    // Viscosity
-                    const float4 viscTerm = other->properties.x * ((other->velocity - particle->velocity) / other->properties.y);
-                    particle->viscosityForce += viscosityLaplacianKernel2D(diff, h) * viscTerm;
-
-                    // Surface tension
-                    n += other->properties.x * (1.0f / other->properties.y) * poly6Kernel2DGradient(diff, h);
-                    c += other->properties.x * (1.0f / other->properties.y) * poly6Kernel2DLaplacian(diff, h);
-                }
-            }
-        }
-    }
-
-    particle->pressureForce = -1.0f * particle->pressureForce;
-    particle->viscosityForce = mu * particle->viscosityForce;
-
-    float lenN = sqrtf(n.x * n.x + n.y * n.y);
-    if (lenN > tensionThreshold) {
-        particle->surfaceTensionForce = -1.0f * tension * c * (n / lenN);
-    }
+    particles[pi].properties.z = k * (density - p_0);     // Check if allowed to max here
+    // particles[pi].properties.z = max(k * (density - p_0), 0.0);     // Check if allowed to max here
 }
 
 __global__ void sphForcesFixedGridKernel(
@@ -474,8 +276,12 @@ __global__ void sphForcesFixedGridKernel(
     ParticleGPU* particle = &particles[pi];
 
     float4 pos = particle->position;
+
     int gx = pos.x / h;
     int gy = pos.y / h;
+
+    gx = max(0, min(gx, gridResolution.x - 1));
+    gy = max(0, min(gy, gridResolution.y - 1));
 
     particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -531,7 +337,9 @@ __global__ void sphForcesFixedGridKernel(
 
                     // Surface tension
                     n += other->properties.x * (1.0f / other->properties.y) * poly6Kernel2DGradient(diff, h);
+                    // n += other->properties.x * (1.0f / other->properties.y) * spikyKernel2DGradient(diff, h);
                     c += other->properties.x * (1.0f / other->properties.y) * poly6Kernel2DLaplacian(diff, h);
+                    // c += other->properties.x * (1.0f / other->properties.y) * viscosityLaplacianKernel2D(diff, h);
                 }
             }
         }
@@ -539,10 +347,13 @@ __global__ void sphForcesFixedGridKernel(
 
     particle->pressureForce = -1.0f * particle->pressureForce;
     particle->viscosityForce = mu * particle->viscosityForce;
+    particle->debugging.x = 0.0f;
 
     float lenN = sqrtf(n.x * n.x + n.y * n.y);
     if (lenN > tensionThreshold) {
-        particle->surfaceTensionForce = -1.0f * tension * c * (n / lenN);
+        float4 normalizedN = n / (lenN + 1e-6f);
+        particle->surfaceTensionForce = -1.0f * tension * c * normalizedN;
+        particle->debugging.x = lenN;
     }
 }
 
@@ -593,7 +404,25 @@ __global__ void updateParticlesKernel(
 
     // Update position
     const float4 force = particle->pressureForce + particle->viscosityForce + particle->surfaceTensionForce;
+    // const float4 force = particle->surfaceTensionForce;
     const float4 acceleration = force / particle->properties.y + make_float4(0.0f, gravity, 0.0f, 1.0f);
+    //
+    // if (particle->properties.y < 0.1)
+    //     printf("%f", particle->properties.y);
+
+    // if (!isfinite(particle->position.x) || !isfinite(particle->position.y)) {
+    //     printf("POS NAN at %d\n", id);
+    // }
+    //
+    // if (!isfinite(particle->velocity.x) || !isfinite(particle->velocity.y)) {
+    //     printf("VEL NAN at %d\n", id);
+    // }
+    //
+    // float lenF = sqrtf(force.x*force.x + force.y*force.y);
+    //
+    // if (!isfinite(lenF) || lenF > 1e5f) {
+    //     printf("FORCE BAD at %d | F=%f rho=%f\n", id, lenF, particle->properties.y);
+    // }
 
     particle->velocity += (0.5f * deltaTime) * acceleration;
     particle->position += deltaTime * particle->velocity;
@@ -638,21 +467,6 @@ __global__ void resetParticlesKernel(
 
 // --- Launchers ---
 #pragma region Launchers
-void launchHashParticlesKernel(
-    const ParticleGPU* particles,
-    uint32_t* hashes,
-    uint32_t* hashIndices,
-    const float cellSize,
-    const int numParticles
-) {
-    int threadsPerBlock = 256;
-    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
-
-    hashParticlesKernel<<<blocks, threadsPerBlock>>>(
-        particles, hashes, hashIndices, cellSize, numParticles
-    );
-}
-
 void launchComputeCellIndexKernel(
     const int numParticles,
     ParticleGPU* particles,
@@ -669,22 +483,6 @@ void launchComputeCellIndexKernel(
     );
 }
 
-void sortIndicesByHash(
-    uint32_t* hashes,
-    uint32_t* hashIndices,
-    const int numParticles
-) {
-    thrust::device_ptr<uint32_t> d_keys_ptr(hashes);
-    thrust::device_ptr<uint32_t> d_values_ptr(hashIndices);
-
-    thrust::sort_by_key(
-        thrust::device,
-        d_keys_ptr,
-        d_keys_ptr + numParticles,
-        d_values_ptr
-    );
-}
-
 void sortIndicesByCellId(
     const int numParticles,
     int* particleCellIndex,
@@ -695,20 +493,6 @@ void sortIndicesByCellId(
         particleCellIndex,
         particleCellIndex + numParticles,
         particleIndex
-    );
-}
-
-void launchFindHashCellBoundariesKernel(
-    const uint32_t* hashes,
-    int32_t* cellStart,
-    int32_t* cellEnd,
-    const int numParticles
-) {
-    int threadsPerBlock = 256;
-    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
-
-    findHashCellBoundariesKernel<<<blocks, threadsPerBlock>>>(
-        hashes, cellStart, cellEnd, numParticles
     );
 }
 
@@ -723,24 +507,6 @@ void launchFindCellStartEndKernel(
 
     findCellStartEndKernel<<<blocks, threadsPerBlock>>>(
         numParticles, particleCellIndex, cellStart, cellEnd
-    );
-}
-
-void launchDensityPressureKernel(
-    ParticleGPU* particles,
-    const uint32_t* hashIndices,
-    const int32_t* cellStart,
-    const int32_t* cellEnd,
-    const float h,
-    const int numParticles,
-    const float k,
-    const float p_0
-) {
-    int threadsPerBlock = 256;
-    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
-
-    densityPressureKernel<<<blocks, threadsPerBlock>>>(
-        particles, hashIndices, cellStart, cellEnd, h, numParticles, k, p_0
     );
 }
 
@@ -760,25 +526,6 @@ void launchDensityPressureFixedGridKernel(
 
     densityPressureFixedGridKernel<<<blocks, threadsPerBlock>>>(
         numParticles, particles, particleIndex, cellStart, cellEnd, gridResolution, h, k, p_0
-    );
-}
-
-void launchSphForcesKernel(
-    ParticleGPU* particles,
-    const uint32_t* hashIndices,
-    const int32_t* cellStart,
-    const int32_t* cellEnd,
-    const float h,
-    const int numParticles,
-    const float mu,
-    const float tensionThreshold,
-    const float tension
-) {
-    int threadsPerBlock = 256;
-    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
-
-    sphForcesKernel<<<blocks, threadsPerBlock>>>(
-        particles, hashIndices, cellStart, cellEnd, h, numParticles, mu, tensionThreshold, tension
     );
 }
 

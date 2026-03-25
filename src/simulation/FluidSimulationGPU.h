@@ -19,6 +19,9 @@ struct ParticleGPU {
     float4 pressureForce;
     float4 viscosityForce;
     float4 surfaceTensionForce;
+
+    // Debugging
+    float4 debugging;
 };
 
 struct HashEntry {
@@ -32,7 +35,8 @@ struct SimulationSettings {
     float k = 0.7f;
     float mu = 0.1f;
 
-    float tensionThreshold = 0.1f;
+    // 8 was rather good
+    float tensionThreshold = 8.0f;
     float tension = 0.001f;
 
     bool enableGravity = false;

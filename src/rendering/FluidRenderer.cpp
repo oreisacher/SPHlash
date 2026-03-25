@@ -4,7 +4,7 @@
 
 #define GLAD_GL_IMPLEMENTATION
 
-#include "FluidRenderer.h"
+#include "rendering/FluidRenderer.h"
 #include <glad/gl.h>
 #include "../simulation/FluidSimulation.h"
 #include "GLFW/glfw3.h"
@@ -42,6 +42,10 @@ FluidRenderer::FluidRenderer(const FluidSimulationGPU* sim) {
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, properties));
     glEnableVertexAttribArray(2);
     glVertexAttribDivisor(2, 1);
+
+    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, debugging));
+    glEnableVertexAttribArray(3);
+    glVertexAttribDivisor(3, 1);
 }
 
 FluidRenderer::~FluidRenderer() {

@@ -87,6 +87,7 @@ void SettingsPanel::SaveSettings(const std::string& path) const {
     json["p_0"] = settings->p_0;
     json["k"] = settings->k;
     json["mu"] = settings->mu;
+    json["tensionThreshold"] = settings->tensionThreshold;
     json["tension"] = settings->tension;
     json["enableGravity"] = settings->enableGravity;
     json["gravity"] = settings->gravity;
@@ -108,6 +109,7 @@ void SettingsPanel::LoadSettings(const std::string& path) {
     settings->p_0 = json.value("p_0", settings->p_0);
     settings->k = json.value("k", settings->k);
     settings->mu = json.value("mu", settings->mu);
+    settings->tensionThreshold = json.value("tensionThreshold", settings->tensionThreshold);
     settings->tension = json.value("tension", settings->tension);
     settings->enableGravity = json.value("enableGravity", settings->enableGravity);
     settings->gravity = json.value("gravity", settings->gravity);
