@@ -2,7 +2,7 @@
 // Created by ruut on 3/14/26.
 //
 
-#include "UIPanel.h"
+#include "ui/UIPanel.h"
 
 UIPanel::UIPanel(const std::string& name) : name(name) {}
 

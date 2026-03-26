@@ -33,6 +33,7 @@ FluidSimulationGPU::FluidSimulationGPU(int particleCount, float xMin, float yMin
         particles[i].properties = { mass, 0.0, 0.0, 0.0 };
     }
 
+
     // int gridSize = static_cast<int>(std::sqrt(particleCount));
     // float cellWidth  = (xMax - xMin) / gridSize;
     // float cellHeight = (yMax - yMin) / gridSize;
@@ -59,34 +60,23 @@ FluidSimulationGPU::FluidSimulationGPU(int particleCount, float xMin, float yMin
     float avgSpacing = std::sqrt(((xMax - xMin) * (yMax - yMin)) / (particleCount));
     settings.h = 5.0f * avgSpacing;
 
-    // Setup hash data
-    hashes.resize(particleCount);
-    hashIndices.resize(particleCount);
-    cellStart.resize(particleCount);
-    cellEnd.resize(particleCount);
-
-    cudaMalloc(reinterpret_cast<void**>(&d_hashes), hashes.size() * sizeof(uint32_t));
-    cudaMalloc(reinterpret_cast<void**>(&d_hashIndices), hashIndices.size() * sizeof(uint32_t));
-
     updateBoundaries(1.0, 1.0f);
 
-    // cudaMalloc(reinterpret_cast<void**>(&d_cellStart), cellStart.size() * sizeof(int32_t));
-    // cudaMalloc(reinterpret_cast<void**>(&d_cellEnd), cellEnd.size() * sizeof(int32_t));
-    // cudaMemset(d_cellStart, -1, particleCount * sizeof(int32_t));
-    // cudaMemset(d_cellEnd,   -1, particleCount * sizeof(int32_t));
-
-    cudaMalloc(reinterpret_cast<void**>(&d_particleCellIndex), particleCount * sizeof(int32_t));
-    cudaMalloc(reinterpret_cast<void**>(&d_particleIndex), particleCount * sizeof(int32_t));
+    // Setup hash data
+    cudaMalloc(reinterpret_cast<void**>(&d_particleCellIndex), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_particleIndex), particleCount * sizeof(int));
 }
 
 FluidSimulationGPU::~FluidSimulationGPU() {
-    cudaFree(d_hashes);
-    cudaFree(d_hashIndices);
+    cudaFree(d_particleCellIndex);
+    cudaFree(d_particleIndex);
     cudaFree(d_cellStart);
     cudaFree(d_cellEnd);
 }
 
 void FluidSimulationGPU::update(const float deltaTime) {
+    cudaGetLastError();
+
     ParticleGPU* d_particles = nullptr;
     size_t numBytes = 0;
 
@@ -94,8 +84,8 @@ void FluidSimulationGPU::update(const float deltaTime) {
     cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_particles), &numBytes, particleResource);
 
     // Reset old data
-    cudaMemset(d_cellStart, -1, totalCells * sizeof(int32_t));
-    cudaMemset(d_cellEnd,   -1, totalCells * sizeof(int32_t));
+    cudaMemset(d_cellStart, -1, totalCells * sizeof(int));
+    cudaMemset(d_cellEnd,   -1, totalCells * sizeof(int));
 
     // --- Fixed Grid ---
     nvtxRangePush("CellIndices");
@@ -213,11 +203,13 @@ void FluidSimulationGPU::updateBoundaries(float width, float height) {
     gridSizeY = std::ceil(height / settings.h);
     totalCells = gridSizeX * gridSizeY;
 
+    cudaDeviceSynchronize();
+
     cudaFree(d_cellStart);
     cudaFree(d_cellEnd);
 
-    cudaMalloc(reinterpret_cast<void**>(&d_cellStart), totalCells * sizeof(int32_t));
-    cudaMalloc(reinterpret_cast<void**>(&d_cellEnd), totalCells * sizeof(int32_t));
+    cudaMalloc(reinterpret_cast<void**>(&d_cellStart), totalCells * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_cellEnd), totalCells * sizeof(int));
 }
 
 void FluidSimulationGPU::setupVBOConnection(const GLuint vbo) {

@@ -47,8 +47,8 @@ void main() {
     vec2 coord = TexCoord - vec2(0.5);
     float dist = length(coord);
 
-    if (dist > 0.5)
-        discard;
+//    if (dist > 0.5)
+//        discard;
 
     if (selectedParticleID == ID) {
         FragColor = vec4(1.0f);

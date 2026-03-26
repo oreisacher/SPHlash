@@ -11,7 +11,7 @@
 
 class FluidRenderer {
 public:
-    FluidRenderer(const FluidSimulationGPU* simulation);
+    FluidRenderer(FluidSimulationGPU* simulation);
     ~FluidRenderer();
 
     static void Init();
@@ -29,7 +29,10 @@ private:
     static inline bool initialized = false;
 
     Framebuffer* framebuffer;
-    GLuint vao, vbo;
+    GLuint vao, particleVBO;
+    GLuint sphereVBO, sphereEBO;
+
+    int sphereIndexCount;
 };
 
 #endif //FLUIDSIMSPH_FLUIDRENDERER_H

@@ -1,12 +1,12 @@
 #version 330 core
 
-layout (location = 0) in vec2 aPos;
-layout (location = 1) in vec2 aVel;
-layout (location = 2) in vec4 aProperties;
-layout (location = 3) in vec4 aDebugging;
+layout (location = 0) in vec3 aSpherePos;
+layout (location = 1) in vec3 aSphereNormal;
 
-uniform mat4 projection;
-uniform float size;
+layout (location = 2) in vec2 aPos;
+layout (location = 3) in vec2 aVel;
+layout (location = 4) in vec4 aProperties;
+layout (location = 5) in vec4 aDebugging;
 
 out vec2 Velocity;
 out vec2 TexCoord;
@@ -14,26 +14,18 @@ out vec4 Properties;
 out vec4 Debugging;
 flat out int ID;
 
-const vec2 positions[4] = vec2[4](
-    vec2(-1.0,  1.0),
-    vec2(-1.0, -1.0),
-    vec2( 1.0,  1.0),
-    vec2( 1.0, -1.0)
-);
+uniform float size;
 
-const vec2 uvs[4] = vec2[4](
-    vec2(0.0, 1.0),
-    vec2(0.0, 0.0),
-    vec2(1.0, 1.0),
-    vec2(1.0, 0.0)
-);
+// Camera
+uniform mat4 view;
+uniform mat4 projection;
 
 void main() {
     Velocity = aVel;
-    TexCoord = uvs[gl_VertexID];
     Properties = aProperties;
     Debugging = aDebugging;
     ID = gl_InstanceID;
 
-    gl_Position = projection * vec4(size * positions[gl_VertexID] + aPos, 0.0f, 1.0f);
+    vec3 worldPos = vec3(aPos, 0.0) + aSpherePos * size;
+    gl_Position = projection * view * vec4(worldPos, 1.0f);
 }

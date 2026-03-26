@@ -8,7 +8,9 @@
 
 SimulationPanel::SimulationPanel(const std::string& name, GLuint texture) : UIPanel(name), texture(texture) { }
 
-void SimulationPanel::update(double deltaTime) { }
+void SimulationPanel::update(double deltaTime) {
+    events.clear();
+}
 
 void SimulationPanel::draw() {
     if (!visible)
@@ -18,9 +20,13 @@ void SimulationPanel::draw() {
 
     ImVec2 size = ImGui::GetContentRegionAvail();
 
+    // Check if resized
     if (viewportSize.x != size.x || viewportSize.y != size.y) {
         viewportSize = { size.x, size.y };
-        resized = true;
+        events.push_back({
+            .type = PanelEvent::RESIZE,
+            .resize = { viewportSize }
+        });
     }
 
     ImGui::Image(
@@ -31,16 +37,102 @@ void SimulationPanel::draw() {
     );
 
     if (ImGui::IsItemHovered()) {
+        // Mouse movement
         auto mouse = ImGui::GetMousePos();
         auto imageMin = ImGui::GetItemRectMin();
-        mousePosition = { mouse.x - imageMin.x, mouse.y - imageMin.y };
+
+        glm::vec2 newMousePosition = { mouse.x - imageMin.x, mouse.y - imageMin.y };
+
+        if (newMousePosition != mousePosition) {
+            events.push_back({
+                .type = PanelEvent::MOUSEMOVE,
+                .mouseMove = { mousePosition, dragging, newMousePosition - mousePosition },
+            });
+
+            mousePosition = newMousePosition;
+        }
+
+        // Scroll
         mouseScroll = ImGui::GetIO().MouseWheel;
-    } else {
-        mousePosition = { -100, -100 };
+
+        if (mouseScroll != 0) {
+            events.push_back({
+                .type = PanelEvent::SCROLL,
+                .scroll = { mouseScroll }
+            });
+        }
+
+        // Buttons
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+            dragging = true;
+            events.push_back({
+                .type = PanelEvent::MOUSEDOWN,
+                .mouse = { 1 }
+            });
+        }
+
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+            dragging = true;
+            events.push_back({
+                .type = PanelEvent::MOUSEDOWN,
+                .mouse = { 2 }
+            });
+        }
+
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            dragging = false;
+            events.push_back({
+                .type = PanelEvent::MOUSEUP,
+                .mouse = { 1 }
+            });
+        }
+
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+            dragging = false;
+            events.push_back({
+                .type = PanelEvent::MOUSEUP,
+                .mouse = { 2 }
+            });
+        }
+    }
+
+    // Mouse Release outside if dragging
+    if (dragging) {
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            dragging = false;
+            events.push_back({
+                .type = PanelEvent::MOUSEUP,
+                .mouse = { 1 }
+            });
+        }
+
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+            dragging = false;
+            events.push_back({
+                .type = PanelEvent::MOUSEUP,
+                .mouse = { 2 }
+            });
+        }
+    }
+
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        events.push_back({
+            .type = PanelEvent::MOUSEHOLD,
+            .mouse = { 1 }
+        });
+    }
+
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
+        events.push_back({
+            .type = PanelEvent::MOUSEHOLD,
+            .mouse = { 2 }
+        });
     }
 
     ImGui::End();
 }
+
+std::vector<PanelEvent> SimulationPanel::getEvents() { return events; }
 
 glm::vec2 SimulationPanel::getSize() const { return viewportSize; }
 bool SimulationPanel::wasResized() const { return resized; }

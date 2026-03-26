@@ -9,8 +9,9 @@
 #include "../simulation/FluidSimulation.h"
 #include "GLFW/glfw3.h"
 #include "utils/Logger.h"
+#include "utils/SphereCreator.h"
 
-FluidRenderer::FluidRenderer(const FluidSimulationGPU* sim) {
+FluidRenderer::FluidRenderer(FluidSimulationGPU* sim) {
     if (!initialized) {
         LOG_ERROR("Renderer is not initialized. Call `Renderer::Init()` before use.")
         return;
@@ -21,31 +22,58 @@ FluidRenderer::FluidRenderer(const FluidSimulationGPU* sim) {
     // Setup framebuffer
     framebuffer = new Framebuffer(1, 1);
     framebuffer->addColorAttachment();
+    framebuffer->addDepthBuffer();
 
-    // Setup quad VAO for particle drawing
+    // Create sphere
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+    createSphere(vertices, indices);
+    sphereIndexCount = indices.size();
+
     glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-
     glBindVertexArray(vao);
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    // Vertex buffer
+    glGenBuffers(1, &sphereVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, sphereVBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+
+    // Index buffer
+    glGenBuffers(1, &sphereEBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sphereEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
+    // Position
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // Normal
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+    glEnableVertexAttribArray(1);
+
+    // Setup quad VAO for particle drawing
+    glGenBuffers(1, &particleVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(ParticleGPU) * simulation->particleCount, simulation->particles.data(), GL_DYNAMIC_DRAW);
 
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribDivisor(0, 1);
-
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, velocity));
-    glEnableVertexAttribArray(1);
-    glVertexAttribDivisor(1, 1);
-
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, properties));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)0);
     glEnableVertexAttribArray(2);
     glVertexAttribDivisor(2, 1);
 
-    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, debugging));
+    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, velocity));
     glEnableVertexAttribArray(3);
     glVertexAttribDivisor(3, 1);
+
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, properties));
+    glEnableVertexAttribArray(4);
+    glVertexAttribDivisor(4, 1);
+
+    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, debugging));
+    glEnableVertexAttribArray(5);
+    glVertexAttribDivisor(5, 1);
+
+    // Connect particles vbo to cuda
+    sim->setupVBOConnection(particleVBO);
 }
 
 FluidRenderer::~FluidRenderer() {
@@ -65,14 +93,13 @@ void FluidRenderer::Init() {
 }
 
 void FluidRenderer::render() const {
-    // Update particles data
-    // glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Particle) * simulation->particleCount, simulation->particles.data());
-
     // Render into framebuffer
     framebuffer->bind();
     glViewport(0, 0, framebuffer->getSize().x, framebuffer->getSize().y);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, simulation->particleCount);
+
+    glBindVertexArray(vao);
+    glDrawElementsInstanced(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0, simulation->particleCount);
 }
 
 GLuint FluidRenderer::getTextureId() const {
@@ -85,4 +112,4 @@ void FluidRenderer::setSize(int width, int height) const {
         framebuffer->resize(width, height);
 }
 
-GLuint FluidRenderer::getParticleVBO() const { return vbo; }
+GLuint FluidRenderer::getParticleVBO() const { return particleVBO; }

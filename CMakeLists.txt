@@ -55,9 +55,16 @@ add_executable(FluidSimSPH
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
-        src/cuda/FluidSimulation.h
-        src/ui/ParticlesPanel.cpp
-        src/ui/ParticlesPanel.h
+    src/cuda/FluidSimulation.h
+    src/ui/ParticlesPanel.cpp
+    src/ui/ParticlesPanel.h
+    src/utils/InputManager.cpp
+    src/utils/InputManager.h
+        src/utils/Camera.cpp
+        src/utils/Camera.h
+        src/utils/SphereCreator.h
+        src/Application.cpp
+        src/Application.h
 )
 
 add_library(imgui
