@@ -11,11 +11,11 @@ struct ParticleGPU;
 
 void launchComputeCellIndexKernel(
     const int numParticles,
-    ParticleGPU* particles,
+    const ParticleGPU* particles,
     int* particleCellIndex,
     int* particleIndex,
     const float cellSize,
-    const int2 gridResolution
+    const int3 gridResolution
 );
 
 void sortIndicesByCellId(
@@ -37,7 +37,7 @@ void launchDensityPressureFixedGridKernel(
     const int* particleIndex,
     const int* cellStart,
     const int* cellEnd,
-    const int2 gridResolution,
+    const int3 gridResolution,
     const float h,
     const float k,
     const float p_0
@@ -49,7 +49,7 @@ void launchSphForcesFixedGridKernel(
     const int* particleIndex,
     const int* cellStart,
     const int* cellEnd,
-    const int2 gridResolution,
+    const int3 gridResolution,
     const float h,
     const float mu,
     const float tensionThreshold,
@@ -68,10 +68,9 @@ void launchUpdateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
     const float deltaTime,
-    const float xMin,
-    const float xMax,
-    const float yMin,
-    const float yMax,
+    const float2 x,
+    const float2 y,
+    const float2 z,
     const float gravity
 );
 

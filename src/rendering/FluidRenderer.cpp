@@ -11,7 +11,7 @@
 #include "utils/Logger.h"
 #include "utils/SphereCreator.h"
 
-#define PARTICLE_SIZE 0.002f
+#define PARTICLE_SIZE 0.005f
 
 FluidRenderer::FluidRenderer(FluidSimulationGPU* sim) : simulation(sim) {
     // Setup OpenGL State
@@ -64,7 +64,7 @@ void FluidRenderer::render() const {
     boundaryShader->setMat4("projection", camera->getProjectionMatrix());
     boundaryShader->setMat4("view", camera->getViewMatrix());
     glBindVertexArray(boxVAO);
-    glDrawArrays(GL_LINE_LOOP, 0, 4);
+    glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
 }
 
 void FluidRenderer::setCamera(Camera* cam) {
@@ -79,16 +79,37 @@ Shader* FluidRenderer::getBoundaryShader() const {
     return boundaryShader;
 }
 
-void FluidRenderer::rebuildFrame() const {
+void FluidRenderer::rebuildBoundaryBox() const {
+    //      7 -------- 6
+    //     /|         /|
+    //    3 -------- 2 |
+    //    | |        | |
+    //    | 4 -------| 5
+    //    |/         |/
+    //    0 -------- 1
+
     float vertices[] = {
-        simulation->settings.xBoundary.x, simulation->settings.yBoundary.x, 0.0f,
-        simulation->settings.xBoundary.y, simulation->settings.yBoundary.x, 0.0f,
-        simulation->settings.xBoundary.y, simulation->settings.yBoundary.y, 0.0f,
-        simulation->settings.xBoundary.x, simulation->settings.yBoundary.y, 0.0f,
+        simulation->settings.xBoundary.x, simulation->settings.yBoundary.x, simulation->settings.zBoundary.x, // 0
+        simulation->settings.xBoundary.y, simulation->settings.yBoundary.x, simulation->settings.zBoundary.x, // 1
+        simulation->settings.xBoundary.y, simulation->settings.yBoundary.y, simulation->settings.zBoundary.x, // 2
+        simulation->settings.xBoundary.x, simulation->settings.yBoundary.y, simulation->settings.zBoundary.x, // 3
+        simulation->settings.xBoundary.x, simulation->settings.yBoundary.x, simulation->settings.zBoundary.y, // 4
+        simulation->settings.xBoundary.y, simulation->settings.yBoundary.x, simulation->settings.zBoundary.y, // 5
+        simulation->settings.xBoundary.y, simulation->settings.yBoundary.y, simulation->settings.zBoundary.y, // 6
+        simulation->settings.xBoundary.x, simulation->settings.yBoundary.y, simulation->settings.zBoundary.y, // 7
+    };
+
+    unsigned int indices[] = {
+        0, 1, 1, 2, 2, 3, 3, 0,
+        4, 5, 5, 6, 6, 7, 7, 4,
+        0, 4, 1, 5, 2, 6, 3, 7
     };
 
     glBindBuffer(GL_ARRAY_BUFFER, boxVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, boxEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 }
 
 GLuint FluidRenderer::getTextureId() const {
@@ -147,7 +168,6 @@ void FluidRenderer::setupSphereModel() {
     // Normal
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
     glEnableVertexAttribArray(1);
-
 }
 
 void FluidRenderer::setupParticles() {
@@ -155,11 +175,11 @@ void FluidRenderer::setupParticles() {
     glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(ParticleGPU) * simulation->particleCount, simulation->particles.data(), GL_DYNAMIC_DRAW);
 
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)0);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)0);
     glEnableVertexAttribArray(2);
     glVertexAttribDivisor(2, 1);
 
-    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, velocity));
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, velocity));
     glEnableVertexAttribArray(3);
     glVertexAttribDivisor(3, 1);
 
@@ -179,7 +199,9 @@ void FluidRenderer::setupBoundaryModel() {
     glBindVertexArray(boxVAO);
 
     glGenBuffers(1, &boxVBO);
-    rebuildFrame();
+    glGenBuffers(1, &boxEBO);
+
+    rebuildBoundaryBox();
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);

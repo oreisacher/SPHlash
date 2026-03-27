@@ -22,7 +22,7 @@ public:
     Shader* getParticleShader() const;
     Shader* getBoundaryShader() const;
 
-    void rebuildFrame() const;
+    void rebuildBoundaryBox() const;
 
     // Framebuffer texture
     GLuint getTextureId() const;

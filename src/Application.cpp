@@ -21,7 +21,7 @@
 #define WINDOW_SIZE_X 1000
 #define WINDOW_SIZE_Y 600
 #define SIM_UNITS_PER_PIXEL (1.0 / 600)
-#define PARTICLES 10000
+#define PARTICLES 50000
 
 Application::Application() {
     // Window creation
@@ -36,7 +36,7 @@ Application::Application() {
     }
 
     // Simulation
-    simulation = new FluidSimulationGPU(PARTICLES, { 0.3f, 0.6f }, { 0.3f, 0.6f });
+    simulation = new FluidSimulationGPU(PARTICLES, { 0.3f, 0.6f }, { 0.3f, 0.6f }, { 0.3f, 0.6f });
 
     // Rendering
     renderer = new FluidRenderer(simulation);
@@ -67,10 +67,10 @@ void Application::run() const {
         // simulation.update(Motor::Time.getDeltaTime());
         // simulation.update(0.016);  // Force 60 fps
         // simGPU.update(0.008333333); // Force 120 fps
-        simulation->update(0.0005);
-        simulation->update(0.0005);
-        simulation->update(0.0005);
-        simulation->update(0.0005);
+        simulation->update(0.008);
+        // simulation->update(0.000/5);
+        // simulation->update(0.0005);
+        // simulation->update(0.0005);
 
         // Render simulation into texture
         renderer->render();

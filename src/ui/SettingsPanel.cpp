@@ -26,7 +26,9 @@ void SettingsPanel::draw() {
     ImGui::Begin(name.c_str());
 
     if (ImGui::CollapsingHeader("Particle Settings")) {
-        ImGui::InputFloat("H", &settings->h);
+        if (ImGui::InputFloat("H", &settings->h)) {
+            simulation->updateBoundaries();
+        }
         ImGui::InputFloat("P_0", &settings->p_0);
         ImGui::InputFloat("k", &settings->k);
         ImGui::InputFloat("mu", &settings->mu);
@@ -42,11 +44,15 @@ void SettingsPanel::draw() {
     if (ImGui::CollapsingHeader("Boundary Settings")) {
         if (ImGui::DragFloat2("X", glm::value_ptr(settings->xBoundary), 0.01f)) {
             simulation->updateBoundaries();
-            renderer->rebuildFrame();
+            renderer->rebuildBoundaryBox();
         }
         if (ImGui::DragFloat2("Y", glm::value_ptr(settings->yBoundary), 0.01f)) {
             simulation->updateBoundaries();
-            renderer->rebuildFrame();
+            renderer->rebuildBoundaryBox();
+        }
+        if (ImGui::DragFloat2("Z", glm::value_ptr(settings->zBoundary), 0.01f)) {
+            simulation->updateBoundaries();
+            renderer->rebuildBoundaryBox();
         }
     }
 

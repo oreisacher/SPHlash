@@ -2,7 +2,7 @@
 
 #define PI 3.1415
 
-in vec2 Velocity;
+in vec3 Velocity;
 in vec2 TexCoord;
 in vec4 Properties;
 in vec4 Debugging;

@@ -16,7 +16,7 @@ __device__ float4 operator+(const float4& a, const float4& b) {
     return make_float4(
         a.x + b.x,
         a.y + b.y,
-        0.0f,
+        a.z + b.z,
         0.0f
     );
 }
@@ -25,7 +25,7 @@ __device__ float4 operator-(const float4& a, const float4& b) {
     return make_float4(
         a.x - b.x,
         a.y - b.y,
-        0.0f,
+        a.z - b.z,
         0.0f
     );
 }
@@ -33,6 +33,7 @@ __device__ float4 operator-(const float4& a, const float4& b) {
 __device__ float4& operator+=(float4& a, const float4& b) {
     a.x += b.x;
     a.y += b.y;
+    a.z += b.z;
     return a;
 }
 
@@ -40,7 +41,7 @@ __device__ float4 operator/(const float4& v, float s) {
     return make_float4(
         v.x / s,
         v.y / s,
-        0.0f,
+        v.z / s,
         0.0f
     );
 }
@@ -49,7 +50,7 @@ __device__ float4 operator*(float s, const float4& v) {
     return make_float4(
         v.x * s,
         v.y * s,
-        0.0f,
+        v.z * s,
         0.0f
     );
 }
@@ -57,42 +58,47 @@ __device__ float4 operator*(float s, const float4& v) {
 
 // --- Kernels ---
 #pragma region Kernels
-__device__ float poly6Kernel2D(float2 dist, float h) {
-    float r2 = dist.x * dist.x + dist.y * dist.y;
+__device__ float poly6Kernel(float4 dist, float h) {
+    float r2 = dist.x * dist.x + dist.y * dist.y + dist.z * dist.z;
     float h2 = h * h;
 
     if (r2 <= h2) {
         float x = h2 - r2;
-        float h8 = h2 * h2 * h2 * h2;
-        return 4.0f / (CUDART_PI_F * h8) * x * x * x;
+        float h9 = h2 * h2 * h2 * h2 * h;
+        return 315.0f / (64.0f * CUDART_PI_F * h9) * x * x * x;
     }
 
     return 0.0f;
 }
 
-__device__ float4 poly6Kernel2DGradient(float4 dist, float h) {
-    float r2 = dist.x * dist.x + dist.y * dist.y;
+__device__ float4 poly6KernelGradient(float4 dist, float h) {
+    float r2 = dist.x * dist.x + dist.y * dist.y + dist.z * dist.z;
     float h2 = h * h;
 
-    if (r2 > 0 && r2 < h2) {
+    if (r2 < h2) {
         float x = h2 - r2;
-        float h8 = h2 * h2 * h2 * h2;
-        float factor = (-24.0f / (CUDART_PI_F * h8)) * x * x;
-        return make_float4(factor * dist.x, factor * dist.y, 0.0f, 0.0f);
+        float h9 = h2 * h2 * h2 * h2 * h;
+        float factor = (-945.0f / (32.0f * CUDART_PI_F * h9)) * x * x;
+        return make_float4(
+            factor * dist.x,
+            factor * dist.y,
+            factor * dist.z,
+            0.0
+        );
     }
 
     return make_float4(0.0, 0.0, 0.0, 0.0);
 }
 
-__device__ float poly6Kernel2DLaplacian(float4 dist, float h) {
-    float r2 = dist.x * dist.x + dist.y * dist.y;
+__device__ float poly6KernelLaplacian(float4 dist, float h) {
+    float r2 = dist.x * dist.x + dist.y * dist.y + dist.z * dist.z;
     float h2 = h * h;
 
     if (r2 < h2) {
-        float h8 = h2 * h2 * h2 * h2;
-        float term1 = 24.0f / (CUDART_PI_F * h8);
+        float h9 = h2 * h2 * h2 * h2 * h;
+        float term1 = 945.0f / (32.0f * CUDART_PI_F * h9);
         float term2 = h2 - r2;
-        float term3 = 3.0f * r2 - h2;
+        float term3 = 7.0f * r2 - 3.0f * h2;
 
         return term1 * term2 * term3;
     }
@@ -100,17 +106,17 @@ __device__ float poly6Kernel2DLaplacian(float4 dist, float h) {
     return 0.0f;
 }
 
-__device__ float4 spikyKernel2DGradient(float4 dist, float h) {
-    float r = sqrt(dist.x * dist.x + dist.y * dist.y);
+__device__ float4 spikyKernelGradient(float4 dist, float h) {
+    float r = sqrtf(dist.x * dist.x + dist.y * dist.y + dist.z * dist.z);
 
-    if (r < h) {
+    if (r > 0.0f && r < h) {
         float x = h - r;
-        float h5 = h * h * h * h * h;
-        float factor = (-30.0f / (CUDART_PI_F * h5)) * x * x;
+        float h6 = h * h * h * h * h * h;
+        float factor = (-45.0f / (CUDART_PI_F * h6)) * x * x;
         return make_float4(
             factor * (dist.x / r),
             factor * (dist.y / r),
-            0.0f,
+            factor * (dist.z / r),
             0.0f
         );
     }
@@ -118,7 +124,7 @@ __device__ float4 spikyKernel2DGradient(float4 dist, float h) {
     return make_float4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-__device__ float viscosityLaplacianKernel2D(float4 dist, float h) {
+__device__ float viscosityLaplacianKernel(float4 dist, float h) {
     float r = sqrt(dist.x * dist.x + dist.y * dist.y);
 
     if (r <= h) {
@@ -138,7 +144,7 @@ __global__ void computeCellIndexKernel(
     int* particleCellIndex,
     int* particleIndex,
     const float cellSize,
-    const int2 gridResolution
+    const int3 gridResolution
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -148,15 +154,18 @@ __global__ void computeCellIndexKernel(
     // Get cell of particle
     int gx = particles[id].position.x / cellSize;
     int gy = particles[id].position.y / cellSize;
+    int gz = particles[id].position.z / cellSize;
 
     gx = max(0, min(gx, gridResolution.x - 1));
     gy = max(0, min(gy, gridResolution.y - 1));
+    gz = max(0, min(gz, gridResolution.z - 1));
 
-    int cellIndex = gx + gy * gridResolution.x;
+    int cellIndex = gx +
+                    gy * gridResolution.x +
+                    gz * gridResolution.x * gridResolution.y;
 
     particleCellIndex[id] = cellIndex;
     particleIndex[id] = id;
-    // particles[id].properties.w = cellIndex;
 }
 
 __global__ void findCellStartEndKernel(
@@ -193,7 +202,7 @@ __global__ void densityPressureFixedGridKernel(
     const int* particleIndex,
     const int* cellStart,
     const int* cellEnd,
-    const int2 gridResolution,
+    const int3 gridResolution,
     const float h,
     const float k,
     const float p_0
@@ -208,50 +217,61 @@ __global__ void densityPressureFixedGridKernel(
 
     int gx = pos.x / h;
     int gy = pos.y / h;
+    int gz = pos.z / h;
 
     gx = max(0, min(gx, gridResolution.x - 1));
     gy = max(0, min(gy, gridResolution.y - 1));
+    gz = max(0, min(gz, gridResolution.z - 1));
 
     float density = 0.0f;
+    float h2 = h * h;
 
     // Find neighbors
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
-            int nx = gx + dx;
-            int ny = gy + dy;
+            for (int dz = -1; dz <= 1; dz++) {
+                int nx = gx + dx;
+                int ny = gy + dy;
+                int nz = gz + dz;
 
-            if (nx < 0 || ny < 0 || nx >= gridResolution.x || ny >= gridResolution.y)
-                continue;
+                if (nx < 0 || ny < 0 || nz < 0 ||
+                    nx >= gridResolution.x || ny >= gridResolution.y || nz >= gridResolution.z)
+                    continue;
 
-            int neighborCell = nx + ny * gridResolution.x;
+                int neighborCell =  nx +
+                                    ny * gridResolution.x +
+                                    nz * gridResolution.x * gridResolution.y;
 
-            int start = cellStart[neighborCell];
+                int start = cellStart[neighborCell];
 
-            // Cell with no particles
-            if (start == -1)
-                continue;
+                // Cell with no particles
+                if (start == -1)
+                    continue;
 
-            int end = cellEnd[neighborCell];
+                int end = cellEnd[neighborCell];
 
-            for (int j = start ; j < end; j++) {
-                int pj = particleIndex[j];
+                for (int j = start ; j < end; j++) {
+                    int pj = particleIndex[j];
 
-                const float2 diff = make_float2(
-                    pos.x - particles[pj].position.x,
-                    pos.y - particles[pj].position.y
-                );
+                    const float4 diff = make_float4(
+                        pos.x - particles[pj].position.x,
+                        pos.y - particles[pj].position.y,
+                        pos.z - particles[pj].position.z,
+                        0.0f
+                    );
 
-                // Check if within radius
-                float distSq = diff.x * diff.x + diff.y * diff.y;
-                if (distSq < h * h) {
-                    density += particles[pj].properties.x * poly6Kernel2D(diff, h);
+                    // Check if within radius
+                    float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
+                    if (distSq < h2) {
+                        density += particles[pj].properties.x * poly6Kernel(diff, h);
+                    }
                 }
             }
         }
     }
 
     particles[pi].properties.y = density;
-    particles[pi].properties.z = k * (density - p_0);     // Check if allowed to max here
+    particles[pi].properties.z = k * (density - p_0);
     // particles[pi].properties.z = max(k * (density - p_0), 0.0);     // Check if allowed to max here
 }
 
@@ -261,7 +281,7 @@ __global__ void sphForcesFixedGridKernel(
     const int* particleIndex,
     const int* cellStart,
     const int* cellEnd,
-    const int2 gridResolution,
+    const int3 gridResolution,
     const float h,
     const float mu,
     const float tensionThreshold,
@@ -279,9 +299,11 @@ __global__ void sphForcesFixedGridKernel(
 
     int gx = pos.x / h;
     int gy = pos.y / h;
+    int gz = pos.z / h;
 
     gx = max(0, min(gx, gridResolution.x - 1));
     gy = max(0, min(gy, gridResolution.y - 1));
+    gz = max(0, min(gz, gridResolution.z - 1));
 
     particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -290,56 +312,63 @@ __global__ void sphForcesFixedGridKernel(
     float4 n = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     float c = 0.0f;
 
+    float h2 = h * h;
+
     // Find neighbors
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
-            int nx = gx + dx;
-            int ny = gy + dy;
+            for (int dz = -1; dz <= 1; dz++) {
+                int nx = gx + dx;
+                int ny = gy + dy;
+                int nz = gz + dz;
 
-            if (nx < 0 || ny < 0 || nx >= gridResolution.x || ny >= gridResolution.y)
-                continue;
-
-            int neighborCell = nx + ny * gridResolution.x;
-
-            int start = cellStart[neighborCell];
-
-            // Cell with no particles
-            if (start == -1)
-                continue;
-
-            int end = cellEnd[neighborCell];
-
-            for (int j = start ; j < end; j++) {
-                int pj = particleIndex[j];
-
-                // Skip self
-                if (pi == pj)
+                if (nx < 0 || ny < 0 || nz < 0 ||
+                    nx >= gridResolution.x || ny >= gridResolution.y || nz >= gridResolution.z)
                     continue;
 
-                const float4 diff = make_float4(
-                    pos.x - particles[pj].position.x,
-                    pos.y - particles[pj].position.y,
-                    0.0f, 0.0f
-                );
+                int neighborCell =  nx +
+                                    ny * gridResolution.x +
+                                    nz * gridResolution.x * gridResolution.y;
 
-                // Check if within radius
-                float distSq = diff.x * diff.x + diff.y * diff.y;
-                if (distSq < h * h) {
-                    ParticleGPU* other = &particles[pj];
+                int start = cellStart[neighborCell];
 
-                    // Pressure
-                    const float scalar = other->properties.x * ((particle->properties.z + other->properties.z) / (2.0f * other->properties.y));
-                    particle->pressureForce += scalar * spikyKernel2DGradient(diff, h);
+                // Cell with no particles
+                if (start == -1)
+                    continue;
 
-                    // Viscosity
-                    const float4 viscTerm = other->properties.x * ((other->velocity - particle->velocity) / other->properties.y);
-                    particle->viscosityForce += viscosityLaplacianKernel2D(diff, h) * viscTerm;
+                int end = cellEnd[neighborCell];
 
-                    // Surface tension
-                    n += other->properties.x * (1.0f / other->properties.y) * poly6Kernel2DGradient(diff, h);
-                    // n += other->properties.x * (1.0f / other->properties.y) * spikyKernel2DGradient(diff, h);
-                    c += other->properties.x * (1.0f / other->properties.y) * poly6Kernel2DLaplacian(diff, h);
-                    // c += other->properties.x * (1.0f / other->properties.y) * viscosityLaplacianKernel2D(diff, h);
+                for (int j = start ; j < end; j++) {
+                    int pj = particleIndex[j];
+
+                    // Skip self
+                    if (pi == pj)
+                        continue;
+
+                    const float4 diff = make_float4(
+                        pos.x - particles[pj].position.x,
+                        pos.y - particles[pj].position.y,
+                        pos.z - particles[pj].position.z,
+                        0.0f
+                    );
+
+                    // Check if within radius
+                    float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
+                    if (distSq < h2) {
+                        ParticleGPU* other = &particles[pj];
+
+                        // Pressure
+                        const float scalar = other->properties.x * ((particle->properties.z + other->properties.z) / (2.0f * other->properties.y));
+                        particle->pressureForce += scalar * spikyKernelGradient(diff, h);
+
+                        // Viscosity
+                        const float4 viscTerm = other->properties.x * ((other->velocity - particle->velocity) / other->properties.y);
+                        particle->viscosityForce += viscosityLaplacianKernel(diff, h) * viscTerm;
+
+                        // Surface tension
+                        n += other->properties.x * (1.0f / other->properties.y) * poly6KernelGradient(diff, h);
+                        c += other->properties.x * (1.0f / other->properties.y) * poly6KernelLaplacian(diff, h);
+                    }
                 }
             }
         }
@@ -349,7 +378,7 @@ __global__ void sphForcesFixedGridKernel(
     particle->viscosityForce = mu * particle->viscosityForce;
     particle->debugging.x = 0.0f;
 
-    float lenN = sqrtf(n.x * n.x + n.y * n.y);
+    float lenN = sqrtf(n.x * n.x + n.y * n.y + n.z * n.z);
     if (lenN > tensionThreshold) {
         float4 normalizedN = n / (lenN + 1e-6f);
         particle->surfaceTensionForce = -1.0f * tension * c * normalizedN;
@@ -391,10 +420,9 @@ __global__ void updateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
     const float deltaTime,
-    const float xMin,
-    const float xMax,
-    const float yMin,
-    const float yMax,
+    const float2 x,
+    const float2 y,
+    const float2 z,
     const float gravity
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -413,24 +441,34 @@ __global__ void updateParticlesKernel(
     particle->velocity += (0.5f * deltaTime) * acceleration;
 
     // Simple boundaries
-    if (particle->position.x < xMin) {
-        particle->position.x = xMin;
+    if (particle->position.x < x.x) {
+        particle->position.x = x.x;
         particle->velocity.x *= -1.0f;
     }
 
-    if (particle->position.x > xMax) {
-        particle->position.x = xMax;
+    if (particle->position.x > x.y) {
+        particle->position.x = x.y;
         particle->velocity.x *= -1.0f;
     }
 
-    if (particle->position.y < yMin) {
-        particle->position.y = yMin;
+    if (particle->position.y < y.x) {
+        particle->position.y = y.x;
         particle->velocity.y *= -1.0f;
     }
 
-    if (particle->position.y > yMax) {
-        particle->position.y = yMax;
+    if (particle->position.y > y.y) {
+        particle->position.y = y.y;
         particle->velocity.y *= -1.0f;
+    }
+
+    if (particle->position.z < z.x) {
+        particle->position.z = z.x;
+        particle->velocity.z *= -1.0f;
+    }
+
+    if (particle->position.z > z.y) {
+        particle->position.z = z.y;
+        particle->velocity.z *= -1.0f;
     }
 }
 
@@ -453,11 +491,11 @@ __global__ void resetParticlesKernel(
 #pragma region Launchers
 void launchComputeCellIndexKernel(
     const int numParticles,
-    ParticleGPU* particles,
+    const ParticleGPU* particles,
     int* particleCellIndex,
     int* particleIndex,
     const float cellSize,
-    const int2 gridResolution
+    const int3 gridResolution
 ) {
     int threadsPerBlock = 256;
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
@@ -500,7 +538,7 @@ void launchDensityPressureFixedGridKernel(
     const int* particleIndex,
     const int* cellStart,
     const int* cellEnd,
-    const int2 gridResolution,
+    const int3 gridResolution,
     const float h,
     const float k,
     const float p_0
@@ -519,7 +557,7 @@ void launchSphForcesFixedGridKernel(
     const int* particleIndex,
     const int* cellStart,
     const int* cellEnd,
-    const int2 gridResolution,
+    const int3 gridResolution,
     const float h,
     const float mu,
     const float tensionThreshold,
@@ -552,17 +590,16 @@ void launchUpdateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
     const float deltaTime,
-    const float xMin,
-    const float xMax,
-    const float yMin,
-    const float yMax,
+    const float2 x,
+    const float2 y,
+    const float2 z,
     const float gravity
 ) {
     int threadsPerBlock = 256;
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     updateParticlesKernel<<<blocks, threadsPerBlock>>>(
-        particles, numParticles, deltaTime, xMin, xMax, yMin, yMax, gravity
+        particles, numParticles, deltaTime, x, y, z, gravity
     );
 }
 

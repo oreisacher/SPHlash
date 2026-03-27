@@ -40,20 +40,17 @@ struct SimulationSettings {
     // Boundary
     glm::vec2 xBoundary = { 0.0, 1.0 };
     glm::vec2 yBoundary = { 0.0, 1.0 };
+    glm::vec2 zBoundary = { 0.0, 1.0 };
 };
 
 class FluidSimulationGPU {
 public:
-    FluidSimulationGPU(int particleCount, glm::vec2 x, glm::vec2 y);
+    FluidSimulationGPU(int particleCount, glm::vec2 x, glm::vec2 y, glm::vec2 z);
     ~FluidSimulationGPU();
 
     void update(float deltaTime);
 
     void reset();
-
-    void updateMousePos(float x, float y);
-    void updateMouseForceDirection(float direction);
-    void updateMouseRadius(float direction);
 
     void updateBoundaries();
     void setupVBOConnection(GLuint vbo);
@@ -63,8 +60,8 @@ public:
     SimulationSettings settings;
 
 private:
-    void initParticlesRandom(glm::vec2 x, glm::vec2 y);
-    void initParticlesGrid(glm::vec2 x, glm::vec2 y);
+    void initParticlesRandom(glm::vec2 x, glm::vec2 y, glm::vec2 z);
+    void initParticlesGrid(glm::vec2 x, glm::vec2 y, glm::vec2 z);
 
     // Fixed Grid
     int* d_particleCellIndex;
@@ -74,12 +71,10 @@ private:
 
     int gridSizeX = 1;
     int gridSizeY = 1;
+    int gridSizeZ = 1;
     int totalCells = 1;
 
     cudaGraphicsResource* particleResource;
-
-    // Boundaries
-    float width = 1, height = 1;
 
     // Mouse
     float mouseX, mouseY;
