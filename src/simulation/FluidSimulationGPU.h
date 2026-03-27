@@ -24,28 +24,27 @@ struct ParticleGPU {
     float4 debugging;
 };
 
-struct HashEntry {
-    uint32_t hash;
-    uint32_t index;
-};
-
 struct SimulationSettings {
+    // Particles
     float h = 20.0f;
     float p_0 = 1000.0f;
     float k = 0.7f;
     float mu = 0.1f;
-
-    // 8 was rather good
     float tensionThreshold = 8.0f;
     float tension = 0.001f;
 
+    // Gravity
     bool enableGravity = false;
     float gravity = -9.878;
+
+    // Boundary
+    glm::vec2 xBoundary = { 0.0, 1.0 };
+    glm::vec2 yBoundary = { 0.0, 1.0 };
 };
 
 class FluidSimulationGPU {
 public:
-    FluidSimulationGPU(int particleCount, float xMin, float yMin, float xMax, float yMax);
+    FluidSimulationGPU(int particleCount, glm::vec2 x, glm::vec2 y);
     ~FluidSimulationGPU();
 
     void update(float deltaTime);
@@ -56,7 +55,7 @@ public:
     void updateMouseForceDirection(float direction);
     void updateMouseRadius(float direction);
 
-    void updateBoundaries(float width, float height);
+    void updateBoundaries();
     void setupVBOConnection(GLuint vbo);
 
     int particleCount;
@@ -64,6 +63,9 @@ public:
     SimulationSettings settings;
 
 private:
+    void initParticlesRandom(glm::vec2 x, glm::vec2 y);
+    void initParticlesGrid(glm::vec2 x, glm::vec2 y);
+
     // Fixed Grid
     int* d_particleCellIndex;
     int* d_particleIndex;

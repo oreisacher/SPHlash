@@ -391,8 +391,10 @@ __global__ void updateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
     const float deltaTime,
-    const float width,
-    const float height,
+    const float xMin,
+    const float xMax,
+    const float yMin,
+    const float yMax,
     const float gravity
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -404,48 +406,30 @@ __global__ void updateParticlesKernel(
 
     // Update position
     const float4 force = particle->pressureForce + particle->viscosityForce + particle->surfaceTensionForce;
-    // const float4 force = particle->surfaceTensionForce;
     const float4 acceleration = force / particle->properties.y + make_float4(0.0f, gravity, 0.0f, 1.0f);
-    //
-    // if (particle->properties.y < 0.1)
-    //     printf("%f", particle->properties.y);
-
-    // if (!isfinite(particle->position.x) || !isfinite(particle->position.y)) {
-    //     printf("POS NAN at %d\n", id);
-    // }
-    //
-    // if (!isfinite(particle->velocity.x) || !isfinite(particle->velocity.y)) {
-    //     printf("VEL NAN at %d\n", id);
-    // }
-    //
-    // float lenF = sqrtf(force.x*force.x + force.y*force.y);
-    //
-    // if (!isfinite(lenF) || lenF > 1e5f) {
-    //     printf("FORCE BAD at %d | F=%f rho=%f\n", id, lenF, particle->properties.y);
-    // }
 
     particle->velocity += (0.5f * deltaTime) * acceleration;
     particle->position += deltaTime * particle->velocity;
     particle->velocity += (0.5f * deltaTime) * acceleration;
 
     // Simple boundaries
-    if (particle->position.x < 0) {
-        particle->position.x = 0;
+    if (particle->position.x < xMin) {
+        particle->position.x = xMin;
         particle->velocity.x *= -1.0f;
     }
 
-    if (particle->position.x > width) {
-        particle->position.x = width;
+    if (particle->position.x > xMax) {
+        particle->position.x = xMax;
         particle->velocity.x *= -1.0f;
     }
 
-    if (particle->position.y < 0) {
-        particle->position.y = 0;
+    if (particle->position.y < yMin) {
+        particle->position.y = yMin;
         particle->velocity.y *= -1.0f;
     }
 
-    if (particle->position.y > height) {
-        particle->position.y = height;
+    if (particle->position.y > yMax) {
+        particle->position.y = yMax;
         particle->velocity.y *= -1.0f;
     }
 }
@@ -568,15 +552,17 @@ void launchUpdateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
     const float deltaTime,
-    const float width,
-    const float height,
+    const float xMin,
+    const float xMax,
+    const float yMin,
+    const float yMax,
     const float gravity
 ) {
     int threadsPerBlock = 256;
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     updateParticlesKernel<<<blocks, threadsPerBlock>>>(
-        particles, numParticles, deltaTime, width, height, gravity
+        particles, numParticles, deltaTime, xMin, xMax, yMin, yMax, gravity
     );
 }
 

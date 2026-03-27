@@ -17,6 +17,7 @@ public:
     ~Application();
 
     void run() const;
+    void processEvents() const;
 
 private:
     FluidSimulationGPU* simulation;
@@ -25,7 +26,6 @@ private:
     UIManager* ui;
     Window* window;
 
-    Shader* shader;
     Camera* camera;
 };
 

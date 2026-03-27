@@ -8,31 +8,53 @@
 #include "Framebuffer.h"
 #include "glad/gl.h"
 #include "simulation/FluidSimulationGPU.h"
+#include "utils/Camera.h"
 
 class FluidRenderer {
 public:
     FluidRenderer(FluidSimulationGPU* simulation);
     ~FluidRenderer();
 
-    static void Init();
-
     void render() const;
 
+    void setCamera(Camera* cam);
+
+    Shader* getParticleShader() const;
+    Shader* getBoundaryShader() const;
+
+    void rebuildFrame() const;
+
+    // Framebuffer texture
     GLuint getTextureId() const;
     void setSize(int width, int height) const;
 
     GLuint getParticleVBO() const;
 
 private:
-    const FluidSimulationGPU* simulation;
+    void setupShaders();
+    void setupSphereModel();
+    void setupParticles();
+    void setupBoundaryModel();
 
-    static inline bool initialized = false;
+    FluidSimulationGPU* simulation;
+
+    Camera* camera;
+
+    Shader* particleShader;
+    Shader* boundaryShader;
 
     Framebuffer* framebuffer;
-    GLuint vao, particleVBO;
-    GLuint sphereVBO, sphereEBO;
+    GLuint vao;
 
+    // Sphere
+    GLuint sphereVBO, sphereEBO;
     int sphereIndexCount;
+
+    // Particle
+    GLuint particleVBO;
+
+    // Boundary
+    GLuint boxVAO, boxVBO, boxEBO;
 };
 
 #endif //FLUIDSIMSPH_FLUIDRENDERER_H

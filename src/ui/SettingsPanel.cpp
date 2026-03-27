@@ -9,9 +9,11 @@
 #include "imgui.h"
 #include "nlohmann/json.hpp"
 #include "ImGuiFileDialog.h"
+#include "glm/gtc/type_ptr.inl"
 #include "simulation/FluidSimulationGPU.h"
 
-SettingsPanel::SettingsPanel(const std::string& name, FluidSimulationGPU* simulation) : UIPanel(name), simulation(simulation) {
+SettingsPanel::SettingsPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer)
+    : UIPanel(name), renderer(renderer), simulation(simulation) {
     settings = &simulation->settings;
 }
 
@@ -35,6 +37,17 @@ void SettingsPanel::draw() {
     if (ImGui::CollapsingHeader("Gravity Settings")) {
         ImGui::Checkbox("Enable", &settings->enableGravity);
         ImGui::InputFloat("Gravity", &settings->gravity);
+    }
+
+    if (ImGui::CollapsingHeader("Boundary Settings")) {
+        if (ImGui::DragFloat2("X", glm::value_ptr(settings->xBoundary), 0.01f)) {
+            simulation->updateBoundaries();
+            renderer->rebuildFrame();
+        }
+        if (ImGui::DragFloat2("Y", glm::value_ptr(settings->yBoundary), 0.01f)) {
+            simulation->updateBoundaries();
+            renderer->rebuildFrame();
+        }
     }
 
     ImGui::Separator();

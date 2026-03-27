@@ -9,8 +9,8 @@
 #include "imgui.h"
 #include "simulation/FluidSimulationGPU.h"
 
-ParticlesPanel::ParticlesPanel(const std::string& name, GLuint particlesVBO, int particleCount)
-    : UIPanel(name), particlesVBO(particlesVBO), particleCount(particleCount) { }
+ParticlesPanel::ParticlesPanel(const std::string& name, GLuint particlesVBO, int particleCount, Shader* particleShader)
+    : UIPanel(name), particlesVBO(particlesVBO), particleCount(particleCount), shader(particleShader) { }
 
 void ParticlesPanel::update(double deltaTime) { }
 
@@ -18,16 +18,17 @@ void ParticlesPanel::draw() {
     if (!visible)
         return;
 
-    // Bind particle data
-
     ImGui::Begin(name.c_str());
 
     ImGui::Checkbox("Show particle info", &showParticles);
 
     if (showParticles) {
         ImGui::InputInt("Particle", &selectedParticle);
+
+        shader->bind();
         shader->setInt("selectedParticleID", selectedParticle);
 
+        // Bind particle data
         glBindBuffer(GL_ARRAY_BUFFER, particlesVBO);
         ParticleGPU* data = static_cast<ParticleGPU*>(glMapBuffer(GL_ARRAY_BUFFER, GL_READ_ONLY));
 
@@ -49,12 +50,9 @@ void ParticlesPanel::draw() {
 
         glUnmapBuffer(GL_ARRAY_BUFFER);
     } else {
+        shader->bind();
         shader->setInt("selectedParticleID", -1);
     }
 
     ImGui::End();
-}
-
-void ParticlesPanel::setShader(Shader* shader) {
-    this->shader = shader;
 }

@@ -44,14 +44,8 @@ vec3 indexToColor(float i) {
 }
 
 void main() {
-    vec2 coord = TexCoord - vec2(0.5);
-    float dist = length(coord);
-
-//    if (dist > 0.5)
-//        discard;
-
     if (selectedParticleID == ID) {
-        FragColor = vec4(1.0f);
+        FragColor = vec4(0.0f, 1.0f, 0.0f, 1.0f);
         return;
     }
 

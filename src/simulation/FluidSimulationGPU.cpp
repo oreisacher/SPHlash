@@ -14,53 +14,20 @@
 #include "cuda/FluidSimulation.h"
 #include "glad/gl.h"
 
-FluidSimulationGPU::FluidSimulationGPU(int particleCount, float xMin, float yMin, float xMax, float yMax) {
+FluidSimulationGPU::FluidSimulationGPU(int particleCount, glm::vec2 x, glm::vec2 y) {
     // Setup particles
     this->particleCount = particleCount;
     particles.resize(particleCount);
 
-    float mass = 1000.0f * (((xMax - xMin) * (yMax - yMin)) / particleCount);
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> distX(xMin, xMax);
-    std::uniform_real_distribution<float> distY(yMin, yMax);
-
-    for (int i = 0 ; i < particleCount ; i++) {
-        particles[i].position = { distX(gen), distY(gen), 0.0, 0.0 };
-        particles[i].startPosition = particles[i].position,
-        particles[i].velocity = { 0.0, 0.0, 0.0, 0.0 };
-        particles[i].properties = { mass, 0.0, 0.0, 0.0 };
-    }
-
-
-    // int gridSize = static_cast<int>(std::sqrt(particleCount));
-    // float cellWidth  = (xMax - xMin) / gridSize;
-    // float cellHeight = (yMax - yMin) / gridSize;
-    //
-    // int index = 0;
-    // for (int gx = 0; gx < gridSize; gx++) {
-    //     for (int gy = 0; gy < gridSize; gy++) {
-    //         if (index >= particleCount) break;
-    //
-    //         float x = xMin + gx * cellWidth  + cellWidth  * 0.5f;
-    //         float y = yMin + gy * cellHeight + cellHeight * 0.5f;
-    //
-    //         particles[index].position = { x, y, 0.0, 0.0 };
-    //         std::cout << x << " " << y << std::endl;
-    //         particles[index].startPosition = particles[index].position;
-    //         particles[index].velocity = { 0.0, 0.0, 0.0, 0.0 };
-    //         particles[index].properties = { mass, 0.0, 0.0, 0.0 };
-    //
-    //         index++;
-    //     }
-    // }
+    // Init particle data
+    initParticlesRandom(x, y);
+    // initParticlesGrid(x, y);
 
     // Determine h
-    float avgSpacing = std::sqrt(((xMax - xMin) * (yMax - yMin)) / (particleCount));
+    float avgSpacing = std::sqrt(((x.y - x.x) * (y.y - y.x)) / particleCount);
     settings.h = 5.0f * avgSpacing;
 
-    updateBoundaries(1.0, 1.0f);
+    updateBoundaries();
 
     // Setup hash data
     cudaMalloc(reinterpret_cast<void**>(&d_particleCellIndex), particleCount * sizeof(int));
@@ -87,7 +54,6 @@ void FluidSimulationGPU::update(const float deltaTime) {
     cudaMemset(d_cellStart, -1, totalCells * sizeof(int));
     cudaMemset(d_cellEnd,   -1, totalCells * sizeof(int));
 
-    // --- Fixed Grid ---
     nvtxRangePush("CellIndices");
     launchComputeCellIndexKernel(
         particleCount,
@@ -160,8 +126,10 @@ void FluidSimulationGPU::update(const float deltaTime) {
         d_particles,
         particleCount,
         deltaTime,
-        width,
-        height,
+        settings.xBoundary.x,
+        settings.xBoundary.y,
+        settings.yBoundary.x,
+        settings.yBoundary.y,
         settings.enableGravity ? settings.gravity : 0.0f
     );
     nvtxRangePop();
@@ -194,9 +162,9 @@ void FluidSimulationGPU::updateMouseRadius(float direction) {
     this->mouseRadius += 0.01f * direction;
 }
 
-void FluidSimulationGPU::updateBoundaries(float width, float height) {
-    this->width = width;
-    this->height = height;
+void FluidSimulationGPU::updateBoundaries() {
+    width = settings.xBoundary.y - settings.xBoundary.x;
+    height = settings.yBoundary.y - settings.yBoundary.x;
 
     // Recompute grid resolution
     gridSizeX = std::ceil(width / settings.h);
@@ -218,4 +186,46 @@ void FluidSimulationGPU::setupVBOConnection(const GLuint vbo) {
         vbo,
         cudaGraphicsMapFlagsWriteDiscard
     );
+}
+
+// --- Particle Inits ---
+void FluidSimulationGPU::initParticlesRandom(glm::vec2 x, glm::vec2 y) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> distX(x.x, x.y);
+    std::uniform_real_distribution<float> distY(y.x, y.y);
+
+    float mass = 1000.0f * (((x.y - x.x) * (y.y - y.x)) / particleCount);
+
+    for (int i = 0 ; i < particleCount ; i++) {
+        particles[i].position = { distX(gen), distY(gen), 0.0, 0.0 };
+        particles[i].startPosition = particles[i].position,
+        particles[i].velocity = { 0.0, 0.0, 0.0, 0.0 };
+        particles[i].properties = { mass, 0.0, 0.0, 0.0 };
+    }
+}
+
+void FluidSimulationGPU::initParticlesGrid(glm::vec2 x, glm::vec2 y) {
+    int gridSize = static_cast<int>(std::sqrt(particleCount));
+    float cellWidth  = (x.y - x.x) / gridSize;
+    float cellHeight = (y.y - y.x) / gridSize;
+
+    float mass = 1000.0f * (((x.y - x.x) * (y.y - y.x)) / particleCount);
+
+    int index = 0;
+    for (int gx = 0; gx < gridSize; gx++) {
+        for (int gy = 0; gy < gridSize; gy++) {
+            if (index >= particleCount) break;
+
+            float posX = x.x + gx * cellWidth  + cellWidth  * 0.5f;
+            float posY = y.x + gy * cellHeight + cellHeight * 0.5f;
+
+            particles[index].position = { posX, posY, 0.0, 0.0 };
+            particles[index].startPosition = particles[index].position;
+            particles[index].velocity = { 0.0, 0.0, 0.0, 0.0 };
+            particles[index].properties = { mass, 0.0, 0.0, 0.0 };
+
+            index++;
+        }
+    }
 }

@@ -66,11 +66,13 @@ void launchApplyMouseForceKernel(
 
 void launchUpdateParticlesKernel(
     ParticleGPU* particles,
-    int numParticles,
-    float deltaTime,
-    float width,
-    float height,
-    float gravity
+    const int numParticles,
+    const float deltaTime,
+    const float xMin,
+    const float xMax,
+    const float yMin,
+    const float yMax,
+    const float gravity
 );
 
 void launchResetParticlesKernel(

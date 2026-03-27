@@ -11,27 +11,124 @@
 #include "utils/Logger.h"
 #include "utils/SphereCreator.h"
 
-FluidRenderer::FluidRenderer(FluidSimulationGPU* sim) {
-    if (!initialized) {
-        LOG_ERROR("Renderer is not initialized. Call `Renderer::Init()` before use.")
-        return;
-    }
+#define PARTICLE_SIZE 0.002f
 
-    this->simulation = sim;
+FluidRenderer::FluidRenderer(FluidSimulationGPU* sim) : simulation(sim) {
+    // Setup OpenGL State
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
 
     // Setup framebuffer
     framebuffer = new Framebuffer(1, 1);
     framebuffer->addColorAttachment();
     framebuffer->addDepthBuffer();
 
-    // Create sphere
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    // Setup sphere
+    setupSphereModel();
+
+    // Setup particle
+    setupParticles();
+
+    // Setup Box
+    setupBoundaryModel();
+
+    // Setup shaders
+    setupShaders();
+}
+
+FluidRenderer::~FluidRenderer() {
+    delete framebuffer;
+    delete boundaryShader;
+}
+
+void FluidRenderer::render() const {
+    // Update shader
+    particleShader->bind();
+    particleShader->setMat4("projection", camera->getProjectionMatrix());
+    particleShader->setMat4("view", camera->getViewMatrix());
+
+    // Render into framebuffer
+    framebuffer->bind();
+    glViewport(0, 0, framebuffer->getSize().x, framebuffer->getSize().y);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Draw particles
+    glBindVertexArray(vao);
+    glDrawElementsInstanced(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0, simulation->particleCount);
+
+    // Draw bounding box
+    boundaryShader->bind();
+    boundaryShader->setMat4("projection", camera->getProjectionMatrix());
+    boundaryShader->setMat4("view", camera->getViewMatrix());
+    glBindVertexArray(boxVAO);
+    glDrawArrays(GL_LINE_LOOP, 0, 4);
+}
+
+void FluidRenderer::setCamera(Camera* cam) {
+    camera = cam;
+}
+
+Shader* FluidRenderer::getParticleShader() const {
+    return particleShader;
+}
+
+Shader* FluidRenderer::getBoundaryShader() const {
+    return boundaryShader;
+}
+
+void FluidRenderer::rebuildFrame() const {
+    float vertices[] = {
+        simulation->settings.xBoundary.x, simulation->settings.yBoundary.x, 0.0f,
+        simulation->settings.xBoundary.y, simulation->settings.yBoundary.x, 0.0f,
+        simulation->settings.xBoundary.y, simulation->settings.yBoundary.y, 0.0f,
+        simulation->settings.xBoundary.x, simulation->settings.yBoundary.y, 0.0f,
+    };
+
+    glBindBuffer(GL_ARRAY_BUFFER, boxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+}
+
+GLuint FluidRenderer::getTextureId() const {
+    return framebuffer->getColorAttachment(0);
+}
+
+void FluidRenderer::setSize(int width, int height) const {
+    auto size = framebuffer->getSize();
+    if (size.x != width || size.y != height)
+        framebuffer->resize(width, height);
+}
+
+GLuint FluidRenderer::getParticleVBO() const { return particleVBO; }
+
+void FluidRenderer::setupShaders() {
+    // Particle Shader
+    particleShader = new Shader({
+        { "assets/shaders/default.vert", Shader::VERTEX },
+        { "assets/shaders/default.frag", Shader::FRAGMENT },
+    });
+
+    particleShader->compile();
+    particleShader->bind();
+    particleShader->setFloat("size", PARTICLE_SIZE);
+
+    // Boundary Box Shader
+    boundaryShader = new Shader({
+        { "assets/shaders/box.vert", Shader::VERTEX },
+        { "assets/shaders/box.frag", Shader::FRAGMENT },
+    });
+
+    boundaryShader->compile();
+}
+
+void FluidRenderer::setupSphereModel() {
+    // Generate mesh data for sphere
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     createSphere(vertices, indices);
     sphereIndexCount = indices.size();
-
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
 
     // Vertex buffer
     glGenBuffers(1, &sphereVBO);
@@ -51,7 +148,9 @@ FluidRenderer::FluidRenderer(FluidSimulationGPU* sim) {
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
     glEnableVertexAttribArray(1);
 
-    // Setup quad VAO for particle drawing
+}
+
+void FluidRenderer::setupParticles() {
     glGenBuffers(1, &particleVBO);
     glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(ParticleGPU) * simulation->particleCount, simulation->particles.data(), GL_DYNAMIC_DRAW);
@@ -72,44 +171,16 @@ FluidRenderer::FluidRenderer(FluidSimulationGPU* sim) {
     glEnableVertexAttribArray(5);
     glVertexAttribDivisor(5, 1);
 
-    // Connect particles vbo to cuda
-    sim->setupVBOConnection(particleVBO);
+    simulation->setupVBOConnection(particleVBO);
 }
 
-FluidRenderer::~FluidRenderer() {
-    delete framebuffer;
+void FluidRenderer::setupBoundaryModel() {
+    glGenVertexArrays(1, &boxVAO);
+    glBindVertexArray(boxVAO);
+
+    glGenBuffers(1, &boxVBO);
+    rebuildFrame();
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
 }
-
-void FluidRenderer::Init() {
-    if (!gladLoadGL(glfwGetProcAddress)) {
-        LOG_FATAL("Failed to initialize GLAD");
-        return;
-    }
-
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-
-    initialized = true;
-}
-
-void FluidRenderer::render() const {
-    // Render into framebuffer
-    framebuffer->bind();
-    glViewport(0, 0, framebuffer->getSize().x, framebuffer->getSize().y);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glBindVertexArray(vao);
-    glDrawElementsInstanced(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0, simulation->particleCount);
-}
-
-GLuint FluidRenderer::getTextureId() const {
-    return framebuffer->getColorAttachment(0);
-}
-
-void FluidRenderer::setSize(int width, int height) const {
-    auto size = framebuffer->getSize();
-    if (size.x != width || size.y != height)
-        framebuffer->resize(width, height);
-}
-
-GLuint FluidRenderer::getParticleVBO() const { return particleVBO; }

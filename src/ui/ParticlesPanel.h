@@ -11,12 +11,10 @@
 
 class ParticlesPanel : public UIPanel {
 public:
-    explicit ParticlesPanel(const std::string& name, GLuint particlesVBO, int particleCount);
+    explicit ParticlesPanel(const std::string& name, GLuint particlesVBO, int particleCount, Shader* particleShader);
 
     void update(double deltaTime) override;
     void draw() override;
-
-    void setShader(Shader* shader);
 
 private:
     GLuint particlesVBO;

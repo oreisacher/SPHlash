@@ -53,12 +53,10 @@ void SimulationPanel::draw() {
         }
 
         // Scroll
-        mouseScroll = ImGui::GetIO().MouseWheel;
-
-        if (mouseScroll != 0) {
+        if (ImGui::GetIO().MouseWheel != 0) {
             events.push_back({
                 .type = PanelEvent::SCROLL,
-                .scroll = { mouseScroll }
+                .scroll = { ImGui::GetIO().MouseWheel }
             });
         }
 
@@ -133,23 +131,3 @@ void SimulationPanel::draw() {
 }
 
 std::vector<PanelEvent> SimulationPanel::getEvents() { return events; }
-
-glm::vec2 SimulationPanel::getSize() const { return viewportSize; }
-bool SimulationPanel::wasResized() const { return resized; }
-void SimulationPanel::clearResizeFlag() { resized = false; }
-
-int SimulationPanel::isMouseDown() const {
-    if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
-        return 1;
-    if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
-        return 2;
-    return 0;
-}
-
-glm::vec2 SimulationPanel::getMousePosition() const {
-    return mousePosition;
-}
-
-float SimulationPanel::getScroll() const {
-    return mouseScroll;
-}
