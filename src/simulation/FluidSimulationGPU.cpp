@@ -29,9 +29,9 @@ FluidSimulationGPU::FluidSimulationGPU(int particleCount, glm::vec2 x, glm::vec2
     float avgSpacing = std::sqrt(((x.y - x.x) * (y.y - y.x) * (z.y - z.x)) / particleCount);
     settings.h = 5.0f * avgSpacing;
 
-    updateBoundaries();
-
-    // Setup hash data
+    // Allocate memory on gpu
+    cudaMalloc(reinterpret_cast<void**>(&d_cellStart), hashTableSize * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_cellEnd), hashTableSize * sizeof(int));
     cudaMalloc(reinterpret_cast<void**>(&d_particleCellIndex1), particleCount * sizeof(int));
     cudaMalloc(reinterpret_cast<void**>(&d_particleCellIndex2), particleCount * sizeof(int));
     cudaMalloc(reinterpret_cast<void**>(&d_particleHashValue1), particleCount * sizeof(int));
@@ -181,11 +181,15 @@ void FluidSimulationGPU::update(const float deltaTime) {
     // );
     // nvtxRangePop();
 
+    // --- CFL ---
+    float maxVelocity = computeMaxVelocity(d_sorted_particles, particleCount);
+    float cfl = 0.4f * settings.h / (sqrt(settings.k) + maxVelocity + 1e-6f);
+
     nvtxRangePush("Update");
     launchUpdateParticlesKernel(
         d_sorted_particles,
         particleCount,
-        deltaTime,
+        cfl,
         { settings.xBoundary.x, settings.xBoundary.y },
         { settings.yBoundary.x, settings.yBoundary.y },
         { settings.zBoundary.x, settings.zBoundary.y },
@@ -210,31 +214,31 @@ void FluidSimulationGPU::reset() {
     cudaGraphicsUnmapResources(1, &particleResource, nullptr);
 }
 
-void FluidSimulationGPU::updateBoundaries() {
-    if (settings.h == 0.0)
-        return;
-
-    // float width = settings.xBoundary.y - settings.xBoundary.x;
-    // float height = settings.yBoundary.y - settings.yBoundary.x;
-    // float depth = settings.zBoundary.y - settings.zBoundary.x;
-    //
-    // // Recompute grid resolution
-    // gridSizeX = std::ceil(width / settings.h);
-    // gridSizeY = std::ceil(height / settings.h);
-    // gridSizeZ = std::ceil(depth / settings.h);
-    // totalCells = gridSizeX * gridSizeY * gridSizeZ;
-
-    cudaDeviceSynchronize();
-
-    cudaFree(d_cellStart);
-    cudaFree(d_cellEnd);
-
-    // cudaMalloc(reinterpret_cast<void**>(&d_cellStart), totalCells * sizeof(int));
-    // cudaMalloc(reinterpret_cast<void**>(&d_cellEnd), totalCells * sizeof(int));
-
-    cudaMalloc(reinterpret_cast<void**>(&d_cellStart), hashTableSize * sizeof(int));
-    cudaMalloc(reinterpret_cast<void**>(&d_cellEnd), hashTableSize * sizeof(int));
-}
+// void FluidSimulationGPU::updateBoundaries() {
+//     if (settings.h == 0.0)
+//         return;
+//
+//     // float width = settings.xBoundary.y - settings.xBoundary.x;
+//     // float height = settings.yBoundary.y - settings.yBoundary.x;
+//     // float depth = settings.zBoundary.y - settings.zBoundary.x;
+//     //
+//     // // Recompute grid resolution
+//     // gridSizeX = std::ceil(width / settings.h);
+//     // gridSizeY = std::ceil(height / settings.h);
+//     // gridSizeZ = std::ceil(depth / settings.h);
+//     // totalCells = gridSizeX * gridSizeY * gridSizeZ;
+//
+//     cudaDeviceSynchronize();
+//
+//     cudaFree(d_cellStart);
+//     cudaFree(d_cellEnd);
+//
+//     // cudaMalloc(reinterpret_cast<void**>(&d_cellStart), totalCells * sizeof(int));
+//     // cudaMalloc(reinterpret_cast<void**>(&d_cellEnd), totalCells * sizeof(int));
+//
+//     cudaMalloc(reinterpret_cast<void**>(&d_cellStart), hashTableSize * sizeof(int));
+//     cudaMalloc(reinterpret_cast<void**>(&d_cellEnd), hashTableSize * sizeof(int));
+// }
 
 void FluidSimulationGPU::setupVBOConnection(const GLuint vbo) {
     cudaGraphicsGLRegisterBuffer(

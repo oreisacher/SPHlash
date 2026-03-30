@@ -26,14 +26,12 @@ void SettingsPanel::draw() {
     ImGui::Begin(name.c_str());
 
     if (ImGui::CollapsingHeader("Particle Settings")) {
-        if (ImGui::InputFloat("H", &settings->h)) {
-            simulation->updateBoundaries();
-        }
-        ImGui::InputFloat("P_0", &settings->p_0);
-        ImGui::InputFloat("k", &settings->k);
-        ImGui::InputFloat("mu", &settings->mu);
-        ImGui::InputFloat("Tension Threshold", &settings->tensionThreshold);
-        ImGui::InputFloat("Tension", &settings->tension);
+        ImGui::DragFloat("H", &settings->h, 0.0001, 0.0001);
+        ImGui::DragFloat("P_0", &settings->p_0, 0.001f);
+        ImGui::DragFloat("k", &settings->k, 0.001f);
+        ImGui::DragFloat("mu", &settings->mu, 0.001f);
+        ImGui::DragFloat("Tension Threshold", &settings->tensionThreshold, 0.001f);
+        ImGui::DragFloat("Tension", &settings->tension, 0.001f);
     }
 
     if (ImGui::CollapsingHeader("Gravity Settings")) {
@@ -43,15 +41,12 @@ void SettingsPanel::draw() {
 
     if (ImGui::CollapsingHeader("Boundary Settings")) {
         if (ImGui::DragFloat2("X", glm::value_ptr(settings->xBoundary), 0.01f)) {
-            simulation->updateBoundaries();
             renderer->rebuildBoundaryBox();
         }
         if (ImGui::DragFloat2("Y", glm::value_ptr(settings->yBoundary), 0.01f)) {
-            simulation->updateBoundaries();
             renderer->rebuildBoundaryBox();
         }
         if (ImGui::DragFloat2("Z", glm::value_ptr(settings->zBoundary), 0.01f)) {
-            simulation->updateBoundaries();
             renderer->rebuildBoundaryBox();
         }
     }

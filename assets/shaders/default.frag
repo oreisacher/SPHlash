@@ -49,10 +49,10 @@ void main() {
         return;
     }
 
-    if (Debugging.x > 0.0f) {
-        FragColor = vec4(1.0);
-        return;
-    }
+//    if (Debugging.x > 0.0f) {
+//        FragColor = vec4(1.0);
+//        return;
+//    }
 
     float maxSpeed = 1.0f;
     float speed = length(Velocity);

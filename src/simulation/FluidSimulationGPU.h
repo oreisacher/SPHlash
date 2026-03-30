@@ -52,7 +52,7 @@ public:
 
     void reset();
 
-    void updateBoundaries();
+    // void updateBoundaries();
     void setupVBOConnection(GLuint vbo);
 
     int particleCount;

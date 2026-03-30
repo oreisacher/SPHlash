@@ -1,4 +1,5 @@
 #include "FluidSimulation.h"
+#include "simulation/FluidSimulation.h"
 
 #include <complex>
 
@@ -345,8 +346,6 @@ __global__ void densityPressureHashKernel(
     if (id >= numParticles)
         return;
 
-    // int pi = particleIndex[id];
-    // float4 pos = particles[pi].position;
     float4 pos = particles[id].position;
 
     const int gx = floorf(pos.x / h);
@@ -371,19 +370,13 @@ __global__ void densityPressureHashKernel(
                 int end = cellEnd[neighborHash];
 
                 for (int j = start ; j < end; j++) {
-                    // int pj = particleIndex[j];
-
-                    const float4 diff = make_float4(
-                        pos.x - particles[j].position.x,
-                        pos.y - particles[j].position.y,
-                        pos.z - particles[j].position.z,
-                        0.0f
-                    );
+                    const ParticleGPU other = particles[j];
+                    const float4 diff = pos - other.position;
 
                     // Check if within radius
                     float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
                     if (distSq < h2) {
-                        density += particles[j].properties.x * poly6Kernel(diff, h);
+                        density += other.properties.x * poly6Kernel(diff, h);
                     }
                 }
             }
@@ -555,37 +548,29 @@ __global__ void sphForcesHashKernel(
                 int end = cellEnd[neighborHash];
 
                 for (int j = start ; j < end; j++) {
-                    // int pj = particleIndex[j];
-
                     // Skip self
                     if (id == j)
                         continue;
 
-                    const float4 diff = make_float4(
-                        pos.x - particles[j].position.x,
-                        pos.y - particles[j].position.y,
-                        pos.z - particles[j].position.z,
-                        0.0f
-                    );
+                    const ParticleGPU other = particles[j];
+                    const float4 diff = pos - other.position;
 
                     // Check if within radius
                     float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
                     if (distSq < h2) {
-                        ParticleGPU* other = &particles[j];
-
-                        float invDensity = 1.0f / (other->properties.y + 1e-6f);
+                        float invDensity = 1.0f / (other.properties.y + 1e-6f);
 
                         // Pressure
-                        const float scalar = other->properties.x * (particle->properties.z + other->properties.z) * 0.5f * invDensity;
+                        const float scalar = other.properties.x * (particle->properties.z + other.properties.z) * 0.5f * invDensity;
                         particle->pressureForce += scalar * spikyKernelGradient(diff, h);
 
                         // Viscosity
-                        const float4 viscTerm = other->properties.x * (other->velocity - particle->velocity) * invDensity;
+                        const float4 viscTerm = other.properties.x * (other.velocity - particle->velocity) * invDensity;
                         particle->viscosityForce += viscosityLaplacianKernel(diff, h) * viscTerm;
 
                         // Surface tension
-                        n += other->properties.x * invDensity * poly6KernelGradient(diff, h);
-                        c += other->properties.x * invDensity * poly6KernelLaplacian(diff, h);
+                        n += other.properties.x * invDensity * poly6KernelGradient(diff, h);
+                        c += other.properties.x * invDensity * poly6KernelLaplacian(diff, h);
                     }
                 }
             }
@@ -604,34 +589,64 @@ __global__ void sphForcesHashKernel(
     }
 }
 
-__global__ void applyMouseForceKernel(
-    const int numParticles,
+// __global__ void applyMouseForceKernel(
+//     const int numParticles,
+//     ParticleGPU* particles,
+//     const float2 mousePosition,
+//     const float mouseRadius,
+//     const float mouseForceDirection
+// ) {
+//     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+//
+//     if (id >= numParticles)
+//         return;
+//
+//     ParticleGPU* particle = &particles[id];
+//
+//     const float4 dir = make_float4(
+//         particle->position.x - mousePosition.x,
+//         particle->position.y - mousePosition.y,
+//         0.0f, 0.0f
+//     );
+//
+//     const float len2 = dir.x * dir.x + dir.y * dir.y;
+//
+//     if (len2 < mouseRadius * mouseRadius) {
+//         const float len = sqrtf(len2);
+//         const float4 forceDir = (len > 0.0001f) ? dir / len : make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+//         const float falloff = 1.0f - (len / mouseRadius);
+//         particle->velocity += mouseForceDirection * mouseRadius * falloff * forceDir;
+//     }
+// }
+
+struct VelocitySq {
+    __host__ __device__
+    float operator()(const ParticleGPU& p) const
+    {
+        return p.velocity.x * p.velocity.x +
+               p.velocity.y * p.velocity.y +
+               p.velocity.z * p.velocity.z;
+    }
+};
+
+float computeMaxVelocity(
     ParticleGPU* particles,
-    const float2 mousePosition,
-    const float mouseRadius,
-    const float mouseForceDirection
+    int numParticles
 ) {
-    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+    thrust::device_ptr<ParticleGPU> begin(particles);
+    thrust::device_ptr<ParticleGPU> end(particles + numParticles);
 
-    if (id >= numParticles)
-        return;
+    VelocitySq op;
 
-    ParticleGPU* particle = &particles[id];
-
-    const float4 dir = make_float4(
-        particle->position.x - mousePosition.x,
-        particle->position.y - mousePosition.y,
-        0.0f, 0.0f
+    float maxVal = thrust::transform_reduce(
+        begin,
+        end,
+        op,
+        0.0f,
+        thrust::maximum<float>()
     );
 
-    const float len2 = dir.x * dir.x + dir.y * dir.y;
-
-    if (len2 < mouseRadius * mouseRadius) {
-        const float len = sqrtf(len2);
-        const float4 forceDir = (len > 0.0001f) ? dir / len : make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-        const float falloff = 1.0f - (len / mouseRadius);
-        particle->velocity += mouseForceDirection * mouseRadius * falloff * forceDir;
-    }
+    return sqrtf(maxVal);
 }
 
 __global__ void updateParticlesKernel(
@@ -878,20 +893,20 @@ void launchSphForcesHashKernel(
     );
 }
 
-void launchApplyMouseForceKernel(
-    const int numParticles,
-    ParticleGPU* particles,
-    const float2 mousePosition,
-    const float mouseRadius,
-    const float mouseForceDirection
-) {
-    int threadsPerBlock = 256;
-    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
-
-    applyMouseForceKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, mousePosition, mouseRadius, mouseForceDirection
-    );
-}
+// void launchApplyMouseForceKernel(
+//     const int numParticles,
+//     ParticleGPU* particles,
+//     const float2 mousePosition,
+//     const float mouseRadius,
+//     const float mouseForceDirection
+// ) {
+//     int threadsPerBlock = 256;
+//     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
+//
+//     applyMouseForceKernel<<<blocks, threadsPerBlock>>>(
+//         numParticles, particles, mousePosition, mouseRadius, mouseForceDirection
+//     );
+// }
 
 void launchUpdateParticlesKernel(
     ParticleGPU* particles,

@@ -37,6 +37,11 @@ void sortIndicesByCellId(
     int* particleIndex2
 );
 
+float computeMaxVelocity(
+    ParticleGPU* particles,
+    int numParticles
+);
+
 void queryCubRadixBytes(
     const int numParticles,
     size_t &sortTempStorageBytes,
@@ -110,13 +115,13 @@ void launchSphForcesHashKernel(
     const float tension
 );
 
-void launchApplyMouseForceKernel(
-    const int numParticles,
-    ParticleGPU* particles,
-    const float2 mousePosition,
-    const float mouseRadius,
-    const float mouseForceDirection
-);
+// void launchApplyMouseForceKernel(
+//     const int numParticles,
+//     ParticleGPU* particles,
+//     const float2 mousePosition,
+//     const float mouseRadius,
+//     const float mouseForceDirection
+// );
 
 void launchUpdateParticlesKernel(
     ParticleGPU* particles,
