@@ -21,7 +21,7 @@
 #define WINDOW_SIZE_X 1000
 #define WINDOW_SIZE_Y 600
 #define SIM_UNITS_PER_PIXEL (1.0 / 600)
-#define PARTICLES 50000
+#define PARTICLES 200000
 
 Application::Application() {
     // Window creation
@@ -67,8 +67,8 @@ void Application::run() const {
         // simulation.update(Motor::Time.getDeltaTime());
         // simulation.update(0.016);  // Force 60 fps
         // simGPU.update(0.008333333); // Force 120 fps
-        simulation->update(0.008);
-        // simulation->update(0.000/5);
+        simulation->update(0.0005);
+        // simulation->update(0.0005);
         // simulation->update(0.0005);
         // simulation->update(0.0005);
 

@@ -507,14 +507,34 @@ void launchComputeCellIndexKernel(
 
 void sortIndicesByCellId(
     const int numParticles,
-    int* particleCellIndex,
-    int* particleIndex
+    void* sortTempStorage,
+    size_t sortTempStorageBytes,
+    int* particleCellIndex1,
+    int* particleCellIndex2,
+    int* particleIndex1,
+    int* particleIndex2
 ) {
-    thrust::sort_by_key(
-        thrust::device,
-        particleCellIndex,
-        particleCellIndex + numParticles,
-        particleIndex
+    cub::DeviceRadixSort::SortPairs(
+        sortTempStorage,
+        sortTempStorageBytes,
+        particleCellIndex1, particleCellIndex2,
+        particleIndex1, particleIndex2, numParticles
+    );
+}
+
+void queryCubRadixBytes(
+    const int numParticles,
+    size_t &sortTempStorageBytes,
+    int* particleCellIndex1,
+    int* particleCellIndex2,
+    int* particleIndex1,
+    int* particleIndex2
+) {
+    cub::DeviceRadixSort::SortPairs(
+        nullptr,
+        sortTempStorageBytes,
+        particleCellIndex1, particleCellIndex2,
+        particleIndex1, particleIndex2, numParticles
     );
 }
 

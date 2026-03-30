@@ -20,8 +20,21 @@ void launchComputeCellIndexKernel(
 
 void sortIndicesByCellId(
     const int numParticles,
-    int* particleCellIndex,
-    int* particleIndex
+    void* sortTempStorage,
+    size_t sortTempStorageBytes,
+    int* particleCellIndex1,
+    int* particleCellIndex2,
+    int* particleIndex1,
+    int* particleIndex2
+);
+
+void queryCubRadixBytes(
+    const int numParticles,
+    size_t &sortTempStorageBytes,
+    int* particleCellIndex1,
+    int* particleCellIndex2,
+    int* particleIndex1,
+    int* particleIndex2
 );
 
 void launchFindCellStartEndKernel(

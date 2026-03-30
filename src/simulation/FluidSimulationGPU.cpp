@@ -4,6 +4,7 @@
 
 #include "FluidSimulationGPU.h"
 
+#include <algorithm>
 #include <cuda_runtime_api.h>
 #include <cuda_gl_interop.h>
 #include <iostream>
@@ -15,6 +16,8 @@
 #include "glad/gl.h"
 
 FluidSimulationGPU::FluidSimulationGPU(int particleCount, glm::vec2 x, glm::vec2 y, glm::vec2 z) {
+    cudaSetDevice(0);
+
     // Setup particles
     this->particleCount = particleCount;
     particles.resize(particleCount);
@@ -30,13 +33,17 @@ FluidSimulationGPU::FluidSimulationGPU(int particleCount, glm::vec2 x, glm::vec2
     updateBoundaries();
 
     // Setup hash data
-    cudaMalloc(reinterpret_cast<void**>(&d_particleCellIndex), particleCount * sizeof(int));
-    cudaMalloc(reinterpret_cast<void**>(&d_particleIndex), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_particleCellIndex1), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_particleCellIndex2), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_particleIndex1), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_particleIndex2), particleCount * sizeof(int));
 }
 
 FluidSimulationGPU::~FluidSimulationGPU() {
-    cudaFree(d_particleCellIndex);
-    cudaFree(d_particleIndex);
+    cudaFree(d_particleCellIndex1);
+    cudaFree(d_particleCellIndex2);
+    cudaFree(d_particleIndex1);
+    cudaFree(d_particleIndex2);
     cudaFree(d_cellStart);
     cudaFree(d_cellEnd);
 }
@@ -58,8 +65,8 @@ void FluidSimulationGPU::update(const float deltaTime) {
     launchComputeCellIndexKernel(
         particleCount,
         d_particles,
-        d_particleCellIndex,
-        d_particleIndex,
+        d_particleCellIndex1,
+        d_particleIndex1,
         settings.h,
         { gridSizeX, gridSizeY, gridSizeZ }
     );
@@ -68,15 +75,19 @@ void FluidSimulationGPU::update(const float deltaTime) {
     nvtxRangePush("Sort Cells");
     sortIndicesByCellId(
         particleCount,
-        d_particleCellIndex,
-        d_particleIndex
+        d_sortTempStorage,
+        sortTempStorageBytes,
+        d_particleCellIndex1,
+        d_particleCellIndex2,
+        d_particleIndex1,
+        d_particleIndex2
     );
     nvtxRangePop();
 
     nvtxRangePush("Cell Start End");
     launchFindCellStartEndKernel(
         particleCount,
-        d_particleCellIndex,
+        d_particleCellIndex2,
         d_cellStart,
         d_cellEnd
     );
@@ -86,7 +97,7 @@ void FluidSimulationGPU::update(const float deltaTime) {
     launchDensityPressureFixedGridKernel(
         particleCount,
         d_particles,
-        d_particleIndex,
+        d_particleIndex2,
         d_cellStart,
         d_cellEnd,
         { gridSizeX, gridSizeY, gridSizeZ },
@@ -100,7 +111,7 @@ void FluidSimulationGPU::update(const float deltaTime) {
     launchSphForcesFixedGridKernel(
         particleCount,
         d_particles,
-        d_particleIndex,
+        d_particleIndex2,
         d_cellStart,
         d_cellEnd,
         { gridSizeX, gridSizeY, gridSizeZ },
@@ -162,6 +173,8 @@ void FluidSimulationGPU::updateBoundaries() {
     gridSizeZ = std::ceil(depth / settings.h);
     totalCells = gridSizeX * gridSizeY * gridSizeZ;
 
+    std::cout << totalCells << std::endl;
+
     cudaDeviceSynchronize();
 
     cudaFree(d_cellStart);
@@ -169,13 +182,25 @@ void FluidSimulationGPU::updateBoundaries() {
 
     cudaMalloc(reinterpret_cast<void**>(&d_cellStart), totalCells * sizeof(int));
     cudaMalloc(reinterpret_cast<void**>(&d_cellEnd), totalCells * sizeof(int));
+
+    queryCubRadixBytes(
+        particleCount,
+        sortTempStorageBytes,
+        d_particleCellIndex1,
+        d_particleCellIndex2,
+        d_particleIndex1,
+        d_particleIndex2
+    );
+
+    cudaFree(d_sortTempStorage);
+    cudaMalloc(&d_sortTempStorage, sortTempStorageBytes);
 }
 
 void FluidSimulationGPU::setupVBOConnection(const GLuint vbo) {
     cudaGraphicsGLRegisterBuffer(
         &particleResource,
         vbo,
-        cudaGraphicsMapFlagsWriteDiscard
+        cudaGraphicsRegisterFlagsWriteDiscard
     );
 }
 

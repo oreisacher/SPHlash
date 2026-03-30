@@ -191,6 +191,7 @@ void FluidRenderer::setupParticles() {
     glEnableVertexAttribArray(5);
     glVertexAttribDivisor(5, 1);
 
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     simulation->setupVBOConnection(particleVBO);
 }
 

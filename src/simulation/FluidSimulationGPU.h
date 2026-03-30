@@ -63,11 +63,16 @@ private:
     void initParticlesRandom(glm::vec2 x, glm::vec2 y, glm::vec2 z);
     void initParticlesGrid(glm::vec2 x, glm::vec2 y, glm::vec2 z);
 
-    // Fixed Grid
-    int* d_particleCellIndex;
-    int* d_particleIndex;
-    int* d_cellStart;
-    int* d_cellEnd;
+    // Device pointers
+    int* d_particleCellIndex1   = nullptr;
+    int* d_particleCellIndex2   = nullptr;
+    int* d_particleIndex1       = nullptr;
+    int* d_particleIndex2       = nullptr;
+    int* d_cellStart            = nullptr;
+    int* d_cellEnd              = nullptr;
+
+    void* d_sortTempStorage     = nullptr;
+    size_t sortTempStorageBytes = 0;
 
     int gridSizeX = 1;
     int gridSizeY = 1;
