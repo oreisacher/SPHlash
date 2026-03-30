@@ -56,6 +56,8 @@ public:
     void setupVBOConnection(GLuint vbo);
 
     int particleCount;
+    int hashTableSize;
+
     std::vector<ParticleGPU> particles;
     SimulationSettings settings;
 
@@ -63,9 +65,17 @@ private:
     void initParticlesRandom(glm::vec2 x, glm::vec2 y, glm::vec2 z);
     void initParticlesGrid(glm::vec2 x, glm::vec2 y, glm::vec2 z);
 
-    // Device pointers
+    ParticleGPU* d_sorted_particles = nullptr;
+
+    // --- Fixed Grid ---
     int* d_particleCellIndex1   = nullptr;
     int* d_particleCellIndex2   = nullptr;
+
+    // --- Spatial Hashing ---
+    int* d_particleHashValue1   = nullptr;
+    int* d_particleHashValue2   = nullptr;
+
+    // --- Common ---
     int* d_particleIndex1       = nullptr;
     int* d_particleIndex2       = nullptr;
     int* d_cellStart            = nullptr;

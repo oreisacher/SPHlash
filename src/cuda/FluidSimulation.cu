@@ -54,6 +54,15 @@ __device__ float4 operator*(float s, const float4& v) {
         0.0f
     );
 }
+
+__device__ float4 operator*(const float4& v, float s) {
+    return make_float4(
+        v.x * s,
+        v.y * s,
+        v.z * s,
+        0.0f
+    );
+}
 #pragma endregion
 
 // --- Kernels ---
@@ -138,6 +147,16 @@ __device__ float viscosityLaplacianKernel(float4 dist, float h) {
 
 // --- Simulation Steps ---
 #pragma region SimulationSteps
+__device__ int computeSpatialHash(int gx, int gy, int gz, int hashTableSize) {
+    const int p1 = 73856093;
+    const int p2 = 19349663;
+    const int p3 = 83492791;
+
+    int hash = (gx * p1) ^ (gy * p2) ^ (gz * p3);
+
+    return abs(hash) % hashTableSize;
+}
+
 __global__ void computeCellIndexKernel(
     const int numParticles,
     const ParticleGPU* particles,
@@ -168,6 +187,28 @@ __global__ void computeCellIndexKernel(
     particleIndex[id] = id;
 }
 
+__global__ void computeCellIndexHashKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    int* particleHashValue,
+    int* particleIndex,
+    const float h,
+    const int hashTableSize
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (id >= numParticles)
+        return;
+
+    // Get cell of particle
+    int gx = floor(particles[id].position.x / h);
+    int gy = floor(particles[id].position.y / h);
+    int gz = floor(particles[id].position.z / h);
+
+    particleHashValue[id] = computeSpatialHash(gx, gy, gz, hashTableSize);
+    particleIndex[id] = id;
+}
+
 __global__ void findCellStartEndKernel(
     const int numParticles,
     const int* particleCellIndex,
@@ -194,6 +235,19 @@ __global__ void findCellStartEndKernel(
     if (id == numParticles - 1) {
         cellEnd[cell] = id + 1;
     }
+}
+
+__global__ void reorderParticlesKernel(
+    const int numParticles,
+    const int* particleIndex,
+    const ParticleGPU* particles,
+    ParticleGPU* sortedParticles
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+    if (id >= numParticles) return;
+
+    // Move particle to its sorted index
+    sortedParticles[id] = particles[particleIndex[id]];
 }
 
 __global__ void densityPressureFixedGridKernel(
@@ -273,6 +327,71 @@ __global__ void densityPressureFixedGridKernel(
     particles[pi].properties.y = density;
     particles[pi].properties.z = k * (density - p_0);
     // particles[pi].properties.z = max(k * (density - p_0), 0.0);     // Check if allowed to max here
+}
+
+__global__ void densityPressureHashKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const int* particleIndex,
+    const int* cellStart,
+    const int* cellEnd,
+    const int hashTableSize,
+    const float h,
+    const float k,
+    const float p_0
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (id >= numParticles)
+        return;
+
+    // int pi = particleIndex[id];
+    // float4 pos = particles[pi].position;
+    float4 pos = particles[id].position;
+
+    const int gx = floorf(pos.x / h);
+    const int gy = floorf(pos.y / h);
+    const int gz = floorf(pos.z / h);
+
+    float density = 0.0f;
+    float h2 = h * h;
+
+    // Find neighbors
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                int neighborHash = computeSpatialHash(gx + dx, gy + dy, gz + dz, hashTableSize);
+
+                int start = cellStart[neighborHash];
+
+                // Cell with no particles
+                if (start == -1)
+                    continue;
+
+                int end = cellEnd[neighborHash];
+
+                for (int j = start ; j < end; j++) {
+                    // int pj = particleIndex[j];
+
+                    const float4 diff = make_float4(
+                        pos.x - particles[j].position.x,
+                        pos.y - particles[j].position.y,
+                        pos.z - particles[j].position.z,
+                        0.0f
+                    );
+
+                    // Check if within radius
+                    float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
+                    if (distSq < h2) {
+                        density += particles[j].properties.x * poly6Kernel(diff, h);
+                    }
+                }
+            }
+        }
+    }
+
+    particles[id].properties.y = density;
+    particles[id].properties.z = k * (density - p_0);
 }
 
 __global__ void sphForcesFixedGridKernel(
@@ -368,6 +487,105 @@ __global__ void sphForcesFixedGridKernel(
                         // Surface tension
                         n += other->properties.x * (1.0f / other->properties.y) * poly6KernelGradient(diff, h);
                         c += other->properties.x * (1.0f / other->properties.y) * poly6KernelLaplacian(diff, h);
+                    }
+                }
+            }
+        }
+    }
+
+    particle->pressureForce = -1.0f * particle->pressureForce;
+    particle->viscosityForce = mu * particle->viscosityForce;
+    particle->debugging.x = 0.0f;
+
+    float lenN = sqrtf(n.x * n.x + n.y * n.y + n.z * n.z);
+    if (lenN > tensionThreshold) {
+        float4 normalizedN = n / (lenN + 1e-6f);
+        particle->surfaceTensionForce = -1.0f * tension * c * normalizedN;
+        particle->debugging.x = lenN;
+    }
+}
+
+__global__ void sphForcesHashKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const int* particleIndex,
+    const int* cellStart,
+    const int* cellEnd,
+    const int hashTableSize,
+    const float h,
+    const float mu,
+    const float tensionThreshold,
+    const float tension
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (id >= numParticles)
+        return;
+
+    // int pi = particleIndex[id];
+    ParticleGPU* particle = &particles[id];
+
+    float4 pos = particle->position;
+
+    const int gx = floorf(pos.x / h);
+    const int gy = floorf(pos.y / h);
+    const int gz = floorf(pos.z / h);
+
+    particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    particle->surfaceTensionForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+    float4 n = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    float c = 0.0f;
+
+    float h2 = h * h;
+
+    // Find neighbors
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                int neighborHash = computeSpatialHash(gx + dx, gy + dy, gz + dz, hashTableSize);
+
+                int start = cellStart[neighborHash];
+
+                // Cell with no particles
+                if (start == -1)
+                    continue;
+
+                int end = cellEnd[neighborHash];
+
+                for (int j = start ; j < end; j++) {
+                    // int pj = particleIndex[j];
+
+                    // Skip self
+                    if (id == j)
+                        continue;
+
+                    const float4 diff = make_float4(
+                        pos.x - particles[j].position.x,
+                        pos.y - particles[j].position.y,
+                        pos.z - particles[j].position.z,
+                        0.0f
+                    );
+
+                    // Check if within radius
+                    float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
+                    if (distSq < h2) {
+                        ParticleGPU* other = &particles[j];
+
+                        float invDensity = 1.0f / (other->properties.y + 1e-6f);
+
+                        // Pressure
+                        const float scalar = other->properties.x * (particle->properties.z + other->properties.z) * 0.5f * invDensity;
+                        particle->pressureForce += scalar * spikyKernelGradient(diff, h);
+
+                        // Viscosity
+                        const float4 viscTerm = other->properties.x * (other->velocity - particle->velocity) * invDensity;
+                        particle->viscosityForce += viscosityLaplacianKernel(diff, h) * viscTerm;
+
+                        // Surface tension
+                        n += other->properties.x * invDensity * poly6KernelGradient(diff, h);
+                        c += other->properties.x * invDensity * poly6KernelLaplacian(diff, h);
                     }
                 }
             }
@@ -505,6 +723,38 @@ void launchComputeCellIndexKernel(
     );
 }
 
+void launchComputeCellIndexHashKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    int* particleHashValue,
+    int* particleIndex,
+    const float h,
+    const int hashTableSize
+) {
+    int threadsPerBlock = 256;
+    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
+
+    computeCellIndexHashKernel<<<blocks, threadsPerBlock>>>(
+        numParticles, particles, particleHashValue, particleIndex, h, hashTableSize
+    );
+}
+
+void queryCubRadixBytes(
+    const int numParticles,
+    size_t &sortTempStorageBytes,
+    int* particleCellIndex1,
+    int* particleCellIndex2,
+    int* particleIndex1,
+    int* particleIndex2
+) {
+    cub::DeviceRadixSort::SortPairs(
+        nullptr,
+        sortTempStorageBytes,
+        particleCellIndex1, particleCellIndex2,
+        particleIndex1, particleIndex2, numParticles
+    );
+}
+
 void sortIndicesByCellId(
     const int numParticles,
     void* sortTempStorage,
@@ -522,19 +772,17 @@ void sortIndicesByCellId(
     );
 }
 
-void queryCubRadixBytes(
+void launchReorderParticlesKernel(
     const int numParticles,
-    size_t &sortTempStorageBytes,
-    int* particleCellIndex1,
-    int* particleCellIndex2,
-    int* particleIndex1,
-    int* particleIndex2
+    const int* particleIndex,
+    const ParticleGPU* particles,
+    ParticleGPU* sortedParticles
 ) {
-    cub::DeviceRadixSort::SortPairs(
-        nullptr,
-        sortTempStorageBytes,
-        particleCellIndex1, particleCellIndex2,
-        particleIndex1, particleIndex2, numParticles
+    int threadsPerBlock = 256;
+    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
+
+    reorderParticlesKernel<<<blocks, threadsPerBlock>>>(
+        numParticles, particleIndex, particles, sortedParticles
     );
 }
 
@@ -571,6 +819,25 @@ void launchDensityPressureFixedGridKernel(
     );
 }
 
+void launchDensityPressureHashKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const int* particleIndex,
+    const int* cellStart,
+    const int* cellEnd,
+    const int hashTableSize,
+    const float h,
+    const float k,
+    const float p_0
+) {
+    int threadsPerBlock = 256;
+    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
+
+    densityPressureHashKernel<<<blocks, threadsPerBlock>>>(
+        numParticles, particles, particleIndex, cellStart, cellEnd, hashTableSize, h, k, p_0
+    );
+}
+
 void launchSphForcesFixedGridKernel(
     const int numParticles,
     ParticleGPU* particles,
@@ -588,6 +855,26 @@ void launchSphForcesFixedGridKernel(
 
     sphForcesFixedGridKernel<<<blocks, threadsPerBlock>>>(
         numParticles, particles, particleIndex, cellStart, cellEnd, gridResolution, h, mu, tensionThreshold, tension
+    );
+}
+
+void launchSphForcesHashKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const int* particleIndex,
+    const int* cellStart,
+    const int* cellEnd,
+    const int hashTableSize,
+    const float h,
+    const float mu,
+    const float tensionThreshold,
+    const float tension
+) {
+    int threadsPerBlock = 256;
+    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
+
+    sphForcesHashKernel<<<blocks, threadsPerBlock>>>(
+        numParticles, particles, particleIndex, cellStart, cellEnd, hashTableSize, h, mu, tensionThreshold, tension
     );
 }
 
