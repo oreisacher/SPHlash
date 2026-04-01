@@ -18,9 +18,11 @@ public:
     void draw() override;
 
 private:
-    FluidRenderer* renderer;
     FluidSimulationGPU* simulation;
-    SimulationSettings* settings;
+    SimulationSettings* simulationSettings;
+
+    FluidRenderer* renderer;
+    RenderingSettings* renderSettings;
 
     void SaveSettings(const std::string& path) const;
     void LoadSettings(const std::string& path);

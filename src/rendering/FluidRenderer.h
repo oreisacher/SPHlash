@@ -10,6 +10,10 @@
 #include "simulation/FluidSimulationGPU.h"
 #include "utils/Camera.h"
 
+struct RenderingSettings {
+    float particleSize  = 0.005f;
+};
+
 class FluidRenderer {
 public:
     FluidRenderer(FluidSimulationGPU* simulation);
@@ -22,6 +26,7 @@ public:
     Shader* getParticleShader() const;
     Shader* getBoundaryShader() const;
 
+    void updateParticleSize() const;
     void rebuildBoundaryBox() const;
 
     // Framebuffer texture
@@ -29,6 +34,8 @@ public:
     void setSize(int width, int height) const;
 
     GLuint getParticleVBO() const;
+
+    RenderingSettings settings;
 
 private:
     void setupShaders();

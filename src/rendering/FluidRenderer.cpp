@@ -11,8 +11,6 @@
 #include "utils/Logger.h"
 #include "utils/SphereCreator.h"
 
-#define PARTICLE_SIZE 0.005f
-
 FluidRenderer::FluidRenderer(FluidSimulationGPU* sim) : simulation(sim) {
     // Setup OpenGL State
     glEnable(GL_DEPTH_TEST);
@@ -79,6 +77,11 @@ Shader* FluidRenderer::getBoundaryShader() const {
     return boundaryShader;
 }
 
+void FluidRenderer::updateParticleSize() const {
+    particleShader->bind();
+    particleShader->setFloat("size", settings.particleSize);
+}
+
 void FluidRenderer::rebuildBoundaryBox() const {
     //      7 -------- 6
     //     /|         /|
@@ -133,7 +136,7 @@ void FluidRenderer::setupShaders() {
 
     particleShader->compile();
     particleShader->bind();
-    particleShader->setFloat("size", PARTICLE_SIZE);
+    particleShader->setFloat("size", settings.particleSize);
 
     // Boundary Box Shader
     boundaryShader = new Shader({
