@@ -25,46 +25,28 @@ endif()
 add_executable(FluidSimSPH
     src/main.cpp
     src/simulation/FluidSimulation.cpp
-    src/simulation/FluidSimulation.h
     src/rendering/FluidRenderer.cpp
-    src/rendering/FluidRenderer.h
     src/ui/UIPanel.cpp
-    src/ui/UIPanel.h
     src/ui/UIManager.cpp
-    src/ui/UIManager.h
     src/ui/SimulationPanel.cpp
-    src/ui/SimulationPanel.h
     src/rendering/Framebuffer.cpp
-    src/rendering/Framebuffer.h
     src/rendering/Window.cpp
-    src/rendering/Window.h
     src/rendering/Shader.cpp
-    src/rendering/Shader.h
     src/ui/FPSPanel.cpp
-    src/ui/FPSPanel.h
     src/utils/Time.cpp
-    src/utils/Time.h
     src/utils/Logger.cpp
-    src/utils/Logger.h
     src/ui/SettingsPanel.cpp
-    src/ui/SettingsPanel.h
     src/simulation/FluidSimulationGPU.cpp
-    src/simulation/FluidSimulationGPU.h
-        src/cuda/FluidSimulation.cu
+    src/cuda/FluidSimulation.cu
+        src/cuda/Kernels.cuh
 
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
-    src/cuda/FluidSimulation.h
     src/ui/ParticlesPanel.cpp
-    src/ui/ParticlesPanel.h
     src/utils/InputManager.cpp
-    src/utils/InputManager.h
-        src/utils/Camera.cpp
-        src/utils/Camera.h
-        src/utils/SphereCreator.h
-        src/Application.cpp
-        src/Application.h
+    src/utils/Camera.cpp
+    src/Application.cpp
 )
 
 add_library(imgui
