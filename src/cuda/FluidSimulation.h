@@ -5,123 +5,73 @@
 #ifndef FLUIDSIMSPH_HASHPARTICLES_H
 #define FLUIDSIMSPH_HASHPARTICLES_H
 
-#include <cstdint>
-
 struct ParticleGPU;
 
-void launchComputeCellIndexKernel(
+void launchHashParticles(
     const int numParticles,
     const ParticleGPU* particles,
-    int* particleCellIndex,
-    int* particleIndex,
-    const float cellSize,
-    const int3 gridResolution
-);
-
-void launchComputeCellIndexHashKernel(
-    const int numParticles,
-    ParticleGPU* particles,
     int* particleHashValue,
     int* particleIndex,
-    const float h,
-    const int hashTableSize
+    const float h
 );
 
-void sortIndicesByCellId(
+void sortParticlesByHash(
     const int numParticles,
     void* sortTempStorage,
     size_t sortTempStorageBytes,
-    int* particleCellIndex1,
-    int* particleCellIndex2,
-    int* particleIndex1,
-    int* particleIndex2
+    const int* particleHashes,
+    int* sortedParticleHashes,
+    const int* particleIndices,
+    int* sortedParticleIndices
 );
 
-float computeMaxVelocity(
-    ParticleGPU* particles,
-    int numParticles
+void launchBuildOffsetsKernel(
+    int numParticles,
+    const int* sortedHashes,
+    int* offsets
 );
 
-void queryCubRadixBytes(
+float getMaxVelocity(
+    int numParticles,
+    ParticleGPU* particles
+);
+
+void queryRequiredSortingStorage(
     const int numParticles,
     size_t &sortTempStorageBytes,
-    int* particleCellIndex1,
-    int* particleCellIndex2,
-    int* particleIndex1,
-    int* particleIndex2
+    const int* particleHashes,
+    int* sortedParticleHashes,
+    const int* particleIndices,
+    int* sortedParticleIndices
 );
 
 void launchReorderParticlesKernel(
     const int numParticles,
-    const int* particleIndex,
     const ParticleGPU* particles,
+    const int* particleIndices,
     ParticleGPU* sortedParticles
 );
 
-void launchFindCellStartEndKernel(
-    const int numParticles,
-    const int* particleCellIndex,
-    int* cellStart,
-    int* cellEnd
-);
-
-void launchDensityPressureFixedGridKernel(
+void launchDensityPressureKernel(
     const int numParticles,
     ParticleGPU* particles,
-    const int* particleIndex,
-    const int* cellStart,
-    const int* cellEnd,
-    const int3 gridResolution,
+    const int* hashes,
+    const int* offsets,
     const float h,
     const float k,
     const float p_0
 );
 
-void launchDensityPressureHashKernel(
+void launchSphForcesKernel(
     const int numParticles,
     ParticleGPU* particles,
-    const int* particleIndex,
-    const int* cellStart,
-    const int* cellEnd,
-    const int hashTableSize,
-    const float h,
-    const float k,
-    const float p_0
-);
-
-void launchSphForcesFixedGridKernel(
-    const int numParticles,
-    ParticleGPU* particles,
-    const int* particleIndex,
-    const int* cellStart,
-    const int* cellEnd,
-    const int3 gridResolution,
+    const int* hashes,
+    const int* offsets,
     const float h,
     const float mu,
     const float tensionThreshold,
     const float tension
 );
-
-void launchSphForcesHashKernel(
-    const int numParticles,
-    ParticleGPU* particles,
-    const int* particleIndex,
-    const int* cellStart,
-    const int* cellEnd,
-    const int hashTableSize,
-    const float h,
-    const float mu,
-    const float tensionThreshold,
-    const float tension
-);
-
-// void launchApplyMouseForceKernel(
-//     const int numParticles,
-//     ParticleGPU* particles,
-//     const float2 mousePosition,
-//     const float mouseRadius,
-//     const float mouseForceDirection
-// );
 
 void launchUpdateParticlesKernel(
     ParticleGPU* particles,

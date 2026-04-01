@@ -68,9 +68,9 @@ void Application::run() const {
         // simulation.update(0.016);  // Force 60 fps
         // simGPU.update(0.008333333); // Force 120 fps
         simulation->update(0.0);
-        simulation->update(0.0);
-        simulation->update(0.0);
-        simulation->update(0.0);
+        // simulation->update(0.0);
+        // simulation->update(0.0);
+        // simulation->update(0.0);
 
         // Render simulation into texture
         renderer->render();

@@ -13,7 +13,7 @@ struct ParticleGPU {
     float4 position;     // vec4 to avoid padding issues
     float4 startPosition;
     float4 velocity;
-    float4 properties;   // x: mass, y: density, z: pressure, w: unused
+    float4 properties;   // x: mass, y: density, z: pressure, w: id
 
     // SPH Forces
     float4 pressureForce;
@@ -50,7 +50,7 @@ public:
 
     void update(float deltaTime);
 
-    void reset();
+    void reset() const;
 
     // void updateBoundaries();
     void setupVBOConnection(GLuint vbo);
@@ -65,24 +65,21 @@ private:
     void initParticlesRandom(glm::vec2 x, glm::vec2 y, glm::vec2 z);
     void initParticlesGrid(glm::vec2 x, glm::vec2 y, glm::vec2 z);
 
-    ParticleGPU* d_sorted_particles = nullptr;
-
-    // --- Fixed Grid ---
-    int* d_particleCellIndex1   = nullptr;
-    int* d_particleCellIndex2   = nullptr;
+    ParticleGPU* d_particles            = nullptr;
+    ParticleGPU* d_sortedParticles      = nullptr;
 
     // --- Spatial Hashing ---
-    int* d_particleHashValue1   = nullptr;
-    int* d_particleHashValue2   = nullptr;
+    int* d_particleHashes               = nullptr;
+    int* d_sortedParticleHashes         = nullptr;
+    int* d_offsets                      = nullptr;
 
     // --- Common ---
-    int* d_particleIndex1       = nullptr;
-    int* d_particleIndex2       = nullptr;
-    int* d_cellStart            = nullptr;
-    int* d_cellEnd              = nullptr;
+    int* d_particleIndices              = nullptr;
+    int* d_sortedParticleIndices        = nullptr;
 
-    void* d_sortTempStorage     = nullptr;
-    size_t sortTempStorageBytes = 0;
+    // --- Sorting Storage ---
+    void* d_sortTempStorage             = nullptr;
+    size_t sortTempStorageBytes         = 0;
 
     int gridSizeX = 1;
     int gridSizeY = 1;

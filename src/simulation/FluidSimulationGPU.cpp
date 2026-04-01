@@ -16,7 +16,7 @@
 #include "glad/gl.h"
 
 FluidSimulationGPU::FluidSimulationGPU(int particleCount, glm::vec2 x, glm::vec2 y, glm::vec2 z)
-    : particleCount(particleCount), hashTableSize(4.0 * particleCount)
+    : particleCount(particleCount), hashTableSize(particleCount)
 {
     cudaSetDevice(0);
 
@@ -30,164 +30,99 @@ FluidSimulationGPU::FluidSimulationGPU(int particleCount, glm::vec2 x, glm::vec2
     settings.h = 5.0f * avgSpacing;
 
     // Allocate memory on gpu
-    cudaMalloc(reinterpret_cast<void**>(&d_cellStart), hashTableSize * sizeof(int));
-    cudaMalloc(reinterpret_cast<void**>(&d_cellEnd), hashTableSize * sizeof(int));
-    cudaMalloc(reinterpret_cast<void**>(&d_particleCellIndex1), particleCount * sizeof(int));
-    cudaMalloc(reinterpret_cast<void**>(&d_particleCellIndex2), particleCount * sizeof(int));
-    cudaMalloc(reinterpret_cast<void**>(&d_particleHashValue1), particleCount * sizeof(int));
-    cudaMalloc(reinterpret_cast<void**>(&d_particleHashValue2), particleCount * sizeof(int));
-    cudaMalloc(reinterpret_cast<void**>(&d_particleIndex1), particleCount * sizeof(int));
-    cudaMalloc(reinterpret_cast<void**>(&d_particleIndex2), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_particleHashes), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_sortedParticleHashes), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_particleIndices), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_sortedParticleIndices), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_offsets), particleCount * sizeof(int));
 
     // Allocate memory for CUB sorting
-    queryCubRadixBytes(
+    queryRequiredSortingStorage(
         particleCount,
         sortTempStorageBytes,
-        d_particleHashValue1,
-        d_particleHashValue2,
-        d_particleIndex1,
-        d_particleIndex2
+        d_particleHashes,
+        d_sortedParticleHashes,
+        d_particleIndices,
+        d_sortedParticleIndices
     );
 
     cudaMalloc(&d_sortTempStorage, sortTempStorageBytes);
 }
 
 FluidSimulationGPU::~FluidSimulationGPU() {
-    cudaFree(d_particleCellIndex1);
-    cudaFree(d_particleCellIndex2);
-    cudaFree(d_particleIndex1);
-    cudaFree(d_particleIndex2);
-    cudaFree(d_cellStart);
-    cudaFree(d_cellEnd);
+    cudaFree(d_sortedParticles);
+    cudaFree(d_particleHashes);
+    cudaFree(d_sortedParticleHashes);
+    cudaFree(d_offsets);
+    cudaFree(d_particleIndices);
+    cudaFree(d_sortedParticleIndices);
+    cudaFree(d_sortTempStorage);
+
+    cudaGraphicsUnmapResources(1, &particleResource, nullptr);
 }
 
 void FluidSimulationGPU::update(const float deltaTime) {
-    ParticleGPU* d_particles = nullptr;
-    size_t numBytes = 0;
-
-    cudaGraphicsMapResources(1, &particleResource);
-    cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_particles), &numBytes, particleResource);
-
     // Reset old data
-    cudaMemset(d_cellStart, -1, hashTableSize * sizeof(int));
-    cudaMemset(d_cellEnd,   -1, hashTableSize * sizeof(int));
+    cudaMemset(d_offsets,   -1, particleCount * sizeof(int));
 
-    nvtxRangePush("CellIndices");
-    // launchComputeCellIndexKernel(
-    //     particleCount,
-    //     d_particles,
-    //     d_particleCellIndex1,
-    //     d_particleIndex1,
-    //     settings.h,
-    //     { gridSizeX, gridSizeY, gridSizeZ }
-    // );
-    launchComputeCellIndexHashKernel(
+    launchHashParticles(
         particleCount,
         d_particles,
-        d_particleHashValue1,
-        d_particleIndex1,
-        settings.h,
-        hashTableSize
+        d_particleHashes,
+        d_particleIndices,
+        settings.h
     );
-    nvtxRangePop();
 
-    nvtxRangePush("Sort Cells");
-    sortIndicesByCellId(
+    sortParticlesByHash(
         particleCount,
         d_sortTempStorage,
         sortTempStorageBytes,
-        d_particleHashValue1,
-        d_particleHashValue2,
-        d_particleIndex1,
-        d_particleIndex2
+        d_particleHashes,
+        d_sortedParticleHashes,
+        d_particleIndices,
+        d_sortedParticleIndices
     );
-    nvtxRangePop();
 
-    nvtxRangePush("Cell Start End");
-    launchFindCellStartEndKernel(
+    launchBuildOffsetsKernel(
         particleCount,
-        d_particleHashValue2,
-        d_cellStart,
-        d_cellEnd
+        d_sortedParticleHashes,
+        d_offsets
     );
-    nvtxRangePop();
 
     launchReorderParticlesKernel(
         particleCount,
-        d_particleIndex2,
         d_particles,
-        d_sorted_particles
+        d_sortedParticleIndices,
+        d_sortedParticles
     );
 
-    nvtxRangePush("Density");
-    // launchDensityPressureFixedGridKernel(
-    //     particleCount,
-    //     d_particles,
-    //     d_particleIndex2,
-    //     d_cellStart,
-    //     d_cellEnd,
-    //     { gridSizeX, gridSizeY, gridSizeZ },
-    //     settings.h,
-    //     settings.k,
-    //     settings.p_0
-    // );
-    launchDensityPressureHashKernel(
+    launchDensityPressureKernel(
         particleCount,
-        d_sorted_particles,
-        d_particleIndex2,
-        d_cellStart,
-        d_cellEnd,
-        hashTableSize,
+        d_sortedParticles,
+        d_sortedParticleHashes,
+        d_offsets,
         settings.h,
         settings.k,
         settings.p_0
     );
-    nvtxRangePop();
 
-    nvtxRangePush("SPH");
-    // launchSphForcesFixedGridKernel(
-    //     particleCount,
-    //     d_particles,
-    //     d_particleIndex2,
-    //     d_cellStart,
-    //     d_cellEnd,
-    //     { gridSizeX, gridSizeY, gridSizeZ },
-    //     settings.h,
-    //     settings.mu,
-    //     settings.tensionThreshold,
-    //     settings.tension
-    // );
-    launchSphForcesHashKernel(
+    launchSphForcesKernel(
         particleCount,
-        d_sorted_particles,
-        d_particleIndex2,
-        d_cellStart,
-        d_cellEnd,
-        hashTableSize,
+        d_sortedParticles,
+        d_sortedParticleHashes,
+        d_offsets,
         settings.h,
         settings.mu,
         settings.tensionThreshold,
         settings.tension
     );
-    nvtxRangePop();
-
-    // nvtxRangePush("Mouse Force");
-    // launchApplyMouseForceKernel(
-    //     particleCount,
-    //     d_particles,
-    //     { mouseX, mouseY },
-    //     mouseRadius,
-    //     mouseForceDirection
-    // );
-    // nvtxRangePop();
 
     // --- CFL ---
-    float maxVelocity = computeMaxVelocity(d_sorted_particles, particleCount);
+    float maxVelocity = getMaxVelocity(particleCount, d_sortedParticles);
     float cfl = 0.4f * settings.h / (sqrt(settings.k) + maxVelocity + 1e-6f);
 
-    nvtxRangePush("Update");
     launchUpdateParticlesKernel(
-        d_sorted_particles,
+        d_sortedParticles,
         particleCount,
         cfl,
         { settings.xBoundary.x, settings.xBoundary.y },
@@ -195,50 +130,13 @@ void FluidSimulationGPU::update(const float deltaTime) {
         { settings.zBoundary.x, settings.zBoundary.y },
         settings.enableGravity ? settings.gravity : 0.0f
     );
-    nvtxRangePop();
 
-    cudaMemcpy(d_particles, d_sorted_particles, particleCount * sizeof(ParticleGPU), cudaMemcpyDeviceToDevice);
-
-    cudaGraphicsUnmapResources(1, &particleResource, nullptr);
+    std::swap(d_particles, d_sortedParticles);
 }
 
-void FluidSimulationGPU::reset() {
-    ParticleGPU* d_particles = nullptr;
-    size_t numBytes = 0;
-
-    cudaGraphicsMapResources(1, &particleResource);
-    cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_particles), &numBytes, particleResource);
-
+void FluidSimulationGPU::reset() const {
     launchResetParticlesKernel(d_particles, particleCount);
-
-    cudaGraphicsUnmapResources(1, &particleResource, nullptr);
 }
-
-// void FluidSimulationGPU::updateBoundaries() {
-//     if (settings.h == 0.0)
-//         return;
-//
-//     // float width = settings.xBoundary.y - settings.xBoundary.x;
-//     // float height = settings.yBoundary.y - settings.yBoundary.x;
-//     // float depth = settings.zBoundary.y - settings.zBoundary.x;
-//     //
-//     // // Recompute grid resolution
-//     // gridSizeX = std::ceil(width / settings.h);
-//     // gridSizeY = std::ceil(height / settings.h);
-//     // gridSizeZ = std::ceil(depth / settings.h);
-//     // totalCells = gridSizeX * gridSizeY * gridSizeZ;
-//
-//     cudaDeviceSynchronize();
-//
-//     cudaFree(d_cellStart);
-//     cudaFree(d_cellEnd);
-//
-//     // cudaMalloc(reinterpret_cast<void**>(&d_cellStart), totalCells * sizeof(int));
-//     // cudaMalloc(reinterpret_cast<void**>(&d_cellEnd), totalCells * sizeof(int));
-//
-//     cudaMalloc(reinterpret_cast<void**>(&d_cellStart), hashTableSize * sizeof(int));
-//     cudaMalloc(reinterpret_cast<void**>(&d_cellEnd), hashTableSize * sizeof(int));
-// }
 
 void FluidSimulationGPU::setupVBOConnection(const GLuint vbo) {
     cudaGraphicsGLRegisterBuffer(
@@ -252,7 +150,10 @@ void FluidSimulationGPU::setupVBOConnection(const GLuint vbo) {
     cudaGraphicsResourceGetMappedPointer(nullptr, &numBytes, particleResource);
     cudaGraphicsUnmapResources(1, &particleResource, nullptr);
 
-    cudaMalloc(reinterpret_cast<void**>(&d_sorted_particles), numBytes);
+    cudaMalloc(reinterpret_cast<void**>(&d_sortedParticles), numBytes);
+
+    cudaGraphicsMapResources(1, &particleResource);
+    cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_particles), &numBytes, particleResource);
 }
 
 // --- Particle Inits ---
@@ -269,7 +170,7 @@ void FluidSimulationGPU::initParticlesRandom(glm::vec2 x, glm::vec2 y, glm::vec2
         particles[i].position = { distX(gen), distY(gen), distZ(gen), 0.0 };
         particles[i].startPosition = particles[i].position,
         particles[i].velocity = { 0.0, 0.0, 0.0, 0.0 };
-        particles[i].properties = { mass, 0.0, 0.0, 0.0 };
+        particles[i].properties = { mass, 0.0, 0.0, static_cast<float>(i) };
     }
 }
 
