@@ -5,6 +5,7 @@
 in vec3 Velocity;
 in vec2 TexCoord;
 in vec4 Properties;
+in vec4 Flags;
 in vec4 Debugging;
 flat in int ID;
 
@@ -49,10 +50,18 @@ void main() {
         return;
     }
 
-//    if (Debugging.x > 0.0f) {
+//    if (Flags.x == 1.0f) {
 //        FragColor = vec4(1.0);
 //        return;
+//    } else {
+//        FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+//        return;
 //    }
+
+    if (Debugging.x > 0.0f) {
+        FragColor = vec4(1.0);
+        return;
+    }
 
     float maxSpeed = 1.0f;
     float speed = length(Velocity);

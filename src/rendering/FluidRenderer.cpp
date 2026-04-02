@@ -190,9 +190,13 @@ void FluidRenderer::setupParticles() {
     glEnableVertexAttribArray(4);
     glVertexAttribDivisor(4, 1);
 
-    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, debugging));
+    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, flags));
     glEnableVertexAttribArray(5);
-    glVertexAttribDivisor(5, 1);
+    glVertexAttribDivisor(5, 1)
+
+    ;glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, debugging));
+    glEnableVertexAttribArray(6);
+    glVertexAttribDivisor(6, 1);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     simulation->setupVBOConnection(particleVBO);

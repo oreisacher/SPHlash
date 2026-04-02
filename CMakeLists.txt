@@ -32,7 +32,7 @@ add_executable(FluidSimSPH
     src/rendering/Framebuffer.cpp
     src/rendering/Window.cpp
     src/rendering/Shader.cpp
-    src/ui/FPSPanel.cpp
+        src/ui/StatisticsPanel.cpp
     src/utils/Time.cpp
     src/utils/Logger.cpp
     src/ui/SettingsPanel.cpp

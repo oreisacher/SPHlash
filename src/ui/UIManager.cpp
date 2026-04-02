@@ -71,8 +71,8 @@ void UIManager::draw() const {
 
         ImGui::DockBuilderDockWindow("Simulation", dock_main);
         ImGui::DockBuilderDockWindow("Settings", dock_right_top);
-        ImGui::DockBuilderDockWindow("FPS", dock_right_bottom);
-        ImGui::DockBuilderDockWindow("Particles", dock_right_middle);
+        ImGui::DockBuilderDockWindow("Statistics", dock_right_middle);
+        ImGui::DockBuilderDockWindow("Particles", dock_right_bottom);
 
         ImGui::DockBuilderFinish(dockspace_id);
     }

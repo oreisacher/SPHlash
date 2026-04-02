@@ -397,39 +397,42 @@ __global__ void updateParticlesKernel(
     const float4 force = particle->pressureForce + particle->viscosityForce + particle->surfaceTensionForce;
     const float4 acceleration = force / particle->properties.y + make_float4(0.0f, gravity, 0.0f, 1.0f);
 
-    particle->velocity += (0.5f * deltaTime) * acceleration;
+    // particle->velocity += (0.5f * deltaTime) * acceleration;
+    // particle->position += deltaTime * particle->velocity;
+    // particle->velocity += (0.5f * deltaTime) * acceleration;
+
+    particle->velocity += deltaTime * acceleration;
     particle->position += deltaTime * particle->velocity;
-    particle->velocity += (0.5f * deltaTime) * acceleration;
 
     // Simple boundaries
     if (particle->position.x < x.x) {
         particle->position.x = x.x;
-        particle->velocity.x *= -0.9f;
+        particle->velocity.x *= -1.0f;
     }
 
     if (particle->position.x > x.y) {
         particle->position.x = x.y;
-        particle->velocity.x *= -0.9f;
+        particle->velocity.x *= -1.0f;
     }
 
     if (particle->position.y < y.x) {
         particle->position.y = y.x;
-        particle->velocity.y *= -0.9f;
+        particle->velocity.y *= -1.0f;
     }
 
     if (particle->position.y > y.y) {
         particle->position.y = y.y;
-        particle->velocity.y *= -0.9f;
+        particle->velocity.y *= -1.0f;
     }
 
     if (particle->position.z < z.x) {
         particle->position.z = z.x;
-        particle->velocity.z *= -0.9f;
+        particle->velocity.z *= -1.0f;
     }
 
     if (particle->position.z > z.y) {
         particle->position.z = z.y;
-        particle->velocity.z *= -0.9f;
+        particle->velocity.z *= -1.0f;
     }
 }
 

@@ -6,7 +6,7 @@
 
 #include "rendering/FluidRenderer.h"
 #include "rendering/Window.h"
-#include "ui/FPSPanel.h"
+#include "ui/StatisticsPanel.h"
 #include "ui/ParticlesPanel.h"
 #include "ui/SettingsPanel.h"
 #include "ui/SimulationPanel.h"
@@ -18,8 +18,8 @@
 
 #define GLAD_GL_IMPLEMENTATION
 
-#define WINDOW_SIZE_X 1000
-#define WINDOW_SIZE_Y 600
+#define WINDOW_SIZE_X 1200
+#define WINDOW_SIZE_Y 800
 #define SIM_UNITS_PER_PIXEL (1.0 / 600)
 #define PARTICLES 20000
 
@@ -44,7 +44,7 @@ Application::Application() {
     // Setup UI
     ui = new UIManager(window->getNativeWindow());
     ui->addPanel(new SimulationPanel("Simulation", renderer->getTextureId()));
-    ui->addPanel(new FPSPanel("FPS"));
+    ui->addPanel(new StatisticsPanel("Statistics", simulation));
     ui->addPanel(new SettingsPanel("Settings", simulation, renderer));
     ui->addPanel(new ParticlesPanel("Particles", renderer->getParticleVBO(), PARTICLES, renderer->getParticleShader()));
 

@@ -9,11 +9,17 @@
 #include "rendering/Shader.h"
 #include <cuda_runtime.h>
 
+enum ParticleType {
+    GHOST   = 0,
+    NORMAL  = 1
+};
+
 struct ParticleGPU {
     float4 position;     // vec4 to avoid padding issues
     float4 startPosition;
     float4 velocity;
     float4 properties;   // x: mass, y: density, z: pressure, w: id
+    float4 flags;        // x: type, y: undefined, z: undefined, w: undefined
 
     // SPH Forces
     float4 pressureForce;
@@ -56,7 +62,7 @@ public:
     void setupVBOConnection(GLuint vbo);
 
     int particleCount;
-    int hashTableSize;
+    float cfl;
 
     std::vector<ParticleGPU> particles;
     SimulationSettings settings;

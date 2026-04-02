@@ -16,7 +16,7 @@
 #include "glad/gl.h"
 
 FluidSimulationGPU::FluidSimulationGPU(int particleCount, glm::vec2 x, glm::vec2 y, glm::vec2 z)
-    : particleCount(particleCount), hashTableSize(particleCount)
+    : particleCount(particleCount)
 {
     cudaSetDevice(0);
 
@@ -119,7 +119,7 @@ void FluidSimulationGPU::update(const float deltaTime) {
 
     // --- CFL ---
     float maxVelocity = getMaxVelocity(particleCount, d_sortedParticles);
-    float cfl = 0.4f * settings.h / (sqrt(settings.k) + maxVelocity + 1e-6f);
+    cfl = 0.4f * settings.h / (sqrt(settings.k) + maxVelocity + 1e-6f);
 
     launchUpdateParticlesKernel(
         d_sortedParticles,
@@ -171,6 +171,7 @@ void FluidSimulationGPU::initParticlesRandom(glm::vec2 x, glm::vec2 y, glm::vec2
         particles[i].startPosition = particles[i].position,
         particles[i].velocity = { 0.0, 0.0, 0.0, 0.0 };
         particles[i].properties = { mass, 0.0, 0.0, static_cast<float>(i) };
+        particles[i].flags = { NORMAL, 0.0, 0.0, 0.0 };
     }
 }
 
@@ -193,6 +194,7 @@ void FluidSimulationGPU::initParticlesGrid(glm::vec2 x, glm::vec2 y, glm::vec2 z
             particles[index].startPosition = particles[index].position;
             particles[index].velocity = { 0.0, 0.0, 0.0, 0.0 };
             particles[index].properties = { mass, 0.0, 0.0, 0.0 };
+            particles[index].flags = { NORMAL, 0.0, 0.0, 0.0 };
 
             index++;
         }
