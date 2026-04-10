@@ -83,6 +83,12 @@ void launchUpdateParticlesKernel(
     const float gravity
 );
 
+void launchRenderPrepareKernel(
+    const int numParticles,
+    const ParticleGPU* particles,
+    float4* positions
+);
+
 void launchResetParticlesKernel(
     ParticleGPU* particles,
     int numParticles

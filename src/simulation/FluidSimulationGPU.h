@@ -14,6 +14,12 @@ enum ParticleType {
     NORMAL  = 1
 };
 
+enum SimulationState {
+    UNINITIALIZED,
+    PAUSED,
+    RUNNING
+};
+
 struct ParticleGPU {
     float4 position;     // vec4 to avoid padding issues
     float4 startPosition;
@@ -30,6 +36,16 @@ struct ParticleGPU {
     float4 debugging;
 };
 
+struct InitSettings {
+    float totalMass = 1000.0f;
+    float particleSpacing = 0.025f;
+
+    // Spawn area
+    glm::vec2 xBoundary = { 0.1, 0.9 };
+    glm::vec2 yBoundary = { 0.1, 0.9 };
+    glm::vec2 zBoundary = { 0.1, 0.9 };
+};
+
 struct SimulationSettings {
     // Particles
     float h = 20.0f;
@@ -44,33 +60,39 @@ struct SimulationSettings {
     float gravity = -9.878;
 
     // Boundary
-    glm::vec2 xBoundary = { 0.0, 1.0 };
-    glm::vec2 yBoundary = { 0.0, 1.0 };
+    glm::vec2 xBoundary = { 0.0, 2.0 };
+    glm::vec2 yBoundary = { 0.0, 5.0 };
     glm::vec2 zBoundary = { 0.0, 1.0 };
 };
 
 class FluidSimulationGPU {
 public:
-    FluidSimulationGPU(int particleCount, glm::vec2 x, glm::vec2 y, glm::vec2 z);
+    FluidSimulationGPU();
     ~FluidSimulationGPU();
 
     void update(float deltaTime);
-
     void reset() const;
 
-    // void updateBoundaries();
-    void setupVBOConnection(GLuint vbo);
+    void initParticles();
 
-    int particleCount;
+    // void updateBoundaries();
+    void setRendererVBO(GLuint vbo);
+
     float cfl;
 
+    int particleCount = 0;
     std::vector<ParticleGPU> particles;
+
+    int boundaryParticleCount;
+    std::vector<ParticleGPU> boundaryParticles;
+
+    InitSettings initSettings;
     SimulationSettings settings;
 
+    // --- Simulation State ---
+    SimulationState state = UNINITIALIZED;
 private:
-    void initParticlesRandom(glm::vec2 x, glm::vec2 y, glm::vec2 z);
-    void initParticlesGrid(glm::vec2 x, glm::vec2 y, glm::vec2 z);
-
+    // --- Particles ---
     ParticleGPU* d_particles            = nullptr;
     ParticleGPU* d_sortedParticles      = nullptr;
 
@@ -87,17 +109,9 @@ private:
     void* d_sortTempStorage             = nullptr;
     size_t sortTempStorageBytes         = 0;
 
-    int gridSizeX = 1;
-    int gridSizeY = 1;
-    int gridSizeZ = 1;
-    int totalCells = 1;
-
-    cudaGraphicsResource* particleResource;
-
-    // Mouse
-    float mouseX, mouseY;
-    float mouseForceDirection = 0.0f;
-    float mouseRadius = 0.1f;
+    // --- Rendering ---
+    cudaGraphicsResource* rendererResource = nullptr;
+    float4* d_rendererParticles = nullptr;
 };
 
 #endif //FLUIDSIMSPH_FLUIDSIMULATIONGPU_H

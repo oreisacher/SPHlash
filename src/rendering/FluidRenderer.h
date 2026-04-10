@@ -27,7 +27,9 @@ public:
     Shader* getBoundaryShader() const;
 
     void updateParticleSize() const;
-    void rebuildBoundaryBox() const;
+    void rebuildSpawnAreaBox() const;
+
+    void updateParticleData() const;
 
     // Framebuffer texture
     GLuint getTextureId() const;
@@ -41,7 +43,7 @@ private:
     void setupShaders();
     void setupSphereModel();
     void setupParticles();
-    void setupBoundaryModel();
+    void setupSpawnAreaModel();
 
     FluidSimulationGPU* simulation;
 

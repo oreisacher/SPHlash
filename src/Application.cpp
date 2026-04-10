@@ -17,11 +17,15 @@
 #include "utils/Time.h"
 
 #define GLAD_GL_IMPLEMENTATION
+#define TINYOBJLOADER_IMPLEMENTATION
 
 #define WINDOW_SIZE_X 1200
 #define WINDOW_SIZE_Y 800
 #define SIM_UNITS_PER_PIXEL (1.0 / 600)
-#define PARTICLES 20000
+
+#include "tiny_obj_loader.h"
+#include "ui/ControlPanel.h"
+#include "ui/InitPanel.h"
 
 Application::Application() {
     // Window creation
@@ -36,7 +40,7 @@ Application::Application() {
     }
 
     // Simulation
-    simulation = new FluidSimulationGPU(PARTICLES, { 0.3f, 0.6f }, { 0.3f, 0.6f }, { 0.3f, 0.6f });
+    simulation = new FluidSimulationGPU;
 
     // Rendering
     renderer = new FluidRenderer(simulation);
@@ -44,13 +48,26 @@ Application::Application() {
     // Setup UI
     ui = new UIManager(window->getNativeWindow());
     ui->addPanel(new SimulationPanel("Simulation", renderer->getTextureId()));
+    ui->addPanel(new ControlPanel("Controls", simulation));
     ui->addPanel(new StatisticsPanel("Statistics", simulation));
-    ui->addPanel(new SettingsPanel("Settings", simulation, renderer));
-    ui->addPanel(new ParticlesPanel("Particles", renderer->getParticleVBO(), PARTICLES, renderer->getParticleShader()));
+    ui->addPanel(new InitPanel("Init Settings", simulation, renderer));
+    ui->addPanel(new SettingsPanel("Particle Settings", simulation, renderer));
+    ui->addPanel(new ParticlesPanel("Particles", renderer->getParticleVBO(), simulation->particleCount, renderer->getParticleShader()));
 
     // Setup Camera
     camera = new Camera({ 0.0f, 0.0f, 1.0f });
     renderer->setCamera(camera);
+
+    // Load model
+    // TODO - Move into own Model/Mesh class
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+
+    bool success = tinyobj::LoadObj(&attrib, &shapes, &materials, nullptr, nullptr, "assets/models/bowl.obj");
+    if (success) {
+        std::cout << "Success" << std::endl;
+    }
 }
 
 Application::~Application() {
@@ -67,7 +84,7 @@ void Application::run() const {
         // simulation.update(Motor::Time.getDeltaTime());
         // simulation.update(0.016);  // Force 60 fps
         // simGPU.update(0.008333333); // Force 120 fps
-        simulation->update(0.0);
+        simulation->update(0.0083);
         // simulation->update(0.0);
         // simulation->update(0.0);
         // simulation->update(0.0);

@@ -30,8 +30,8 @@ FluidRenderer::FluidRenderer(FluidSimulationGPU* sim) : simulation(sim) {
     // Setup particle
     setupParticles();
 
-    // Setup Box
-    setupBoundaryModel();
+    // Setup Spawn Area box
+    setupSpawnAreaModel();
 
     // Setup shaders
     setupShaders();
@@ -82,7 +82,7 @@ void FluidRenderer::updateParticleSize() const {
     particleShader->setFloat("size", settings.particleSize);
 }
 
-void FluidRenderer::rebuildBoundaryBox() const {
+void FluidRenderer::rebuildSpawnAreaBox() const {
     //      7 -------- 6
     //     /|         /|
     //    3 -------- 2 |
@@ -92,14 +92,14 @@ void FluidRenderer::rebuildBoundaryBox() const {
     //    0 -------- 1
 
     float vertices[] = {
-        simulation->settings.xBoundary.x, simulation->settings.yBoundary.x, simulation->settings.zBoundary.x, // 0
-        simulation->settings.xBoundary.y, simulation->settings.yBoundary.x, simulation->settings.zBoundary.x, // 1
-        simulation->settings.xBoundary.y, simulation->settings.yBoundary.y, simulation->settings.zBoundary.x, // 2
-        simulation->settings.xBoundary.x, simulation->settings.yBoundary.y, simulation->settings.zBoundary.x, // 3
-        simulation->settings.xBoundary.x, simulation->settings.yBoundary.x, simulation->settings.zBoundary.y, // 4
-        simulation->settings.xBoundary.y, simulation->settings.yBoundary.x, simulation->settings.zBoundary.y, // 5
-        simulation->settings.xBoundary.y, simulation->settings.yBoundary.y, simulation->settings.zBoundary.y, // 6
-        simulation->settings.xBoundary.x, simulation->settings.yBoundary.y, simulation->settings.zBoundary.y, // 7
+        simulation->initSettings.xBoundary.x, simulation->initSettings.yBoundary.x, simulation->initSettings.zBoundary.x, // 0
+        simulation->initSettings.xBoundary.y, simulation->initSettings.yBoundary.x, simulation->initSettings.zBoundary.x, // 1
+        simulation->initSettings.xBoundary.y, simulation->initSettings.yBoundary.y, simulation->initSettings.zBoundary.x, // 2
+        simulation->initSettings.xBoundary.x, simulation->initSettings.yBoundary.y, simulation->initSettings.zBoundary.x, // 3
+        simulation->initSettings.xBoundary.x, simulation->initSettings.yBoundary.x, simulation->initSettings.zBoundary.y, // 4
+        simulation->initSettings.xBoundary.y, simulation->initSettings.yBoundary.x, simulation->initSettings.zBoundary.y, // 5
+        simulation->initSettings.xBoundary.y, simulation->initSettings.yBoundary.y, simulation->initSettings.zBoundary.y, // 6
+        simulation->initSettings.xBoundary.x, simulation->initSettings.yBoundary.y, simulation->initSettings.zBoundary.y, // 7
     };
 
     unsigned int indices[] = {
@@ -151,7 +151,7 @@ void FluidRenderer::setupSphereModel() {
     // Generate mesh data for sphere
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
-    createSphere(vertices, indices);
+    createSphere(vertices, indices, 4, 2);
     sphereIndexCount = indices.size();
 
     // Vertex buffer
@@ -176,41 +176,47 @@ void FluidRenderer::setupSphereModel() {
 void FluidRenderer::setupParticles() {
     glGenBuffers(1, &particleVBO);
     glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(ParticleGPU) * simulation->particleCount, simulation->particles.data(), GL_DYNAMIC_DRAW);
+    // glBufferData(GL_ARRAY_BUFFER, sizeof(float4) * simulation->particleCount, nullptr, GL_DYNAMIC_DRAW);
 
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)0);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float4), (void*)0);
     glEnableVertexAttribArray(2);
     glVertexAttribDivisor(2, 1);
 
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, velocity));
-    glEnableVertexAttribArray(3);
-    glVertexAttribDivisor(3, 1);
-
-    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, properties));
-    glEnableVertexAttribArray(4);
-    glVertexAttribDivisor(4, 1);
-
-    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, flags));
-    glEnableVertexAttribArray(5);
-    glVertexAttribDivisor(5, 1)
-
-    ;glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, debugging));
-    glEnableVertexAttribArray(6);
-    glVertexAttribDivisor(6, 1);
+    // glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, velocity));
+    // glEnableVertexAttribArray(3);
+    // glVertexAttribDivisor(3, 1);
+    //
+    // glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, properties));
+    // glEnableVertexAttribArray(4);
+    // glVertexAttribDivisor(4, 1);
+    //
+    // glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, flags));
+    // glEnableVertexAttribArray(5);
+    // glVertexAttribDivisor(5, 1)
+    //
+    // glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, debugging));
+    // glEnableVertexAttribArray(6);
+    // glVertexAttribDivisor(6, 1);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-    simulation->setupVBOConnection(particleVBO);
+    // simulation->setRendererVBO(particleVBO);
 }
 
-void FluidRenderer::setupBoundaryModel() {
+void FluidRenderer::setupSpawnAreaModel() {
     glGenVertexArrays(1, &boxVAO);
     glBindVertexArray(boxVAO);
 
     glGenBuffers(1, &boxVBO);
     glGenBuffers(1, &boxEBO);
 
-    rebuildBoundaryBox();
+    rebuildSpawnAreaBox();
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+}
+
+void FluidRenderer::updateParticleData() const {
+    glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(ParticleGPU) * simulation->particleCount, simulation->particles.data(), GL_DYNAMIC_DRAW);
+    simulation->setRendererVBO(particleVBO);
 }

@@ -178,6 +178,12 @@ __global__ void densityPressureKernel(
     if (id >= numParticles)
         return;
 
+    if (particles[id].flags.x == 0.0) {
+        particles[id].properties.y = 100;
+        particles[id].properties.z = k * 100;
+        return;
+    }
+
     float4 pos = particles[id].position;
 
     // Get cell of particle
@@ -221,6 +227,9 @@ __global__ void densityPressureKernel(
 
     particles[id].properties.y = density;
     particles[id].properties.z = k * (density - p_0);
+
+    // const float B = (k * p_0) / 7;
+    // particles[id].properties.z = B * (pow((density / p_0), 7) - 1);
 }
 
 void launchDensityPressureKernel(
@@ -254,6 +263,10 @@ __global__ void sphForcesKernel(
 
     if (id >= numParticles)
         return;
+
+    if (particles[id].flags.x == 0.0) {
+        return;
+    }
 
     // int pi = particleIndex[id];
     ParticleGPU* particle = &particles[id];
@@ -306,6 +319,9 @@ __global__ void sphForcesKernel(
 
                         // Pressure
                         const float scalar = other.properties.x * (particle->properties.z + other.properties.z) * 0.5f * invDensity;
+                        // const float scalar = other.properties.x *
+                            // (particle->properties.z / (particle->properties.y * particle->properties.y) +
+                             // other.properties.z / (other.properties.y * other.properties.y));
                         particle->pressureForce += scalar * spikyKernelGradient(diff, h);
 
                         // Viscosity
@@ -393,6 +409,10 @@ __global__ void updateParticlesKernel(
 
     ParticleGPU* particle = &particles[id];
 
+    // Skip ghost particles
+    if (particle->flags.x == 0.0)
+        return;
+
     // Update position
     const float4 force = particle->pressureForce + particle->viscosityForce + particle->surfaceTensionForce;
     const float4 acceleration = force / particle->properties.y + make_float4(0.0f, gravity, 0.0f, 1.0f);
@@ -405,35 +425,35 @@ __global__ void updateParticlesKernel(
     particle->position += deltaTime * particle->velocity;
 
     // Simple boundaries
-    if (particle->position.x < x.x) {
-        particle->position.x = x.x;
-        particle->velocity.x *= -1.0f;
-    }
-
-    if (particle->position.x > x.y) {
-        particle->position.x = x.y;
-        particle->velocity.x *= -1.0f;
-    }
-
-    if (particle->position.y < y.x) {
-        particle->position.y = y.x;
-        particle->velocity.y *= -1.0f;
-    }
-
-    if (particle->position.y > y.y) {
-        particle->position.y = y.y;
-        particle->velocity.y *= -1.0f;
-    }
-
-    if (particle->position.z < z.x) {
-        particle->position.z = z.x;
-        particle->velocity.z *= -1.0f;
-    }
-
-    if (particle->position.z > z.y) {
-        particle->position.z = z.y;
-        particle->velocity.z *= -1.0f;
-    }
+    // if (particle->position.x < x.x) {
+    //     particle->position.x = x.x;
+    //     particle->velocity.x *= -0.4f;
+    // }
+    //
+    // if (particle->position.x > x.y) {
+    //     particle->position.x = x.y;
+    //     particle->velocity.x *= -0.4f;
+    // }
+    //
+    // if (particle->position.y < y.x) {
+    //     particle->position.y = y.x;
+    //     particle->velocity.y *= -0.4f;
+    // }
+    //
+    // if (particle->position.y > y.y) {
+    //     particle->position.y = y.y;
+    //     particle->velocity.y *= -0.4f;
+    // }
+    //
+    // if (particle->position.z < z.x) {
+    //     particle->position.z = z.x;
+    //     particle->velocity.z *= -0.4f;
+    // }
+    //
+    // if (particle->position.z > z.y) {
+    //     particle->position.z = z.y;
+    //     particle->velocity.z *= -0.4f;
+    // }
 }
 
 void launchUpdateParticlesKernel(
@@ -450,6 +470,32 @@ void launchUpdateParticlesKernel(
 
     updateParticlesKernel<<<blocks, threadsPerBlock>>>(
         particles, numParticles, deltaTime, x, y, z, gravity
+    );
+}
+
+__global__ void renderPrepareKernel(
+    const int numParticles,
+    const ParticleGPU* particles,
+    float4* positions
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (id >= numParticles)
+        return;
+
+    positions[id] = particles[id].position;
+}
+
+void launchRenderPrepareKernel(
+    const int numParticles,
+    const ParticleGPU* particles,
+    float4* positions
+) {
+    int threadsPerBlock = 256;
+    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
+
+    renderPrepareKernel<<<blocks, threadsPerBlock>>>(
+        numParticles, particles, positions
     );
 }
 

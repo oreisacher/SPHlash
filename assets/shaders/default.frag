@@ -2,11 +2,11 @@
 
 #define PI 3.1415
 
-in vec3 Velocity;
-in vec2 TexCoord;
-in vec4 Properties;
-in vec4 Flags;
-in vec4 Debugging;
+//in vec3 Velocity;
+//in vec2 TexCoord;
+//in vec4 Properties;
+//in vec4 Flags;
+//in vec4 Debugging;
 flat in int ID;
 
 out vec4 FragColor;
@@ -50,6 +50,12 @@ void main() {
         return;
     }
 
+//    if (Flags.x == 0.0) {
+//        discard;
+//        FragColor = vec4(0.0, 1.0f, 0.0f, 1.0);
+//        return;
+//    }
+
 //    if (Flags.x == 1.0f) {
 //        FragColor = vec4(1.0);
 //        return;
@@ -58,17 +64,18 @@ void main() {
 //        return;
 //    }
 
-    if (Debugging.x > 0.0f) {
-        FragColor = vec4(1.0);
-        return;
-    }
+//    if (Debugging.x > 0.0f) {
+//        FragColor = vec4(1.0);
+//        return;
+//    }
 
-    float maxSpeed = 1.0f;
-    float speed = length(Velocity);
-    float strength = clamp(speed / maxSpeed, 0.0, 1.0);
+//    float maxSpeed = 1.0f;
+//    float speed = length(Velocity);
+//    float strength = clamp(speed / maxSpeed, 0.0, 1.0);
 
-    vec3 color = mix(vec3(0.0, 0.5, 1.0), vec3(1.0, 0.2, 0.0), strength);
-    FragColor = vec4(color, 1.0);
+//    vec3 color = mix(vec3(0.0, 0.5, 1.0), vec3(1.0, 0.2, 0.0), strength);
+//    FragColor = vec4(color, 1.0);
+        FragColor = vec4(1.0, 0.0, 0.0, 1.0f);
     //    FragColor = vec4(1.0f, 0.0f, Debugging.x, 1.0f);
 //        FragColor = vec4(indexToColor(Debugging.y), 1.0f);
     //    FragColor = vec4(hsv2rgb(velocityToHSV(Velocity, 10.0)), 1.0f);

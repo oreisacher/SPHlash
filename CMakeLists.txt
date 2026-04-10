@@ -47,6 +47,10 @@ add_executable(FluidSimSPH
     src/utils/InputManager.cpp
     src/utils/Camera.cpp
     src/Application.cpp
+        src/ui/InitPanel.cpp
+        src/ui/InitPanel.h
+        src/ui/ControlPanel.cpp
+        src/ui/ControlPanel.h
 )
 
 add_library(imgui
@@ -68,6 +72,7 @@ find_package(CUDAToolkit REQUIRED)
 add_subdirectory("external/glfw")
 add_subdirectory("external/glm")
 add_subdirectory("external/json")
+add_subdirectory("external/tinyobjloader")
 
 target_compile_definitions(FluidSimSPH PRIVATE USE_STD_FILESYSTEM)
 
@@ -75,6 +80,7 @@ target_include_directories(FluidSimSPH PUBLIC
     src
     external/glad/include
     external/ImGuiFileDialog
+    external/tinyobjloader
 )
 
 target_link_libraries(FluidSimSPH
@@ -83,6 +89,7 @@ target_link_libraries(FluidSimSPH
     PRIVATE glm
     PRIVATE nlohmann_json::nlohmann_json
     PRIVATE CUDA::cudart
+    PRIVATE tinyobjloader
 )
 
 set_target_properties(FluidSimSPH PROPERTIES

@@ -40,17 +40,17 @@ void SettingsPanel::draw() {
         ImGui::InputFloat("Gravity", &simulationSettings->gravity);
     }
 
-    if (ImGui::CollapsingHeader("Boundary Settings")) {
-        if (ImGui::DragFloat2("X", glm::value_ptr(simulationSettings->xBoundary), 0.01f)) {
-            renderer->rebuildBoundaryBox();
-        }
-        if (ImGui::DragFloat2("Y", glm::value_ptr(simulationSettings->yBoundary), 0.01f)) {
-            renderer->rebuildBoundaryBox();
-        }
-        if (ImGui::DragFloat2("Z", glm::value_ptr(simulationSettings->zBoundary), 0.01f)) {
-            renderer->rebuildBoundaryBox();
-        }
-    }
+    // if (ImGui::CollapsingHeader("Boundary Settings")) {
+    //     if (ImGui::DragFloat2("X", glm::value_ptr(simulationSettings->xBoundary), 0.01f)) {
+    //         renderer->rebuildSpawnAreaBox();
+    //     }
+    //     if (ImGui::DragFloat2("Y", glm::value_ptr(simulationSettings->yBoundary), 0.01f)) {
+    //         renderer->rebuildSpawnAreaBox();
+    //     }
+    //     if (ImGui::DragFloat2("Z", glm::value_ptr(simulationSettings->zBoundary), 0.01f)) {
+    //         renderer->rebuildSpawnAreaBox();
+    //     }
+    // }
 
     if (ImGui::CollapsingHeader("Rendering Settings")) {
         if (ImGui::DragFloat("Particle Size", &renderSettings->particleSize, 0.0001f)) {
