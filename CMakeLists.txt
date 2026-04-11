@@ -1,14 +1,14 @@
-cmake_minimum_required(VERSION 4.1)
+cmake_minimum_required(VERSION 3.22)
 
-set(CMAKE_C_COMPILER /usr/bin/gcc-14)
-set(CMAKE_CXX_COMPILER /usr/bin/g++-14)
-set(CMAKE_CUDA_HOST_COMPILER /usr/bin/g++-14)
+#set(CMAKE_C_COMPILER /usr/bin/gcc)
+#set(CMAKE_CXX_COMPILER /usr/bin/g++)
+#set(CMAKE_CUDA_HOST_COMPILER /usr/bin/g++)
 
 project(FluidSimSPH LANGUAGES CXX C CUDA)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CUDA_STANDARD 17)
-set(CMAKE_CUDA_ARCHITECTURES native)
+set(CMAKE_CUDA_ARCHITECTURES 61)
 
 # Pull git submodules
 find_package(Git QUIET)

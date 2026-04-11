@@ -1,0 +1,61 @@
+name: Build Project
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image: nvidia/cuda:12.9.0-devel-ubuntu22.04
+
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            build-essential \
+            cmake \
+            git \
+            libglfw3-dev \
+            libwayland-dev \
+            wayland-protocols \
+            libxkbcommon-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libgl1-mesa-dev \
+            pkg-config
+
+      - name: Install GCC 13
+        run: |
+          apt install -y software-properties-common
+          add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          apt-get update
+          apt-get install -y gcc-13 g++-13
+          update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+          update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Verify submodules
+        run: |
+          git submodule status
+          ls -la external/imgui/
+
+      - name: Configure CMake
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j$(nproc)
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: FluidSim-build
+          path: build/
