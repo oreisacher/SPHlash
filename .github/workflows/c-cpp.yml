@@ -9,10 +9,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
       - name: Install CUDA Toolkit
         uses: Jimver/cuda-toolkit@master
         with:
           cuda: "12.9.0"
+          sub-packages: '["nvcc", "cudart"]'
+
+      - name: Verify CUDA installation
+        run: |
+          echo "CUDA Version:"
+          nvcc --version
+          echo "CUDA Path: $CUDA_PATH"
 
       - name: Install dependencies
         run: |
