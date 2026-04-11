@@ -66,13 +66,20 @@ jobs:
             build/assets
             build/FluidSimSPH
 
+      - name: Package Release
+        run: |
+          mkdir -p release
+          cp build/FluidSimSPH release/
+          cp -r build/assets release/
+          
+          cd release
+          zip -r FluidSimSPH-${{ github.ref_name }}.zip .
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: FluidSim ${{ github.ref_name }}
-          files: |
-            build/FluidSimSPH
-            build/assets/**
+          files: release/FluidSimSPH-${{ github.ref_name }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
