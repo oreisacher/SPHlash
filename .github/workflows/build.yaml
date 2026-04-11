@@ -23,6 +23,7 @@ jobs:
             build-essential \
             cmake \
             git \
+            zip \
             libglfw3-dev \
             libwayland-dev \
             wayland-protocols \
