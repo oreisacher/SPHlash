@@ -20,7 +20,6 @@ jobs:
         uses: Jimver/cuda-toolkit@master
         with:
           cuda: "12.9.0"
-          sub-packages: '["nvcc", "cudart"]'
 
       - name: Verify CUDA installation
         run: |
