@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -48,11 +51,6 @@ jobs:
 
       - name: Mark repo as safe for git
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      - name: Verify submodules
-        run: |
-          git submodule status
-          ls -la external/imgui/
 
       - name: Configure CMake
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
