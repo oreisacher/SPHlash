@@ -13,10 +13,91 @@ UIManager::UIManager(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
 
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImVec4* colors = style.Colors;
+
+    // Main colors - darker backgrounds, less saturated reds
+    colors[ImGuiCol_Text]                   = ImVec4(0.95f, 0.95f, 0.95f, 1.00f);
+    colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    colors[ImGuiCol_WindowBg]               = ImVec4(0.12f, 0.10f, 0.10f, 0.94f);  // Dark gray with hint of red
+    colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_PopupBg]                = ImVec4(0.15f, 0.12f, 0.12f, 0.94f);
+    colors[ImGuiCol_Border]                 = ImVec4(0.40f, 0.25f, 0.25f, 0.50f);  // Muted red border
+    colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+
+    // Frame colors - subtle red tint
+    colors[ImGuiCol_FrameBg]                = ImVec4(0.18f, 0.14f, 0.14f, 0.54f);
+    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.28f, 0.18f, 0.18f, 0.40f);
+    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.35f, 0.20f, 0.20f, 0.67f);
+
+    // Title bar
+    colors[ImGuiCol_TitleBg]                = ImVec4(0.15f, 0.10f, 0.10f, 1.00f);
+    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.25f, 0.15f, 0.15f, 1.00f);
+    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.12f, 0.08f, 0.08f, 0.51f);
+
+    // Scrollbar
+    colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.12f, 0.10f, 0.10f, 0.53f);
+    colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.35f, 0.25f, 0.25f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.45f, 0.30f, 0.30f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.55f, 0.35f, 0.35f, 1.00f);
+
+    // Checkboxes - brighter red accent
+    colors[ImGuiCol_CheckMark]              = ImVec4(0.90f, 0.40f, 0.40f, 1.00f);
+
+    // Sliders
+    colors[ImGuiCol_SliderGrab]             = ImVec4(0.60f, 0.35f, 0.35f, 1.00f);
+    colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.80f, 0.45f, 0.45f, 1.00f);
+
+    // Buttons - desaturated red
+    colors[ImGuiCol_Button]                 = ImVec4(0.35f, 0.25f, 0.25f, 0.40f);
+    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.50f, 0.32f, 0.32f, 1.00f);
+    colors[ImGuiCol_ButtonActive]           = ImVec4(0.65f, 0.40f, 0.40f, 1.00f);
+
+    // Headers
+    colors[ImGuiCol_Header]                 = ImVec4(0.35f, 0.25f, 0.25f, 0.31f);
+    colors[ImGuiCol_HeaderHovered]          = ImVec4(0.50f, 0.32f, 0.32f, 0.80f);
+    colors[ImGuiCol_HeaderActive]           = ImVec4(0.60f, 0.38f, 0.38f, 1.00f);
+
+    // Separators
+    colors[ImGuiCol_Separator]              = ImVec4(0.40f, 0.25f, 0.25f, 0.50f);
+    colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.55f, 0.35f, 0.35f, 0.78f);
+    colors[ImGuiCol_SeparatorActive]        = ImVec4(0.70f, 0.45f, 0.45f, 1.00f);
+
+    // Resize grips
+    colors[ImGuiCol_ResizeGrip]             = ImVec4(0.35f, 0.25f, 0.25f, 0.20f);
+    colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.50f, 0.32f, 0.32f, 0.67f);
+    colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.65f, 0.40f, 0.40f, 0.95f);
+
+    // Tabs
+    colors[ImGuiCol_Tab]                    = ImVec4(0.25f, 0.18f, 0.18f, 0.86f);
+    colors[ImGuiCol_TabHovered]             = ImVec4(0.50f, 0.32f, 0.32f, 0.80f);
+    colors[ImGuiCol_TabActive]              = ImVec4(0.38f, 0.26f, 0.26f, 1.00f);
+    colors[ImGuiCol_TabUnfocused]           = ImVec4(0.18f, 0.14f, 0.14f, 0.97f);
+    colors[ImGuiCol_TabUnfocusedActive]     = ImVec4(0.28f, 0.20f, 0.20f, 1.00f);
+
+    // Text selection
+    colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.50f, 0.32f, 0.32f, 0.35f);
+
+    // Drag and drop
+    colors[ImGuiCol_DragDropTarget]         = ImVec4(0.85f, 0.50f, 0.50f, 0.90f);
+
+    // Navigation
+    colors[ImGuiCol_NavHighlight]           = ImVec4(0.80f, 0.45f, 0.45f, 1.00f);
+    colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+    colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
+    colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.15f, 0.10f, 0.10f, 0.35f);
+
+    // Softer rounding
+    style.WindowRounding    = 6.0f;
+    style.FrameRounding     = 4.0f;
+    style.GrabRounding      = 4.0f;
+    style.ScrollbarRounding = 4.0f;
+    style.TabRounding       = 4.0f;
+
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-    ImGui::StyleColorsDark();
+    // ImGui::StyleColorsDark();
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
@@ -74,7 +155,7 @@ void UIManager::draw() const {
         ImGui::DockBuilderSplitNode(dock_left_2, ImGuiDir_Down, 0.50f, &dock_left_3, &dock_left_2);
 
         // Right
-        ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Up,  0.80f, &dock_right_top, &dock_right_bottom);
+        ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Up,  0.50f, &dock_right_top, &dock_right_bottom);
         ImGui::DockBuilderSplitNode(dock_right_top, ImGuiDir_Up,  0.50f, &dock_right_top, &dock_right_middle);
 
         ImGui::DockBuilderDockWindow("Simulation", dock_main);

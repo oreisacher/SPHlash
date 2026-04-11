@@ -7,22 +7,27 @@
 
 #include "UIPanel.h"
 #include "glad/gl.h"
+#include "rendering/FluidRenderer.h"
 #include "rendering/Shader.h"
+#include "simulation/FluidSimulationGPU.h"
 
 class ParticlesPanel : public UIPanel {
 public:
-    explicit ParticlesPanel(const std::string& name, GLuint particlesVBO, int particleCount, Shader* particleShader);
+    explicit ParticlesPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
-    GLuint particlesVBO;
-    int particleCount;
+    FluidSimulationGPU* simulation;
+    FluidRenderer* renderer;
+
+    ParticleGPU particle;
+
+    double time = 0.0f;
+
     bool showParticles = false;
     int selectedParticle = 0;
-
-    Shader* shader;
 };
 
 #endif //FLUIDSIMSPH_PARTICLESPANEL_H

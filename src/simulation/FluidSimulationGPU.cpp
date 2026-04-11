@@ -89,6 +89,7 @@ FluidSimulationGPU::FluidSimulationGPU() {
 }
 
 FluidSimulationGPU::~FluidSimulationGPU() {
+    cudaFree(d_particles);
     cudaFree(d_sortedParticles);
     cudaFree(d_particleHashes);
     cudaFree(d_sortedParticleHashes);
@@ -97,7 +98,7 @@ FluidSimulationGPU::~FluidSimulationGPU() {
     cudaFree(d_sortedParticleIndices);
     cudaFree(d_sortTempStorage);
 
-    // cudaGraphicsUnmapResources(1, &particleResource, nullptr);
+    cudaGraphicsUnmapResources(1, &rendererResource, nullptr);
 }
 
 void FluidSimulationGPU::update(const float deltaTime) {
@@ -225,6 +226,19 @@ void FluidSimulationGPU::setRendererVBO(const GLuint vbo) {
     // size_t numBytes;
     // cudaGraphicsMapResources(1, &rendererResource);
     // cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_rendererParticles), &numBytes, rendererResource);
+}
+
+ParticleGPU FluidSimulationGPU::getParticle(const int id) const {
+    ParticleGPU particle;
+
+    if (state == UNINITIALIZED)
+        return particle;
+
+    if (id < 0 || id >= particleCount)
+        return particle;
+
+    cudaMemcpy(&particle, &d_particles[id], sizeof(ParticleGPU), cudaMemcpyDeviceToHost);
+    return particle;
 }
 
 void FluidSimulationGPU::initParticles() {

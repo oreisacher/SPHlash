@@ -52,7 +52,7 @@ Application::Application() {
     ui->addPanel(new StatisticsPanel("Statistics", simulation));
     ui->addPanel(new InitPanel("Init Settings", simulation, renderer));
     ui->addPanel(new SettingsPanel("Particle Settings", simulation, renderer));
-    ui->addPanel(new ParticlesPanel("Particles", renderer->getParticleVBO(), simulation->particleCount, renderer->getParticleShader()));
+    ui->addPanel(new ParticlesPanel("Particles", simulation, renderer));
 
     // Setup Camera
     camera = new Camera({ 0.0f, 0.0f, 1.0f });

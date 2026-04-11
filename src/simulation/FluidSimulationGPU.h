@@ -21,19 +21,19 @@ enum SimulationState {
 };
 
 struct ParticleGPU {
-    float4 position;     // vec4 to avoid padding issues
-    float4 startPosition;
-    float4 velocity;
-    float4 properties;   // x: mass, y: density, z: pressure, w: id
-    float4 flags;        // x: type, y: undefined, z: undefined, w: undefined
+    float4 position                 = { 0.0f, 0.0f, 0.0f, 0.0f };   // vec4 to avoid padding issues
+    float4 startPosition            = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float4 velocity                 = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float4 properties               = { -1.0f, -1.0f, -1.0f, -1.0f };   // x: mass, y: density, z: pressure, w: id
+    float4 flags                    = { 0.0f, 0.0f, 0.0f, 0.0f };   // x: type, y: undefined, z: undefined, w: undefined
 
     // SPH Forces
-    float4 pressureForce;
-    float4 viscosityForce;
-    float4 surfaceTensionForce;
+    float4 pressureForce            = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float4 viscosityForce           = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float4 surfaceTensionForce      = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     // Debugging
-    float4 debugging;
+    float4 debugging                = { 0.0f, 0.0f, 0.0f, 0.0f };
 };
 
 struct InitSettings {
@@ -75,10 +75,11 @@ public:
 
     void initParticles();
 
-    // void updateBoundaries();
     void setRendererVBO(GLuint vbo);
 
-    float cfl;
+    ParticleGPU getParticle(int id) const;
+
+    float cfl = 0;
 
     int particleCount = 0;
     std::vector<ParticleGPU> particles;

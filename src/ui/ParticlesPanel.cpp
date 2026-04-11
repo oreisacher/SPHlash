@@ -3,16 +3,24 @@
 //
 
 #include "ParticlesPanel.h"
-
 #include <format>
-
 #include "imgui.h"
 #include "simulation/FluidSimulationGPU.h"
 
-ParticlesPanel::ParticlesPanel(const std::string& name, GLuint particlesVBO, int particleCount, Shader* particleShader)
-    : UIPanel(name), particlesVBO(particlesVBO), particleCount(particleCount), shader(particleShader) { }
+ParticlesPanel::ParticlesPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer)
+    : UIPanel(name), simulation(simulation), renderer(renderer)
+{ }
 
-void ParticlesPanel::update(double deltaTime) { }
+void ParticlesPanel::update(double deltaTime) {
+    time += deltaTime;
+
+    if (time >= 0.5f) {
+        time = 0.0f;
+
+        // Fetch new data from simulation
+        particle = simulation->getParticle(selectedParticle);
+    }
+}
 
 void ParticlesPanel::draw() {
     if (!visible)
@@ -23,35 +31,64 @@ void ParticlesPanel::draw() {
     ImGui::Checkbox("Show particle info", &showParticles);
 
     if (showParticles) {
-        ImGui::InputInt("Particle", &selectedParticle);
+        ImGui::Spacing();
+        ImGui::PushItemWidth(-FLT_MIN);
+        ImGui::Text("Particle ID:");
+        ImGui::DragInt("##id", &selectedParticle, 1, 0, simulation->particleCount);
 
-        shader->bind();
-        shader->setInt("selectedParticleID", selectedParticle);
+        renderer->getParticleShader()->bind();
+        renderer->getParticleShader()->setInt("selectedParticleID", selectedParticle);
 
-        // Bind particle data
-        glBindBuffer(GL_ARRAY_BUFFER, particlesVBO);
-        ParticleGPU* data = static_cast<ParticleGPU*>(glMapBuffer(GL_ARRAY_BUFFER, GL_READ_ONLY));
+        if (particle.properties.w != -1.0) {
+            float totalWidth = ImGui::GetContentRegionAvail().x;
+            float spacing = ImGui::GetStyle().ItemSpacing.x;
+            float itemWidth = (totalWidth - 2.0f * spacing) / 3.0f;
 
-        auto length = [](const float4& v) {
-            return std::sqrt(v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w);
-        };
+            ImGui::Separator();
 
-        ImGui::Text(std::format("Position: {:.3f} {:.3f} {:.3f}", data[selectedParticle].position.x, data[selectedParticle].position.y, data[selectedParticle].position.z).c_str());
-        ImGui::Text(std::format("Velocity: {:.3f} {:.3f} {:.3f} ({:.3f})", data[selectedParticle].velocity.x, data[selectedParticle].velocity.y, data[selectedParticle].velocity.z, length(data[selectedParticle].velocity)).c_str());
-        ImGui::Separator();
-        ImGui::Text(std::format("Mass: {:.3f}", data[selectedParticle].properties.x).c_str());
-        ImGui::Text(std::format("Density: {}", data[selectedParticle].properties.y).c_str());
-        ImGui::Text(std::format("Pressure: {}", data[selectedParticle].properties.z).c_str());
-        ImGui::Text(std::format("A: {}", data[selectedParticle].properties.w).c_str());
-        ImGui::Separator();
-        ImGui::Text(std::format("Pressure Force: {:.3f} {:.3f} {:.3f}", data[selectedParticle].pressureForce.x, data[selectedParticle].pressureForce.y, data[selectedParticle].pressureForce.z).c_str());
-        ImGui::Text(std::format("Viscosity Force: {:.3f} {:.3f} {:.3f}", data[selectedParticle].viscosityForce.x, data[selectedParticle].viscosityForce.y, data[selectedParticle].viscosityForce.z).c_str());
-        ImGui::Text(std::format("Surface Tension Force: {:.3f} {:.3f} {:.3f}", data[selectedParticle].surfaceTensionForce.x, data[selectedParticle].surfaceTensionForce.y, data[selectedParticle].surfaceTensionForce.z).c_str());
+            ImGui::Text("Position:");
+            ImGui::Button(std::format("{:.3f}##posx", particle.position.x).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##posy", particle.position.y).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##posz", particle.position.z).c_str(), ImVec2(itemWidth, 0));
 
-        glUnmapBuffer(GL_ARRAY_BUFFER);
+            ImGui::Text("Velocity:");
+            ImGui::Button(std::format("{:.3f}##velx", particle.velocity.x).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##vely", particle.velocity.y).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##velz", particle.velocity.z).c_str(), ImVec2(itemWidth, 0));
+
+            ImGui::Separator();
+
+            ImGui::Text("Mass:");
+            ImGui::Button(std::format("{:.3f}##mass", particle.properties.x).c_str(), ImVec2(-FLT_MIN, 0));
+
+            ImGui::Text("Density:");
+            ImGui::Button(std::format("{:.3f}##dens", particle.properties.y).c_str(), ImVec2(-FLT_MIN, 0));
+
+            ImGui::Text("Pressure:");
+            ImGui::Button(std::format("{:.3f}##pres", particle.properties.z).c_str(), ImVec2(-FLT_MIN, 0));
+
+            ImGui::Separator();
+
+            ImGui::Text("Pressure Force:");
+            ImGui::Button(std::format("{:.3f}##pfx", particle.pressureForce.x).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##pfy", particle.pressureForce.y).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##pfz", particle.pressureForce.z).c_str(), ImVec2(itemWidth, 0));
+
+            ImGui::Text("Viscosity Force:");
+            ImGui::Button(std::format("{:.3f}##pfx", particle.viscosityForce.x).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##pfy", particle.viscosityForce.y).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##pfz", particle.viscosityForce.z).c_str(), ImVec2(itemWidth, 0));
+
+            ImGui::Text("Surface Tension Force:");
+            ImGui::Button(std::format("{:.3f}##pfx", particle.surfaceTensionForce.x).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##pfy", particle.surfaceTensionForce.y).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##pfz", particle.surfaceTensionForce.z).c_str(), ImVec2(itemWidth, 0));
+        } else {
+            showParticles = false;
+        }
     } else {
-        shader->bind();
-        shader->setInt("selectedParticleID", -1);
+        renderer->getParticleShader()->bind();
+        renderer->getParticleShader()->setInt("selectedParticleID", -1);
     }
 
     ImGui::End();

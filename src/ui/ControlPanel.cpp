@@ -19,10 +19,12 @@ void ControlPanel::draw() {
     ImGui::Begin(name.c_str());
 
     ImGui::BeginDisabled(simulation->state == UNINITIALIZED);
+
     const char* startStopText = simulation->state == RUNNING ? "Stop Simulation" : "Start Simulation";
     if (ImGui::Button(startStopText)) {
         simulation->state = simulation->state == PAUSED ? RUNNING : PAUSED;
     }
+
     ImGui::EndDisabled();
 
     ImGui::End();
