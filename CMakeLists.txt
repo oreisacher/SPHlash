@@ -32,25 +32,25 @@ add_executable(FluidSimSPH
     src/rendering/Framebuffer.cpp
     src/rendering/Window.cpp
     src/rendering/Shader.cpp
-        src/ui/StatisticsPanel.cpp
+    src/ui/StatisticsPanel.cpp
     src/utils/Time.cpp
     src/utils/Logger.cpp
     src/ui/SettingsPanel.cpp
     src/simulation/FluidSimulationGPU.cpp
     src/cuda/FluidSimulation.cu
-        src/cuda/Kernels.cuh
-
-    # External
-    external/glad/src/gl.c
-    external/ImGuiFileDialog/ImGuiFileDialog.cpp
+    src/cuda/Kernels.cuh
     src/ui/ParticlesPanel.cpp
     src/utils/InputManager.cpp
     src/utils/Camera.cpp
     src/Application.cpp
-        src/ui/InitPanel.cpp
-        src/ui/InitPanel.h
-        src/ui/ControlPanel.cpp
-        src/ui/ControlPanel.h
+    src/ui/InitPanel.cpp
+    src/ui/InitPanel.h
+    src/ui/ControlPanel.cpp
+    src/ui/ControlPanel.h
+
+    # External
+    external/glad/src/gl.c
+    external/ImGuiFileDialog/ImGuiFileDialog.cpp
 )
 
 add_library(imgui

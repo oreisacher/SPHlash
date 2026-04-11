@@ -1,6 +1,9 @@
 name: Build Project
 
-on: [push]
+on:
+  push:
+    tags:
+      - "v*"
 
 jobs:
   build:
@@ -68,6 +71,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
+          name: FluidSim ${{ github.ref_name }}
           files: |
             build/FluidSimSPH
             build/assets/**
