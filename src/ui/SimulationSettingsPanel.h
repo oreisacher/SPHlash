@@ -10,9 +10,9 @@
 #include "simulation/FluidSimulation.h"
 #include "simulation/FluidSimulationGPU.h"
 
-class SettingsPanel : public UIPanel {
+class SimulationSettingsPanel : public UIPanel {
 public:
-    explicit SettingsPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer);
+    explicit SimulationSettingsPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer);
 
     void update(double deltaTime) override;
     void draw() override;

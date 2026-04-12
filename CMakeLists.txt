@@ -35,7 +35,7 @@ add_executable(FluidSimSPH
     src/ui/StatisticsPanel.cpp
     src/utils/Time.cpp
     src/utils/Logger.cpp
-    src/ui/SettingsPanel.cpp
+        src/ui/SimulationSettingsPanel.cpp
     src/simulation/FluidSimulationGPU.cpp
     src/cuda/FluidSimulation.cu
     src/cuda/Kernels.cuh
@@ -51,6 +51,8 @@ add_executable(FluidSimSPH
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
+        src/ui/RenderingSettingsPanel.cpp
+        src/ui/RenderingSettingsPanel.h
 )
 
 add_library(imgui

@@ -75,14 +75,14 @@ void ParticlesPanel::draw() {
             ImGui::Button(std::format("{:.3f}##pfz", particle.pressureForce.z).c_str(), ImVec2(itemWidth, 0));
 
             ImGui::Text("Viscosity Force:");
-            ImGui::Button(std::format("{:.3f}##pfx", particle.viscosityForce.x).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
-            ImGui::Button(std::format("{:.3f}##pfy", particle.viscosityForce.y).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
-            ImGui::Button(std::format("{:.3f}##pfz", particle.viscosityForce.z).c_str(), ImVec2(itemWidth, 0));
+            ImGui::Button(std::format("{:.3f}##vfx", particle.viscosityForce.x).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##vfy", particle.viscosityForce.y).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##vfz", particle.viscosityForce.z).c_str(), ImVec2(itemWidth, 0));
 
             ImGui::Text("Surface Tension Force:");
-            ImGui::Button(std::format("{:.3f}##pfx", particle.surfaceTensionForce.x).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
-            ImGui::Button(std::format("{:.3f}##pfy", particle.surfaceTensionForce.y).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
-            ImGui::Button(std::format("{:.3f}##pfz", particle.surfaceTensionForce.z).c_str(), ImVec2(itemWidth, 0));
+            ImGui::Button(std::format("{:.3f}##stfx", particle.surfaceTensionForce.x).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##stfy", particle.surfaceTensionForce.y).c_str(), ImVec2(itemWidth, 0)); ImGui::SameLine();
+            ImGui::Button(std::format("{:.3f}##stfz", particle.surfaceTensionForce.z).c_str(), ImVec2(itemWidth, 0));
         } else {
             showParticles = false;
         }

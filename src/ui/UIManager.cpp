@@ -145,22 +145,23 @@ void UIManager::draw() const {
 
         ImGuiID dock_main = dockspace_id;
         ImGuiID dock_left, dock_left_1, dock_left_2, dock_left_3;
-        ImGuiID dock_right, dock_right_top, dock_right_bottom, dock_right_middle;
+        ImGuiID dock_right, dock_right_1, dock_right_2, dock_right_3;
 
         ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Left, 0.20f, &dock_left, &dock_main);
         ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Right, 0.30f, &dock_right, &dock_main);
 
         // Left
-        ImGui::DockBuilderSplitNode(dock_left, ImGuiDir_Down, 0.90f, &dock_left_2, &dock_left_1);
-        ImGui::DockBuilderSplitNode(dock_left_2, ImGuiDir_Down, 0.50f, &dock_left_3, &dock_left_2);
+        ImGui::DockBuilderSplitNode(dock_left, ImGuiDir_Down, 0.80f, &dock_left_2, &dock_left_1);
+        ImGui::DockBuilderSplitNode(dock_left_2, ImGuiDir_Down, 0.30f, &dock_left_3, &dock_left_2);
 
         // Right
-        ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Up,  0.50f, &dock_right_top, &dock_right_bottom);
-        ImGui::DockBuilderSplitNode(dock_right_top, ImGuiDir_Up,  0.50f, &dock_right_top, &dock_right_middle);
+        ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Down,  0.70f, &dock_right_2, &dock_right_1);
+        ImGui::DockBuilderSplitNode(dock_right_2, ImGuiDir_Up,  0.50f, &dock_right_2, &dock_right_3);
 
         ImGui::DockBuilderDockWindow("Simulation", dock_main);
-        ImGui::DockBuilderDockWindow("Particle Settings", dock_right_top);
-        ImGui::DockBuilderDockWindow("Particles", dock_right_bottom);
+        ImGui::DockBuilderDockWindow("Simulation Settings", dock_right_1);
+        ImGui::DockBuilderDockWindow("Rendering Settings", dock_right_2);
+        ImGui::DockBuilderDockWindow("Particles", dock_right_3);
         ImGui::DockBuilderDockWindow("Controls", dock_left_1);
         ImGui::DockBuilderDockWindow("Init Settings", dock_left_2);
         ImGui::DockBuilderDockWindow("Statistics", dock_left_3);

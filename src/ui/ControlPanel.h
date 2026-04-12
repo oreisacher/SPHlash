@@ -19,6 +19,7 @@ private:
     FluidSimulationGPU* simulation;
 
     float timeStep = 0.0;
+    float stepSize = 16.666667;
 };
 
 #endif //FLUIDSIMSPH_CONTROLPANEL_H

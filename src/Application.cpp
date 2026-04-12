@@ -8,7 +8,7 @@
 #include "rendering/Window.h"
 #include "ui/StatisticsPanel.h"
 #include "ui/ParticlesPanel.h"
-#include "ui/SettingsPanel.h"
+#include "ui/SimulationSettingsPanel.h"
 #include "ui/SimulationPanel.h"
 #include "ui/UIManager.h"
 #include "utils/Camera.h"
@@ -26,6 +26,7 @@
 #include "tiny_obj_loader.h"
 #include "ui/ControlPanel.h"
 #include "ui/InitPanel.h"
+#include "ui/RenderingSettingsPanel.h"
 
 Application::Application() {
     // Window creation
@@ -51,7 +52,8 @@ Application::Application() {
     ui->addPanel(new ControlPanel("Controls", simulation));
     ui->addPanel(new StatisticsPanel("Statistics", simulation));
     ui->addPanel(new InitPanel("Init Settings", simulation, renderer));
-    ui->addPanel(new SettingsPanel("Particle Settings", simulation, renderer));
+    ui->addPanel(new SimulationSettingsPanel("Simulation Settings", simulation, renderer));
+    ui->addPanel(new RenderingSettingsPanel("Rendering Settings", renderer));
     ui->addPanel(new ParticlesPanel("Particles", simulation, renderer));
 
     // Setup Camera
@@ -81,13 +83,7 @@ Application::~Application() {
 void Application::run() const {
     while (!window->shouldClose()) {
         // Simulation
-        // simulation.update(Motor::Time.getDeltaTime());
-        // simulation.update(0.016);  // Force 60 fps
-        // simGPU.update(0.008333333); // Force 120 fps
-        simulation->update(0.0083);
-        // simulation->update(0.0);
-        // simulation->update(0.0);
-        // simulation->update(0.0);
+        simulation->update(Time.getDeltaTime());
 
         // Render simulation into texture
         renderer->render();

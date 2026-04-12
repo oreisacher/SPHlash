@@ -9,11 +9,6 @@
 #include "rendering/FluidRenderer.h"
 #include "simulation/FluidSimulationGPU.h"
 
-//
-// Boundary of spawn area
-// Mass of spawning area
-// => Call init particles function again on button press
-//
 class InitPanel : public UIPanel{
 public:
     explicit InitPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer);

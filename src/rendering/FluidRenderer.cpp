@@ -54,8 +54,10 @@ void FluidRenderer::render() const {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Draw particles
-    glBindVertexArray(vao);
-    glDrawElementsInstanced(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0, simulation->particleCount);
+    if (simulation->particleCount != 0) {
+        glBindVertexArray(vao);
+        glDrawElementsInstanced(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0, simulation->particleCount);
+    }
 
     // Draw bounding box
     boundaryShader->bind();
@@ -136,7 +138,11 @@ void FluidRenderer::setupShaders() {
 
     particleShader->compile();
     particleShader->bind();
+
+    // Set default settings
+    particleShader->setInt("mode", settings.mode);
     particleShader->setFloat("size", settings.particleSize);
+    particleShader->setVec3("particleColor", settings.solidColor);
 
     // Boundary Box Shader
     boundaryShader = new Shader({
@@ -176,20 +182,19 @@ void FluidRenderer::setupSphereModel() {
 void FluidRenderer::setupParticles() {
     glGenBuffers(1, &particleVBO);
     glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(float4) * simulation->particleCount, nullptr, GL_DYNAMIC_DRAW);
 
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(float4), (void*)0);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(RendererParticle), (void*)0);
     glEnableVertexAttribArray(2);
     glVertexAttribDivisor(2, 1);
 
-    // glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, velocity));
-    // glEnableVertexAttribArray(3);
-    // glVertexAttribDivisor(3, 1);
-    //
-    // glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, properties));
-    // glEnableVertexAttribArray(4);
-    // glVertexAttribDivisor(4, 1);
-    //
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(RendererParticle), (void*)offsetof(RendererParticle, velocity));
+    glEnableVertexAttribArray(3);
+    glVertexAttribDivisor(3, 1);
+
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(RendererParticle), (void*)offsetof(RendererParticle, properties));
+    glEnableVertexAttribArray(4);
+    glVertexAttribDivisor(4, 1);
+
     // glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, flags));
     // glEnableVertexAttribArray(5);
     // glVertexAttribDivisor(5, 1)
@@ -217,6 +222,25 @@ void FluidRenderer::setupSpawnAreaModel() {
 
 void FluidRenderer::updateParticleData() const {
     glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(ParticleGPU) * simulation->particleCount, simulation->particles.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(RendererParticle) * simulation->particleCount, nullptr, GL_DYNAMIC_DRAW);
     simulation->setRendererVBO(particleVBO);
+}
+
+void FluidRenderer::updateRenderingSettings() const {
+    particleShader->bind();
+
+    particleShader->setInt("mode", settings.mode);
+    particleShader->setFloat("size", settings.particleSize);
+
+    particleShader->setVec3("particleColor", settings.solidColor);
+
+    particleShader->setVec3("minVelColor", settings.minVelColor);
+    particleShader->setVec3("maxVelColor", settings.maxVelColor);
+    particleShader->setFloat("minVel", settings.velocityMin);
+    particleShader->setFloat("maxVel", settings.velocityMax);
+
+    particleShader->setVec3("minPresColor", settings.minPresColor);
+    particleShader->setVec3("maxPresColor", settings.maxPresColor);
+    particleShader->setFloat("minPres", settings.pressureMin);
+    particleShader->setFloat("maxPres", settings.pressureMax);
 }

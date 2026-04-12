@@ -2,7 +2,7 @@
 // Created by ruut on 3/16/26.
 //
 
-#include "SettingsPanel.h"
+#include "SimulationSettingsPanel.h"
 
 #include <fstream>
 
@@ -12,55 +12,71 @@
 #include "glm/gtc/type_ptr.inl"
 #include "simulation/FluidSimulationGPU.h"
 
-SettingsPanel::SettingsPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer)
+SimulationSettingsPanel::SimulationSettingsPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer)
     : UIPanel(name), simulation(simulation), renderer(renderer) {
     simulationSettings = &simulation->settings;
     renderSettings = &renderer->settings;
 }
 
-void SettingsPanel::update(double deltaTime) { }
+void SimulationSettingsPanel::update(double deltaTime) { }
 
-void SettingsPanel::draw() {
+void SimulationSettingsPanel::draw() {
     if (!visible)
         return;
 
     ImGui::Begin(name.c_str());
+    ImGui::PushItemWidth(-FLT_MIN);
+    float totalWidth = ImGui::GetContentRegionAvail().x;
 
     if (ImGui::CollapsingHeader("Particle Settings")) {
-        ImGui::DragFloat("H", &simulationSettings->h, 0.0001, 0.0001);
-        ImGui::DragFloat("P_0", &simulationSettings->p_0, 0.001f);
-        ImGui::DragFloat("k", &simulationSettings->k, 0.001f);
-        ImGui::DragFloat("mu", &simulationSettings->mu, 0.001f);
-        ImGui::DragFloat("Tension Threshold", &simulationSettings->tensionThreshold, 0.001f);
-        ImGui::DragFloat("Tension", &simulationSettings->tension, 0.001f);
+        ImGui::Text("H:");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Size of Kernel");
+        ImGui::DragFloat("##H", &simulationSettings->h, 0.0001, 0.0001);
+
+        ImGui::Text("P_0:");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Rest Density");
+        ImGui::DragFloat("##P_0", &simulationSettings->p_0, 0.001f);
+
+        ImGui::Text("K:");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Stiffness");
+        ImGui::DragFloat("##k", &simulationSettings->k, 0.001f);
+
+        ImGui::Text("Mu:");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Viscosity Coefficient");
+        ImGui::DragFloat("##mu", &simulationSettings->mu, 0.001f);
+
+        ImGui::Text("Surface Tension Threshold:");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Surface Tension Threshold");
+        ImGui::DragFloat("##TT", &simulationSettings->tensionThreshold, 0.001f);
+
+        ImGui::Text("Surface Tension:");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Surface Tension Strength");
+        ImGui::DragFloat("##T", &simulationSettings->tension, 0.001f);
     }
 
     if (ImGui::CollapsingHeader("Gravity Settings")) {
-        ImGui::Checkbox("Enable", &simulationSettings->enableGravity);
-        ImGui::InputFloat("Gravity", &simulationSettings->gravity);
+        ImGui::Checkbox("Enable##g", &simulationSettings->enableGravity);
+
+        ImGui::Text("Gravity:");
+        ImGui::DragFloat("##g", &simulationSettings->gravity, 0.01);
     }
 
-    // if (ImGui::CollapsingHeader("Boundary Settings")) {
-    //     if (ImGui::DragFloat2("X", glm::value_ptr(simulationSettings->xBoundary), 0.01f)) {
-    //         renderer->rebuildSpawnAreaBox();
-    //     }
-    //     if (ImGui::DragFloat2("Y", glm::value_ptr(simulationSettings->yBoundary), 0.01f)) {
-    //         renderer->rebuildSpawnAreaBox();
-    //     }
-    //     if (ImGui::DragFloat2("Z", glm::value_ptr(simulationSettings->zBoundary), 0.01f)) {
-    //         renderer->rebuildSpawnAreaBox();
-    //     }
-    // }
+    if (ImGui::CollapsingHeader("CFL Settings")) {
+        ImGui::Checkbox("Enable##cfl", &simulationSettings->useCFL);
 
-    if (ImGui::CollapsingHeader("Rendering Settings")) {
-        if (ImGui::DragFloat("Particle Size", &renderSettings->particleSize, 0.0001f)) {
-            renderer->updateParticleSize();
-        }
+        ImGui::Text("Safety Factor:");
+        ImGui::DragFloat("##cflSF", &simulationSettings->safetyFactor, 0.01);
     }
 
     ImGui::Separator();
 
-    if (ImGui::Button("Save Settings")) {
+    if (ImGui::Button("Save Settings", ImVec2(totalWidth, 0))) {
         IGFD::FileDialogConfig config;
         config.path = ".";
         ImGuiFileDialog::Instance()->OpenDialog("SaveLocation", "Choose location", ".json", config);
@@ -75,9 +91,7 @@ void SettingsPanel::draw() {
         ImGuiFileDialog::Instance()->Close();
     }
 
-    ImGui::SameLine();
-
-    if (ImGui::Button("Load Settings")) {
+    if (ImGui::Button("Load Settings", ImVec2(totalWidth, 0))) {
         IGFD::FileDialogConfig config;
         config.path = ".";
         ImGuiFileDialog::Instance()->OpenDialog("LoadLocation", "Choose location", ".json", config);
@@ -92,16 +106,10 @@ void SettingsPanel::draw() {
         ImGuiFileDialog::Instance()->Close();
     }
 
-    ImGui::Separator();
-
-    if (ImGui::Button("Reset Particles")) {
-        simulation->reset();
-    }
-
     ImGui::End();
 }
 
-void SettingsPanel::SaveSettings(const std::string& path) const {
+void SimulationSettingsPanel::SaveSettings(const std::string& path) const {
     nlohmann::json json;
 
     json["h"] = simulationSettings->h;
@@ -118,7 +126,7 @@ void SettingsPanel::SaveSettings(const std::string& path) const {
     file << json.dump(4);
 }
 
-void SettingsPanel::LoadSettings(const std::string& path) {
+void SimulationSettingsPanel::LoadSettings(const std::string& path) {
     std::ifstream file(path);
     if (!file.is_open())
         return;

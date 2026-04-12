@@ -11,6 +11,8 @@
 #include <thrust/device_vector.h>
 #include <cub/cub.cuh>
 
+#include "rendering/FluidRenderer.h"
+
 void queryRequiredSortingStorage(
     const int numParticles,
     size_t &sortTempStorageBytes,
@@ -178,9 +180,10 @@ __global__ void densityPressureKernel(
     if (id >= numParticles)
         return;
 
+    // Boundary particles
     if (particles[id].flags.x == 0.0) {
-        particles[id].properties.y = 100;
-        particles[id].properties.z = k * 100;
+        particles[id].properties.y = 1000;
+        particles[id].properties.z = 0.0;
         return;
     }
 
@@ -227,6 +230,7 @@ __global__ void densityPressureKernel(
 
     particles[id].properties.y = density;
     particles[id].properties.z = k * (density - p_0);
+
 
     // const float B = (k * p_0) / 7;
     // particles[id].properties.z = B * (pow((density / p_0), 7) - 1);
@@ -415,7 +419,8 @@ __global__ void updateParticlesKernel(
 
     // Update position
     const float4 force = particle->pressureForce + particle->viscosityForce + particle->surfaceTensionForce;
-    const float4 acceleration = force / particle->properties.y + make_float4(0.0f, gravity, 0.0f, 1.0f);
+    const float4 acceleration = force / particle->properties.y + make_float4(0.0f, gravity, 0.0f, 0.0f);
+
 
     // particle->velocity += (0.5f * deltaTime) * acceleration;
     // particle->position += deltaTime * particle->velocity;
@@ -425,35 +430,35 @@ __global__ void updateParticlesKernel(
     particle->position += deltaTime * particle->velocity;
 
     // Simple boundaries
-    // if (particle->position.x < x.x) {
-    //     particle->position.x = x.x;
-    //     particle->velocity.x *= -0.4f;
-    // }
-    //
-    // if (particle->position.x > x.y) {
-    //     particle->position.x = x.y;
-    //     particle->velocity.x *= -0.4f;
-    // }
-    //
-    // if (particle->position.y < y.x) {
-    //     particle->position.y = y.x;
-    //     particle->velocity.y *= -0.4f;
-    // }
-    //
-    // if (particle->position.y > y.y) {
-    //     particle->position.y = y.y;
-    //     particle->velocity.y *= -0.4f;
-    // }
-    //
-    // if (particle->position.z < z.x) {
-    //     particle->position.z = z.x;
-    //     particle->velocity.z *= -0.4f;
-    // }
-    //
-    // if (particle->position.z > z.y) {
-    //     particle->position.z = z.y;
-    //     particle->velocity.z *= -0.4f;
-    // }
+    if (particle->position.x < x.x) {
+        particle->position.x = x.x;
+        particle->velocity.x *= -0.4f;
+    }
+
+    if (particle->position.x > x.y) {
+        particle->position.x = x.y;
+        particle->velocity.x *= -0.4f;
+    }
+
+    if (particle->position.y < y.x) {
+        particle->position.y = y.x;
+        particle->velocity.y *= -0.4f;
+    }
+
+    if (particle->position.y > y.y) {
+        particle->position.y = y.y;
+        particle->velocity.y *= -0.4f;
+    }
+
+    if (particle->position.z < z.x) {
+        particle->position.z = z.x;
+        particle->velocity.z *= -0.4f;
+    }
+
+    if (particle->position.z > z.y) {
+        particle->position.z = z.y;
+        particle->velocity.z *= -0.4f;
+    }
 }
 
 void launchUpdateParticlesKernel(
@@ -476,26 +481,77 @@ void launchUpdateParticlesKernel(
 __global__ void renderPrepareKernel(
     const int numParticles,
     const ParticleGPU* particles,
-    float4* positions
+    RendererParticle* rendererParticles
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
 
     if (id >= numParticles)
         return;
 
-    positions[id] = particles[id].position;
+    rendererParticles[id].position = particles[id].position;
+    rendererParticles[id].velocity = particles[id].velocity;
+    rendererParticles[id].properties = particles[id].properties;
 }
 
 void launchRenderPrepareKernel(
     const int numParticles,
     const ParticleGPU* particles,
-    float4* positions
+    RendererParticle* rendererParticles
 ) {
     int threadsPerBlock = 256;
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     renderPrepareKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, positions
+        numParticles, particles, rendererParticles
+    );
+}
+
+__global__ void initParticlesKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const int3 gridCount,
+    const float4 startPosition,
+    const float particleSpacing,
+    const float mass
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (id >= numParticles)
+        return;
+
+    // Map id to 3d position
+    const int gx = id % gridCount.x;
+    const int gy = (id / gridCount.x) % gridCount.y;
+    const int gz = id / (gridCount.x * gridCount.y);
+
+    float posX = startPosition.x + gx * particleSpacing;
+    float posY = startPosition.y + gy * particleSpacing;
+    float posZ = startPosition.z + gz * particleSpacing;
+
+    ParticleGPU* particle = &particles[id];
+    particle->position = { posX, posY, posZ, 0.0 };
+    particle->startPosition = particle->position;
+    particle->velocity = { 0.0, 0.0, 0.0, 0.0 };
+    particle->properties = { mass, 0.0, 0.0, 0.0 };
+    particle->flags = { NORMAL, 0.0, 0.0, 0.0 };
+    particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    particle->surfaceTensionForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+}
+
+void launchInitParticlesKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const int3 gridCount,
+    const float4 startPosition,
+    const float particleSpacing,
+    const float mass
+) {
+    int threadsPerBlock = 256;
+    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
+
+    initParticlesKernel<<<blocks, threadsPerBlock>>>(
+        numParticles, particles, gridCount, startPosition, particleSpacing, mass
     );
 }
 
@@ -511,6 +567,11 @@ __global__ void resetParticlesKernel(
     ParticleGPU* particle = &particles[id];
     particle->position = particle->startPosition;
     particle->velocity = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    particle->properties.y = 0.0f;
+    particle->properties.z = 0.0f;
+    particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    particle->surfaceTensionForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 void launchResetParticlesKernel(

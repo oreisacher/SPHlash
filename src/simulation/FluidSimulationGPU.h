@@ -9,6 +9,8 @@
 #include "rendering/Shader.h"
 #include <cuda_runtime.h>
 
+#include "rendering/FluidRenderer.h"
+
 enum ParticleType {
     GHOST   = 0,
     NORMAL  = 1
@@ -59,10 +61,9 @@ struct SimulationSettings {
     bool enableGravity = false;
     float gravity = -9.878;
 
-    // Boundary
-    glm::vec2 xBoundary = { 0.0, 2.0 };
-    glm::vec2 yBoundary = { 0.0, 5.0 };
-    glm::vec2 zBoundary = { 0.0, 1.0 };
+    // CFL
+    bool useCFL = true;
+    float safetyFactor = 0.4f;
 };
 
 class FluidSimulationGPU {
@@ -71,6 +72,8 @@ public:
     ~FluidSimulationGPU();
 
     void update(float deltaTime);
+    void step(float deltaTime);
+
     void reset() const;
 
     void initParticles();
@@ -80,9 +83,7 @@ public:
     ParticleGPU getParticle(int id) const;
 
     float cfl = 0;
-
     int particleCount = 0;
-    std::vector<ParticleGPU> particles;
 
     int boundaryParticleCount;
     std::vector<ParticleGPU> boundaryParticles;
@@ -112,7 +113,7 @@ private:
 
     // --- Rendering ---
     cudaGraphicsResource* rendererResource = nullptr;
-    float4* d_rendererParticles = nullptr;
+    RendererParticle* d_rendererParticles = nullptr;
 };
 
 #endif //FLUIDSIMSPH_FLUIDSIMULATIONGPU_H

@@ -4,6 +4,7 @@
 
 #ifndef FLUIDSIMSPH_HASHPARTICLES_H
 #define FLUIDSIMSPH_HASHPARTICLES_H
+#include "rendering/FluidRenderer.h"
 
 struct ParticleGPU;
 
@@ -86,7 +87,16 @@ void launchUpdateParticlesKernel(
 void launchRenderPrepareKernel(
     const int numParticles,
     const ParticleGPU* particles,
-    float4* positions
+    RendererParticle* rendererParticles
+);
+
+void launchInitParticlesKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const int3 gridCount,
+    const float4 startPosition,
+    const float particleSpacing,
+    const float mass
 );
 
 void launchResetParticlesKernel(
