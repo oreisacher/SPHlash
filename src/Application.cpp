@@ -3,6 +3,7 @@
 //
 
 #include "Application.h"
+#include "Version.h"
 
 #include "rendering/FluidRenderer.h"
 #include "rendering/Window.h"
@@ -31,7 +32,7 @@
 Application::Application() {
     // Window creation
     Window::Init();
-    window = new Window(WINDOW_SIZE_X, WINDOW_SIZE_Y, "Fluid Simulation");
+    window = new Window(WINDOW_SIZE_X, WINDOW_SIZE_Y, std::format("SPHlash {}", VERSION).c_str());
     Input.addInputWindow(window);
 
     // Load OpenGL

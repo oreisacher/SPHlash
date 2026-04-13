@@ -1,16 +1,12 @@
 cmake_minimum_required(VERSION 3.22)
 
-#set(CMAKE_C_COMPILER /usr/bin/gcc)
-#set(CMAKE_CXX_COMPILER /usr/bin/g++)
-#set(CMAKE_CUDA_HOST_COMPILER /usr/bin/g++)
-
-project(FluidSimSPH LANGUAGES CXX C CUDA)
+project(SPHlash LANGUAGES CXX C CUDA)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_ARCHITECTURES 61)
 
-# Pull git submodules
+# --- Update submodules ---
 find_package(Git QUIET)
 if (GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     message(STATUS "Submodule update")
@@ -22,7 +18,22 @@ if (GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     endif()
 endif()
 
-add_executable(FluidSimSPH
+# --- Get Version from Commit ---
+execute_process(
+    COMMAND git describe --tags --always --dirty
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE VERSION
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+configure_file(
+    ${CMAKE_SOURCE_DIR}/src/Version.h.in
+    ${CMAKE_BINARY_DIR}/generated/Version.h
+    @ONLY
+)
+
+# --- Build Application ---
+add_executable(SPHlash
     src/main.cpp
     src/simulation/FluidSimulation.cpp
     src/rendering/FluidRenderer.cpp
@@ -35,7 +46,7 @@ add_executable(FluidSimSPH
     src/ui/StatisticsPanel.cpp
     src/utils/Time.cpp
     src/utils/Logger.cpp
-        src/ui/SimulationSettingsPanel.cpp
+    src/ui/SimulationSettingsPanel.cpp
     src/simulation/FluidSimulationGPU.cpp
     src/cuda/FluidSimulation.cu
     src/cuda/Kernels.cuh
@@ -47,12 +58,12 @@ add_executable(FluidSimSPH
     src/ui/InitPanel.h
     src/ui/ControlPanel.cpp
     src/ui/ControlPanel.h
+    src/ui/RenderingSettingsPanel.cpp
+    src/ui/RenderingSettingsPanel.h
 
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
-        src/ui/RenderingSettingsPanel.cpp
-        src/ui/RenderingSettingsPanel.h
 )
 
 add_library(imgui
@@ -76,16 +87,17 @@ add_subdirectory("external/glm")
 add_subdirectory("external/json")
 add_subdirectory("external/tinyobjloader")
 
-target_compile_definitions(FluidSimSPH PRIVATE USE_STD_FILESYSTEM)
+target_compile_definitions(SPHlash PRIVATE USE_STD_FILESYSTEM)
 
-target_include_directories(FluidSimSPH PUBLIC
+target_include_directories(SPHlash PUBLIC
     src
+    ${CMAKE_BINARY_DIR}/generated
     external/glad/include
     external/ImGuiFileDialog
     external/tinyobjloader
 )
 
-target_link_libraries(FluidSimSPH
+target_link_libraries(SPHlash
     PRIVATE imgui
     PRIVATE glfw
     PRIVATE glm
@@ -94,15 +106,17 @@ target_link_libraries(FluidSimSPH
     PRIVATE tinyobjloader
 )
 
-set_target_properties(FluidSimSPH PROPERTIES
+set_target_properties(SPHlash PROPERTIES
     CUDA_SEPARATE_COMPILATION ON
     CUDA_STANDARD 17
     CUDA_STANDARD_REQUIRED ON
 )
 
-add_custom_target(CopyAssets ALL
-    COMMENT "Copying assets to build directory..."
+# --- Copy assets to build directory ---
+add_custom_command(
+    TARGET SPHlash POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets
         ${CMAKE_BINARY_DIR}/assets
+    COMMENT "Copying assets to build directory..."
 )
