@@ -2,14 +2,20 @@
 // Created by ruut on 4/13/26.
 //
 
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include "Model.h"
 
+#include <filesystem>
 #include <format>
 #include <iostream>
-
 #include "tiny_obj_loader.h"
+#include "glm/gtc/quaternion.hpp"
+#include "glm/gtx/transform.hpp"
 
 Model::Model(const std::string& path) {
+    name = std::filesystem::path(path).stem().string();
+
     // Load model from disk
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -101,13 +107,33 @@ Model::Model(const std::string& path) {
 
 void Model::draw(const Shader* shader) const {
     for (const auto& mesh : meshes) {
+        shader->setMat4("model", modelMatrix);
+
         // Set material
         int matIndex = mesh->getMaterialIndex();
         if (matIndex != -1) {
             shader->setVec3("albedo", materials[matIndex].albedo);
+        } else {
+            shader->setVec3("albedo", glm::vec3(1.0));
         }
 
         // Draw mesh
         mesh->draw();
     }
+}
+
+Transform* Model::getTransform() {
+    return &transform;
+}
+
+void Model::updateTransform() {
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, transform.position);
+    model *= glm::mat4_cast(glm::quat(glm::radians(transform.rotation)));
+    model = glm::scale(model, transform.scale);
+    modelMatrix = model;
+}
+
+std::string Model::getName() const {
+    return name;
 }

@@ -68,6 +68,8 @@ add_executable(SPHlash
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
+        src/ui/ModelsPanel.cpp
+        src/ui/ModelsPanel.h
 )
 
 add_library(imgui

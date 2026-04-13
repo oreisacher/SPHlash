@@ -44,6 +44,13 @@ UIManager::UIManager(GLFWwindow* window) {
     // Checkboxes - brighter red accent
     colors[ImGuiCol_CheckMark]              = ImVec4(0.90f, 0.40f, 0.40f, 1.00f);
 
+    // Tables
+    colors[ImGuiCol_TableHeaderBg]        = ImVec4(0.22f, 0.16f, 0.16f, 1.00f);
+    colors[ImGuiCol_TableBorderStrong]    = ImVec4(0.45f, 0.28f, 0.28f, 0.80f);
+    colors[ImGuiCol_TableBorderLight]     = ImVec4(0.30f, 0.20f, 0.20f, 0.50f);
+    colors[ImGuiCol_TableRowBg]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_TableRowBgAlt]        = ImVec4(0.20f, 0.14f, 0.14f, 0.30f);
+
     // Sliders
     colors[ImGuiCol_SliderGrab]             = ImVec4(0.60f, 0.35f, 0.35f, 1.00f);
     colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.80f, 0.45f, 0.45f, 1.00f);
@@ -164,6 +171,7 @@ void UIManager::draw() const {
         ImGui::DockBuilderDockWindow("Particles", dock_right_3);
         ImGui::DockBuilderDockWindow("Controls", dock_left_1);
         ImGui::DockBuilderDockWindow("Init Settings", dock_left_2);
+        ImGui::DockBuilderDockWindow("Models", dock_left_2);
         ImGui::DockBuilderDockWindow("Statistics", dock_left_3);
 
         ImGui::DockBuilderFinish(dockspace_id);

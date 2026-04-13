@@ -28,6 +28,7 @@
 #include "rendering/Mesh.h"
 #include "ui/ControlPanel.h"
 #include "ui/InitPanel.h"
+#include "ui/ModelsPanel.h"
 #include "ui/RenderingSettingsPanel.h"
 
 Application::Application() {
@@ -57,6 +58,7 @@ Application::Application() {
     ui->addPanel(new SimulationSettingsPanel("Simulation Settings", simulation, renderer));
     ui->addPanel(new RenderingSettingsPanel("Rendering Settings", renderer));
     ui->addPanel(new ParticlesPanel("Particles", simulation, renderer));
+    ui->addPanel(new ModelsPanel("Models", renderer));
 
     // Setup Camera
     camera = new Camera({ 0.0f, 0.0f, 1.0f });

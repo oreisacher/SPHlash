@@ -66,6 +66,10 @@ public:
     void updateParticleData() const;
     void updateRenderingSettings() const;
 
+    void addModel(const std::string& path);
+    void removeModel(int index);
+    std::vector<Model*> getModels() const;
+
     // Framebuffer texture
     GLuint getTextureId() const;
     void setSize(int width, int height) const;
@@ -101,7 +105,8 @@ private:
     // Boundary
     GLuint boxVAO, boxVBO, boxEBO;
 
-    Model* model;
+    // --- Models ---
+    std::vector<Model*> models;
 };
 
 #endif //FLUIDSIMSPH_FLUIDRENDERER_H

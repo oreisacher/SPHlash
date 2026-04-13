@@ -12,6 +12,7 @@
 #include "GLFW/glfw3.h"
 #include "utils/Logger.h"
 #include "utils/SphereCreator.h"
+#include <vector>
 
 FluidRenderer::FluidRenderer(FluidSimulationGPU* sim) : simulation(sim) {
     // Setup OpenGL State
@@ -37,15 +38,15 @@ FluidRenderer::FluidRenderer(FluidSimulationGPU* sim) : simulation(sim) {
 
     // Setup shaders
     setupShaders();
-
-    // Model
-    // model = new Model("assets/models/test.obj");
 }
 
 FluidRenderer::~FluidRenderer() {
     delete framebuffer;
     delete boundaryShader;
-    delete model;
+
+    for (const auto m : models) {
+        delete m;
+    }
 }
 
 void FluidRenderer::render() const {
@@ -75,7 +76,10 @@ void FluidRenderer::render() const {
     modelShader->bind();
     modelShader->setMat4("projection", camera->getProjectionMatrix());
     modelShader->setMat4("view", camera->getViewMatrix());
-    model->draw(modelShader);
+
+    for (const auto model : models) {
+        model->draw(modelShader);
+    }
 }
 
 void FluidRenderer::setCamera(Camera* cam) {
@@ -261,4 +265,20 @@ void FluidRenderer::updateRenderingSettings() const {
     particleShader->setVec3("maxPresColor", settings.maxPresColor);
     particleShader->setFloat("minPres", settings.pressureMin);
     particleShader->setFloat("maxPres", settings.pressureMax);
+}
+
+void FluidRenderer::addModel(const std::string& path) {
+    models.push_back(new Model(path));
+}
+
+void FluidRenderer::removeModel(int index) {
+    if (index < 0 || index >= models.size())
+        return;
+
+    delete models[index];
+    models.erase(models.begin() + index);
+}
+
+std::vector<Model*> FluidRenderer::getModels() const {
+    return models;
 }
