@@ -60,6 +60,10 @@ add_executable(SPHlash
     src/ui/ControlPanel.h
     src/ui/RenderingSettingsPanel.cpp
     src/ui/RenderingSettingsPanel.h
+    src/rendering/Mesh.cpp
+    src/rendering/Mesh.h
+    src/rendering/Model.cpp
+    src/rendering/Model.h
 
     # External
     external/glad/src/gl.c
@@ -120,3 +124,11 @@ add_custom_command(
         ${CMAKE_BINARY_DIR}/assets
     COMMENT "Copying assets to build directory..."
 )
+
+add_custom_target(CopyAssets ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/assets
+            ${CMAKE_BINARY_DIR}/assets
+)
+
+add_dependencies(SPHlash CopyAssets)

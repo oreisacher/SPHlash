@@ -6,6 +6,8 @@
 
 #include "rendering/FluidRenderer.h"
 #include <glad/gl.h>
+
+#include "Mesh.h"
 #include "../simulation/FluidSimulation.h"
 #include "GLFW/glfw3.h"
 #include "utils/Logger.h"
@@ -35,11 +37,15 @@ FluidRenderer::FluidRenderer(FluidSimulationGPU* sim) : simulation(sim) {
 
     // Setup shaders
     setupShaders();
+
+    // Model
+    // model = new Model("assets/models/test.obj");
 }
 
 FluidRenderer::~FluidRenderer() {
     delete framebuffer;
     delete boundaryShader;
+    delete model;
 }
 
 void FluidRenderer::render() const {
@@ -65,6 +71,11 @@ void FluidRenderer::render() const {
     boundaryShader->setMat4("view", camera->getViewMatrix());
     glBindVertexArray(boxVAO);
     glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+
+    modelShader->bind();
+    modelShader->setMat4("projection", camera->getProjectionMatrix());
+    modelShader->setMat4("view", camera->getViewMatrix());
+    model->draw(modelShader);
 }
 
 void FluidRenderer::setCamera(Camera* cam) {
@@ -151,11 +162,18 @@ void FluidRenderer::setupShaders() {
     });
 
     boundaryShader->compile();
+
+    modelShader = new Shader({
+        { "assets/shaders/model.vert", Shader::VERTEX },
+        { "assets/shaders/model.frag", Shader::FRAGMENT },
+    });
+
+    modelShader->compile();
 }
 
 void FluidRenderer::setupSphereModel() {
     // Generate mesh data for sphere
-    std::vector<Vertex> vertices;
+    std::vector<SphereVertex> vertices;
     std::vector<unsigned int> indices;
     createSphere(vertices, indices, 4, 2);
     sphereIndexCount = indices.size();
@@ -163,7 +181,7 @@ void FluidRenderer::setupSphereModel() {
     // Vertex buffer
     glGenBuffers(1, &sphereVBO);
     glBindBuffer(GL_ARRAY_BUFFER, sphereVBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(SphereVertex), vertices.data(), GL_STATIC_DRAW);
 
     // Index buffer
     glGenBuffers(1, &sphereEBO);
@@ -171,11 +189,11 @@ void FluidRenderer::setupSphereModel() {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
     // Position
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(SphereVertex), (void*)0);
     glEnableVertexAttribArray(0);
 
     // Normal
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(SphereVertex), (void*)offsetof(SphereVertex, normal));
     glEnableVertexAttribArray(1);
 }
 

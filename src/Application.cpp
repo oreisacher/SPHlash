@@ -25,6 +25,7 @@
 #define SIM_UNITS_PER_PIXEL (1.0 / 600)
 
 #include "tiny_obj_loader.h"
+#include "rendering/Mesh.h"
 #include "ui/ControlPanel.h"
 #include "ui/InitPanel.h"
 #include "ui/RenderingSettingsPanel.h"
@@ -60,17 +61,6 @@ Application::Application() {
     // Setup Camera
     camera = new Camera({ 0.0f, 0.0f, 1.0f });
     renderer->setCamera(camera);
-
-    // Load model
-    // TODO - Move into own Model/Mesh class
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-
-    bool success = tinyobj::LoadObj(&attrib, &shapes, &materials, nullptr, nullptr, "assets/models/bowl.obj");
-    if (success) {
-        std::cout << "Success" << std::endl;
-    }
 }
 
 Application::~Application() {

@@ -7,6 +7,8 @@
 
 #include <vector_types.h>
 #include "Framebuffer.h"
+#include "Mesh.h"
+#include "Model.h"
 #include "Shader.h"
 #include "glad/gl.h"
 #include "utils/Camera.h"
@@ -84,6 +86,7 @@ private:
 
     Shader* particleShader;
     Shader* boundaryShader;
+    Shader* modelShader;
 
     Framebuffer* framebuffer;
     GLuint vao;
@@ -97,6 +100,8 @@ private:
 
     // Boundary
     GLuint boxVAO, boxVBO, boxEBO;
+
+    Model* model;
 };
 
 #endif //FLUIDSIMSPH_FLUIDRENDERER_H
