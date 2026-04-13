@@ -62,25 +62,25 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FluidSim-build
+          name: SPHlash-build
           path: |
             build/assets
-            build/FluidSimSPH
+            build/SPHlash
 
       - name: Package Release
         run: |
           mkdir -p release
-          cp build/FluidSimSPH release/
+          cp build/SPHlash release/
           cp -r build/assets release/
           
           cd release
-          zip -r FluidSimSPH-${{ github.ref_name }}.zip .
+          zip -r SPHlash-${{ github.ref_name }}.zip .
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: FluidSim ${{ github.ref_name }}
-          files: release/FluidSimSPH-${{ github.ref_name }}.zip
+          name: SPHlash ${{ github.ref_name }}
+          files: release/SPHlash-${{ github.ref_name }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
