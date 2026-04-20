@@ -50,7 +50,7 @@ struct InitSettings {
 
 struct SimulationSettings {
     // Particles
-    float h = 20.0f;
+    float h = 0.2f;
     float p_0 = 1000.0f;
     float k = 0.7f;
     float mu = 0.1f;

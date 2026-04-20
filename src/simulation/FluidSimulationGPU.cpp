@@ -10,8 +10,11 @@
 #include <ostream>
 #include <random>
 #include <nvtx3/nvToolsExt.h>
+
+#include "cuda/Boundaries.h"
 #include "cuda/FluidSimulation.h"
 #include "glad/gl.h"
+#include "utils/MarchingCubesLookup.h"
 
 FluidSimulationGPU::FluidSimulationGPU() {
     cudaSetDevice(0);
@@ -192,8 +195,139 @@ ParticleGPU FluidSimulationGPU::getParticle(const int id) const {
 }
 
 void FluidSimulationGPU::calculateDensityMap() {
-    // Get mesh data
+    // Get triangle data
+    std::vector<Triangle> meshTriangles;
 
+    for (auto model : FluidRenderer::getInstance()->getModels()) {
+        auto modelTriangles = model->getTriangles();
+        meshTriangles.insert(meshTriangles.end(), modelTriangles.begin(), modelTriangles.end());
+    }
+
+    std::cout << meshTriangles.size() << std::endl;
+
+    Triangle* d_triangles;
+    cudaMalloc(&d_triangles, meshTriangles.size() * sizeof(Triangle));
+    cudaMemcpy(d_triangles, meshTriangles.data(), meshTriangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
+
+    // SDF
+    int sdfResolution = 64;
+
+    float* d_sdf;
+    cudaMalloc(&d_sdf, sdfResolution * sdfResolution * sdfResolution * sizeof(float));
+
+    glm::vec3 gridMin = { 0.0, 0.0, 0.0f };
+    glm::vec3 gridMax = { 1.0, 1.0, 1.0f };
+
+    launchSdfKernel(
+        meshTriangles.size(),
+        d_triangles,
+        d_sdf,
+        sdfResolution * sdfResolution * sdfResolution,
+        sdfResolution,
+        { gridMin.x, gridMin.y, gridMin.z },
+        { gridMax.x, gridMax.y, gridMax.z }
+    );
+
+    std::vector<float> sdf(sdfResolution * sdfResolution * sdfResolution);
+    cudaMemcpy(sdf.data(), d_sdf, sdf.size() * sizeof(float), cudaMemcpyDeviceToHost);
+
+    cudaDeviceSynchronize();
+
+    // Marching cubes
+    float3 cellSize = make_float3(
+        (gridMax.x - gridMin.x) / (sdfResolution - 1),
+        (gridMax.y - gridMin.y) / (sdfResolution - 1),
+        (gridMax.z - gridMin.z) / (sdfResolution - 1)
+    );
+
+    int dx = 1;
+    int dy = sdfResolution;
+    int dz = sdfResolution * sdfResolution;
+
+    std::vector<Vertex> vertices = {};
+    std::vector<unsigned int> indices = {};
+
+    for (int z = 0; z < sdfResolution - 1; z++) {
+        for (int y = 0; y < sdfResolution - 1; y++) {
+            for (int x = 0; x < sdfResolution - 1; x++) {
+                int id = x + y * sdfResolution + z * sdfResolution * sdfResolution;
+
+                float cube[8];
+
+                // Bottom layer
+                cube[0] = sdf[id            ];
+                cube[1] = sdf[id + dx       ];
+                cube[2] = sdf[id + dx + dy  ];
+                cube[3] = sdf[id + dy       ];
+
+                // Top layer
+                cube[4] = sdf[id + dz];
+                cube[5] = sdf[id + dx + dz];
+                cube[6] = sdf[id + dx + dy + dz];
+                cube[7] = sdf[id + dy + dz];
+
+                // Build index
+                int cubeIndex = 0;
+
+                if (cube[0] < 0) cubeIndex |= 1;
+                if (cube[1] < 0) cubeIndex |= 2;
+                if (cube[2] < 0) cubeIndex |= 4;
+                if (cube[3] < 0) cubeIndex |= 8;
+                if (cube[4] < 0) cubeIndex |= 16;
+                if (cube[5] < 0) cubeIndex |= 32;
+                if (cube[6] < 0) cubeIndex |= 64;
+                if (cube[7] < 0) cubeIndex |= 128;
+
+                // Skip empty / full cells
+                if (cubeIndex == 0 || cubeIndex == 255)
+                    continue;
+
+                glm::vec3 position[8];
+                position[0] = glm::vec3((x + 0) * cellSize.x, (y + 0) * cellSize.y, (z + 0)* cellSize.z) + gridMin;
+                position[1] = glm::vec3((x + 1) * cellSize.x, (y + 0) * cellSize.y, (z + 0)* cellSize.z) + gridMin;
+                position[2] = glm::vec3((x + 1) * cellSize.x, (y + 1) * cellSize.y, (z + 0) * cellSize.z) + gridMin;
+                position[3] = glm::vec3((x + 0) * cellSize.x, (y + 1) * cellSize.y, (z + 0) * cellSize.z) + gridMin;
+                position[4] = glm::vec3((x + 0) * cellSize.x, (y + 0) * cellSize.y, (z + 1) * cellSize.z) + gridMin;
+                position[5] = glm::vec3((x + 1) * cellSize.x, (y + 0) * cellSize.y, (z + 1) * cellSize.z) + gridMin;
+                position[6] = glm::vec3((x + 1) * cellSize.x, (y + 1) * cellSize.y, (z + 1) * cellSize.z) + gridMin;
+                position[7] = glm::vec3((x + 0) * cellSize.x, (y + 1) * cellSize.y, (z + 1) * cellSize.z) + gridMin;
+
+                // Add vertices
+                int edgeVertexIndex[12] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+                for (int i = 0 ; i < 12 ; i++) {
+                    if ((edgeTable[cubeIndex] & (1 << i)) == 0)
+                        continue;
+
+                    auto verts = edgeToVertices[i];
+
+                    auto lerpedVertex = interp(
+                        position[verts.first],
+                        position[verts.second],
+                        cube[verts.first],
+                        cube[verts.second]
+                    );
+
+                    edgeVertexIndex[i] = vertices.size();
+                    vertices.push_back({{ lerpedVertex }, { calculateNormal(x, y, z, sdfResolution, sdf) }});
+                }
+
+                // Build faces
+                for (int i = 0 ; triangleTable[cubeIndex][i] != -1 ; i+= 3) {
+                    int index0 = triangleTable[cubeIndex][i    ];
+                    int index1 = triangleTable[cubeIndex][i + 1];
+                    int index2 = triangleTable[cubeIndex][i + 2];
+
+                    indices.push_back(edgeVertexIndex[index0]);
+                    indices.push_back(edgeVertexIndex[index2]);
+                    indices.push_back(edgeVertexIndex[index1]);
+                }
+            }
+        }
+    }
+
+    std::vector<Mesh*> meshes = { new Mesh("SDF", vertices, indices) };
+    auto sdfModel = new Model("SDF", meshes);
+    FluidRenderer::getInstance()->addModel(sdfModel);
 }
 
 void FluidSimulationGPU::initParticles() {

@@ -67,6 +67,7 @@ public:
     void updateRenderingSettings() const;
 
     void addModel(const std::string& path);
+    void addModel(Model* model);
     void removeModel(int index);
     std::vector<Model*> getModels() const;
 

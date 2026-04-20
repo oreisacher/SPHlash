@@ -6,6 +6,7 @@
 #define SPHLASH_MESH_H
 
 #include <string>
+#include <vector_types.h>
 
 #include "glad/gl.h"
 #include "glm/glm.hpp"
@@ -14,6 +15,10 @@ struct Vertex {
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec2 texCoord;
+};
+
+struct Triangle {
+    float3 v0, v1, v2;
 };
 
 class Mesh {
@@ -28,6 +33,8 @@ public:
 
     void setMaterialIndex(int index);
     int getMaterialIndex() const;
+
+    std::vector<Triangle> getTriangles(glm::mat4 model) const;
 
 private:
     void uploadToGPU();

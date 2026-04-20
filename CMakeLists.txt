@@ -64,12 +64,15 @@ add_executable(SPHlash
     src/rendering/Mesh.h
     src/rendering/Model.cpp
     src/rendering/Model.h
+    src/ui/ModelsPanel.cpp
+    src/ui/ModelsPanel.h
+    src/cuda/Boundaries.h
+    src/cuda/Boundaries.cu
 
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
-        src/ui/ModelsPanel.cpp
-        src/ui/ModelsPanel.h
+        src/utils/MarchingCubesLookup.h
 )
 
 add_library(imgui

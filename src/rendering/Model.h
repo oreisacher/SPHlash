@@ -24,6 +24,7 @@ struct Transform {
 class Model {
 public:
     Model(const std::string &path);
+    Model(const std::string& name, const std::vector<Mesh*>& meshes);
 
     void draw(const Shader* shader) const;
 
@@ -31,6 +32,8 @@ public:
     void updateTransform();
 
     std::string getName() const;
+
+    std::vector<Triangle> getTriangles() const;
 
 private:
     std::string name = "Undefined";

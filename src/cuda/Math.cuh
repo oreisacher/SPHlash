@@ -77,3 +77,63 @@ __device__ inline uint3 operator%(const uint3& v, const int s) {
         v.z % s
     );
 }
+
+__device__ inline float3 operator-(const float3& a, const float3& b) {
+    return make_float3(
+        a.x - b.x,
+        a.y - b.y,
+        a.z - b.z
+    );
+}
+
+
+
+__device__ inline float3 operator*(const float3& a, const float3& b) {
+    return make_float3(
+        a.x * b.x,
+        a.y * b.y,
+        a.z * b.z
+    );
+}
+
+__device__ inline float3 operator*(const float3& a, const float& b) {
+    return make_float3(
+        a.x * b,
+        a.y * b,
+        a.z * b
+    );
+}
+
+__host__ __device__
+inline float3 cross(const float3 a, const float3 b)
+{
+    float3 result;
+    result.x = a.y * b.z - a.z * b.y;
+    result.y = a.z * b.x - a.x * b.z;
+    result.z = a.x * b.y - a.y * b.x;
+    return result;
+}
+
+__host__ __device__
+inline float dot(const float3 a, const float3 b)
+{
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+__host__ __device__
+inline float signf(float x)
+{
+    return (x > 0.0f) - (x < 0.0f);
+}
+
+__host__ __device__
+inline float dot2(const float3 v)
+{
+    return v.x * v.x + v.y * v.y + v.z * v.z;
+}
+
+__host__ __device__
+inline float clampf(float x, float a, float b)
+{
+    return fminf(fmaxf(x, a), b);
+}

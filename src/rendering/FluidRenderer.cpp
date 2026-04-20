@@ -278,6 +278,10 @@ void FluidRenderer::addModel(const std::string& path) {
     models.push_back(new Model(path));
 }
 
+void FluidRenderer::addModel(Model* model) {
+    models.push_back(model);
+}
+
 void FluidRenderer::removeModel(int index) {
     if (index < 0 || index >= models.size())
         return;

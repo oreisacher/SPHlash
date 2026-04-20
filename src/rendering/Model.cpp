@@ -105,6 +105,8 @@ Model::Model(const std::string& path) {
     }
 }
 
+Model::Model(const std::string& name, const std::vector<Mesh*>& meshes) : name(name), meshes(meshes) {}
+
 void Model::draw(const Shader* shader) const {
     for (const auto& mesh : meshes) {
         shader->setMat4("model", modelMatrix);
@@ -136,4 +138,15 @@ void Model::updateTransform() {
 
 std::string Model::getName() const {
     return name;
+}
+
+std::vector<Triangle> Model::getTriangles() const {
+    std::vector<Triangle> triangles;
+
+    for (const auto& mesh : meshes) {
+        auto meshTriangles = mesh->getTriangles(modelMatrix);
+        triangles.insert(triangles.end(), meshTriangles.begin(), meshTriangles.end());
+    }
+
+    return triangles;
 }

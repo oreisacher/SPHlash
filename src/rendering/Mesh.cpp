@@ -4,6 +4,8 @@
 
 #include "Mesh.h"
 
+#include <vector_functions.h>
+
 Mesh::Mesh(
     const std::string& name,
     const std::vector<Vertex>& vertices,
@@ -25,6 +27,24 @@ void Mesh::setMaterialIndex(const int index) {
 
 int Mesh::getMaterialIndex() const {
     return materialIndex;
+}
+
+std::vector<Triangle> Mesh::getTriangles(glm::mat4 model) const {
+    std::vector<Triangle> triangles;
+
+    for (int i = 0; i < indices.size(); i += 3) {
+        const glm::vec3 v0 = model * glm::vec4(vertices[indices[i    ]].position, 1.0f);
+        const glm::vec3 v1 = model * glm::vec4(vertices[indices[i + 1]].position, 1.0f);
+        const glm::vec3 v2 = model * glm::vec4(vertices[indices[i + 2]].position, 1.0f);
+
+        triangles.push_back({
+            make_float3(v0.x, v0.y, v0.z),
+            make_float3(v1.x, v1.y, v1.z),
+            make_float3(v2.x, v2.y, v2.z)
+        });
+    }
+
+    return triangles;
 }
 
 void Mesh::uploadToGPU() {
