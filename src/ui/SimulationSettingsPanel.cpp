@@ -12,10 +12,10 @@
 #include "glm/gtc/type_ptr.inl"
 #include "simulation/FluidSimulationGPU.h"
 
-SimulationSettingsPanel::SimulationSettingsPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer)
-    : UIPanel(name), simulation(simulation), renderer(renderer) {
-    simulationSettings = &simulation->settings;
-    renderSettings = &renderer->settings;
+SimulationSettingsPanel::SimulationSettingsPanel()
+    : UIPanel("Simulation Settings") {
+    simulationSettings  = &FluidSimulationGPU::getInstance()->settings;
+    renderSettings      = &FluidRenderer::getInstance()->settings;
 }
 
 void SimulationSettingsPanel::update(double deltaTime) { }

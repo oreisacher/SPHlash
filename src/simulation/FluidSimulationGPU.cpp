@@ -15,77 +15,6 @@
 
 FluidSimulationGPU::FluidSimulationGPU() {
     cudaSetDevice(0);
-
-    // Setup particles
-    // particles.resize(initSettings.particleCount);
-    // initParticlesRandom(x, y, z);
-    // initParticles();
-
-    // Determine h
-    // float avgSpacing = std::sqrt(((x.y - x.x) * (y.y - y.x) * (z.y - z.x)) / particleCount);
-    // settings.h = 5.0f * avgSpacing;
-
-    // Setup ghost particles
-    // int ghosts = 0;
-    // auto addGhostLayer = [&](float3 start, float3 end, float spacing) {
-    //     for (float x = start.x; x <= end.x; x += spacing) {
-    //         for (float y = start.y; y <= end.y; y += spacing) {
-    //             for (float z = start.z; z <= end.z; z += spacing) {
-    //                 particles.push_back({
-    //                     { x, y, z, 0.0f },
-    //                     { x, y, z, 0.0f },
-    //                     { 0.0f, 0.0f, 0.0f, 0.0f },
-    //                     { 0.0256, 0.0f, 0.0f, 0.0f },
-    //                     { GHOST, 0.0f, 0.0f, 0.0f },
-    //                 });
-    //                 ghosts++;
-    //             }
-    //         }
-    //     }
-    // };
-    //
-    // float s = 0.025f;                          // uniform spacing
-    // float t = s * 3;                          // wall thickness (2 layers)
-    // float xMin = settings.xBoundary.x;
-    // float xMax = settings.xBoundary.y;
-    // float yMin = settings.yBoundary.x;
-    // float yMax = settings.yBoundary.y;
-    // float zMin = settings.zBoundary.x;
-    // float zMax = settings.zBoundary.y;
-    //
-    // // Floor (full coverage)
-    // addGhostLayer({xMin - t, yMin - t, zMin - t}, {xMax + t, yMin, zMax + t}, s);
-    //
-    // // Left wall (exclude floor/ceiling overlap in Y)
-    // addGhostLayer({xMin - t, yMin + s, zMin - t}, {xMin, yMax - s, zMax + t}, s);
-    // // Right wall
-    // addGhostLayer({xMax, yMin + s, zMin - t}, {xMax + t, yMax - s, zMax + t}, s);
-    //
-    // // Front wall (exclude corners already covered by X walls)
-    // addGhostLayer({xMin, yMin + s, zMin - t}, {xMax, yMax - s, zMin}, s);
-    // // Back wall
-    // addGhostLayer({xMin, yMin + s, zMax}, {xMax, yMax - s, zMax + t}, s);
-
-    // particlesCount = initSettings.particleCount + ghosts;
-
-    // Allocate memory on gpu
-    // cudaMalloc(reinterpret_cast<void**>(&d_particleHashes), particlesCount * sizeof(int));
-    // cudaMalloc(reinterpret_cast<void**>(&d_sortedParticleHashes), particlesCount * sizeof(int));
-    // cudaMalloc(reinterpret_cast<void**>(&d_particleIndices), particlesCount * sizeof(int));
-    // cudaMalloc(reinterpret_cast<void**>(&d_sortedParticleIndices), particlesCount * sizeof(int));
-    // cudaMalloc(reinterpret_cast<void**>(&d_offsets), particlesCount * sizeof(int));
-    //
-    // // Allocate memory for CUB sorting
-    // queryRequiredSortingStorage(
-        // particlesCount,
-        // sortTempStorageBytes,
-        // d_particleHashes,
-        // d_sortedParticleHashes,
-        // d_particleIndices,
-        // d_sortedParticleIndices
-    // );
-
-    // cudaMalloc(&d_sortTempStorage, sortTempStorageBytes);
 }
 
 FluidSimulationGPU::~FluidSimulationGPU() {
@@ -99,6 +28,11 @@ FluidSimulationGPU::~FluidSimulationGPU() {
     cudaFree(d_sortTempStorage);
 
     cudaGraphicsUnmapResources(1, &rendererResource, nullptr);
+}
+
+FluidSimulationGPU* FluidSimulationGPU::getInstance() {
+    static FluidSimulationGPU instance;
+    return &instance;
 }
 
 void FluidSimulationGPU::update(const float deltaTime) {
@@ -198,7 +132,20 @@ void FluidSimulationGPU::step(float deltaTime) {
     state = PAUSED;
 }
 
-void FluidSimulationGPU::reset() const {
+void FluidSimulationGPU::start() {
+    // Preprocess boundary density map
+    calculateDensityMap();
+
+    state = RUNNING;
+}
+
+void FluidSimulationGPU::pause() {
+    state = PAUSED;
+}
+
+void FluidSimulationGPU::reset() {
+    state = PAUSED;
+
     launchResetParticlesKernel(d_particles, particleCount);
 
     // Copy reset data to renderer vbo
@@ -242,6 +189,11 @@ ParticleGPU FluidSimulationGPU::getParticle(const int id) const {
 
     cudaMemcpy(&particle, &d_particles[id], sizeof(ParticleGPU), cudaMemcpyDeviceToHost);
     return particle;
+}
+
+void FluidSimulationGPU::calculateDensityMap() {
+    // Get mesh data
+
 }
 
 void FluidSimulationGPU::initParticles() {

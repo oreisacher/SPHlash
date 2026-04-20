@@ -11,9 +11,10 @@
 #include "ImGuiFileDialog.h"
 #include "glm/gtc/type_ptr.inl"
 
-ModelsPanel::ModelsPanel(const std::string& name, FluidRenderer* renderer)
-    : UIPanel(name), renderer(renderer)
-{ }
+ModelsPanel::ModelsPanel()
+    : UIPanel("Models") {
+    renderer = FluidRenderer::getInstance();
+}
 
 void ModelsPanel::update(double deltaTime) {
 

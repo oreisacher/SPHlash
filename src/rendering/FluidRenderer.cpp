@@ -14,7 +14,9 @@
 #include "utils/SphereCreator.h"
 #include <vector>
 
-FluidRenderer::FluidRenderer(FluidSimulationGPU* sim) : simulation(sim) {
+FluidRenderer::FluidRenderer() {
+    simulation = FluidSimulationGPU::getInstance();
+
     // Setup OpenGL State
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -47,6 +49,11 @@ FluidRenderer::~FluidRenderer() {
     for (const auto m : models) {
         delete m;
     }
+}
+
+FluidRenderer* FluidRenderer::getInstance() {
+    static FluidRenderer instance;
+    return &instance;
 }
 
 void FluidRenderer::render() const {

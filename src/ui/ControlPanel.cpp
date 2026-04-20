@@ -6,9 +6,10 @@
 #include "imgui.h"
 #include <iostream>
 
-ControlPanel::ControlPanel(const std::string& name, FluidSimulationGPU* simulation)
-    : UIPanel(name), simulation(simulation)
-{ }
+ControlPanel::ControlPanel()
+    : UIPanel("Controls") {
+    simulation = FluidSimulationGPU::getInstance();
+}
 
 void ControlPanel::update(double deltaTime) { }
 
@@ -24,10 +25,10 @@ void ControlPanel::draw() {
     ImGui::BeginDisabled(simulation->state == UNINITIALIZED);
 
     if (ImGui::Button(simulation->state == RUNNING ? "Stop Simulation" : "Start Simulation", ImVec2(totalWidth, 0)))
-        simulation->state = simulation->state == PAUSED ? RUNNING : PAUSED;
+        simulation->state == PAUSED ? simulation->start() : simulation->pause();
 
     if (ImGui::IsKeyPressed(ImGuiKey_Space) && simulation->state != UNINITIALIZED)
-        simulation->state = simulation->state == PAUSED ? RUNNING : PAUSED;
+        simulation->state == PAUSED ? simulation->start() : simulation->pause();
 
     if (ImGui::Button("Reset Simulation", ImVec2(totalWidth, 0)))
         simulation->reset();

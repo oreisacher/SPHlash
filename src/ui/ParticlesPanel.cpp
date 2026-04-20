@@ -7,9 +7,11 @@
 #include "imgui.h"
 #include "simulation/FluidSimulationGPU.h"
 
-ParticlesPanel::ParticlesPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer)
-    : UIPanel(name), simulation(simulation), renderer(renderer)
-{ }
+ParticlesPanel::ParticlesPanel()
+    : UIPanel("Particles") {
+    simulation = FluidSimulationGPU::getInstance();
+    renderer = FluidRenderer::getInstance();
+}
 
 void ParticlesPanel::update(double deltaTime) {
     time += deltaTime;

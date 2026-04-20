@@ -9,9 +9,10 @@
 #include "imgui.h"
 #include "glm/gtc/type_ptr.hpp"
 
-RenderingSettingsPanel::RenderingSettingsPanel(const std::string& name, FluidRenderer* renderer)
-    : UIPanel(name), renderer(renderer)
-{ }
+RenderingSettingsPanel::RenderingSettingsPanel()
+    : UIPanel("Rendering Settings") {
+    renderer = FluidRenderer::getInstance();
+}
 
 void RenderingSettingsPanel::update(double deltaTime) { }
 

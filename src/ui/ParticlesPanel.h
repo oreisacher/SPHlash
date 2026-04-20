@@ -13,7 +13,7 @@
 
 class ParticlesPanel : public UIPanel {
 public:
-    explicit ParticlesPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer);
+    explicit ParticlesPanel();
 
     void update(double deltaTime) override;
     void draw() override;

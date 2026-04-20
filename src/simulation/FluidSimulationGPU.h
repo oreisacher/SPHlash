@@ -68,13 +68,15 @@ struct SimulationSettings {
 
 class FluidSimulationGPU {
 public:
-    FluidSimulationGPU();
-    ~FluidSimulationGPU();
+
+    static FluidSimulationGPU* getInstance();
 
     void update(float deltaTime);
     void step(float deltaTime);
 
-    void reset() const;
+    void start();
+    void pause();
+    void reset();
 
     void initParticles();
 
@@ -85,15 +87,15 @@ public:
     float cfl = 0;
     int particleCount = 0;
 
-    int boundaryParticleCount;
-    std::vector<ParticleGPU> boundaryParticles;
-
     InitSettings initSettings;
     SimulationSettings settings;
 
     // --- Simulation State ---
     SimulationState state = UNINITIALIZED;
 private:
+    FluidSimulationGPU();
+    ~FluidSimulationGPU();
+
     // --- Particles ---
     ParticleGPU* d_particles            = nullptr;
     ParticleGPU* d_sortedParticles      = nullptr;
@@ -114,6 +116,8 @@ private:
     // --- Rendering ---
     cudaGraphicsResource* rendererResource = nullptr;
     RendererParticle* d_rendererParticles = nullptr;
+
+    void calculateDensityMap();
 };
 
 #endif //FLUIDSIMSPH_FLUIDSIMULATIONGPU_H

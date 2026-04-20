@@ -11,7 +11,7 @@
 
 class InitPanel : public UIPanel{
 public:
-    explicit InitPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer);
+    explicit InitPanel();
 
     void update(double deltaTime) override;
     void draw() override;

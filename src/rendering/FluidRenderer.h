@@ -50,8 +50,8 @@ struct RendererParticle {
 
 class FluidRenderer {
 public:
-    FluidRenderer(FluidSimulationGPU* simulation);
     ~FluidRenderer();
+    static FluidRenderer* getInstance();
 
     void render() const;
 
@@ -79,6 +79,8 @@ public:
     RenderingSettings settings;
 
 private:
+    FluidRenderer();
+
     void setupShaders();
     void setupSphereModel();
     void setupParticles();

@@ -14,7 +14,7 @@
 
 class StatisticsPanel : public UIPanel {
 public:
-    explicit StatisticsPanel(const std::string& name, FluidSimulationGPU* simulation);
+    explicit StatisticsPanel();
 
     void update(double deltaTime) override;
     void draw() override;

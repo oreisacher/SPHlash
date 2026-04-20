@@ -7,8 +7,10 @@
 #include <format>
 #include "imgui.h"
 
-StatisticsPanel::StatisticsPanel(const std::string& name, FluidSimulationGPU* simulation)
-    : UIPanel(name), simulation(simulation) { }
+StatisticsPanel::StatisticsPanel()
+    : UIPanel("Statistics") {
+    simulation = FluidSimulationGPU::getInstance();
+}
 
 void StatisticsPanel::update(double deltaTime) {
     // Update fps

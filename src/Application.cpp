@@ -44,21 +44,21 @@ Application::Application() {
     }
 
     // Simulation
-    simulation = new FluidSimulationGPU;
+    simulation = FluidSimulationGPU::getInstance();
 
     // Rendering
-    renderer = new FluidRenderer(simulation);
+    renderer = FluidRenderer::getInstance();
 
     // Setup UI
     ui = new UIManager(window->getNativeWindow());
-    ui->addPanel(new SimulationPanel("Simulation", renderer->getTextureId()));
-    ui->addPanel(new ControlPanel("Controls", simulation));
-    ui->addPanel(new StatisticsPanel("Statistics", simulation));
-    ui->addPanel(new InitPanel("Init Settings", simulation, renderer));
-    ui->addPanel(new SimulationSettingsPanel("Simulation Settings", simulation, renderer));
-    ui->addPanel(new RenderingSettingsPanel("Rendering Settings", renderer));
-    ui->addPanel(new ParticlesPanel("Particles", simulation, renderer));
-    ui->addPanel(new ModelsPanel("Models", renderer));
+    ui->addPanel(new SimulationPanel);
+    ui->addPanel(new ControlPanel);
+    ui->addPanel(new StatisticsPanel);
+    ui->addPanel(new InitPanel);
+    ui->addPanel(new SimulationSettingsPanel);
+    ui->addPanel(new RenderingSettingsPanel);
+    ui->addPanel(new ParticlesPanel);
+    ui->addPanel(new ModelsPanel);
 
     // Setup Camera
     camera = new Camera({ 0.0f, 0.0f, 1.0f });
@@ -66,8 +66,8 @@ Application::Application() {
 }
 
 Application::~Application() {
-    delete simulation;
-    delete renderer;
+    // delete simulation;
+    // delete renderer;
     delete ui;
     delete camera;
     delete window;

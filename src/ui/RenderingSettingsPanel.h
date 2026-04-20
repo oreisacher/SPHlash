@@ -10,7 +10,7 @@
 
 class RenderingSettingsPanel : public UIPanel {
 public:
-    explicit RenderingSettingsPanel(const std::string& name, FluidRenderer* renderer);
+    explicit RenderingSettingsPanel();
 
     void update(double deltaTime) override;
     void draw() override;

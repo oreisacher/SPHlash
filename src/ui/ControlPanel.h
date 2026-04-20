@@ -10,7 +10,7 @@
 
 class ControlPanel : public UIPanel {
 public:
-    explicit ControlPanel(const std::string& name, FluidSimulationGPU* simulation);
+    explicit ControlPanel();
 
     void update(double deltaTime) override;
     void draw() override;

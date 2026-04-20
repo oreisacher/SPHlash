@@ -11,9 +11,12 @@
 #include "imgui_internal.h"
 #include "glm/gtc/type_ptr.inl"
 
-InitPanel::InitPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer)
-    : UIPanel(name), simulation(simulation), renderer(renderer)
+InitPanel::InitPanel()
+    : UIPanel("Init Settings")
 {
+    simulation = FluidSimulationGPU::getInstance();
+    renderer = FluidRenderer::getInstance();
+
     recalculateParticles();
 }
 

@@ -10,7 +10,7 @@
 
 class ModelsPanel : public UIPanel {
 public:
-    explicit ModelsPanel(const std::string& name, FluidRenderer* renderer);
+    explicit ModelsPanel();
 
     void update(double deltaTime) override;
     void draw() override;

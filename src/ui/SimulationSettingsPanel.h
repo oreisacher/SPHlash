@@ -12,7 +12,7 @@
 
 class SimulationSettingsPanel : public UIPanel {
 public:
-    explicit SimulationSettingsPanel(const std::string& name, FluidSimulationGPU* simulation, FluidRenderer* renderer);
+    explicit SimulationSettingsPanel();
 
     void update(double deltaTime) override;
     void draw() override;
