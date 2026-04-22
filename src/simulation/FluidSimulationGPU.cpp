@@ -105,9 +105,9 @@ void FluidSimulationGPU::update(const float deltaTime) {
         d_sortedParticles,
         particleCount,
         settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
-        { 0.0, 1.0 },
-        { 0.0, 1.0 },
-        { 0.0, 1.0 },
+        { settings.xDomain.x, settings.xDomain.y },
+        { settings.yDomain.x, settings.yDomain.y },
+        { settings.zDomain.x, settings.zDomain.y },
         settings.enableGravity ? settings.gravity : 0.0f
     );
 
@@ -253,22 +253,17 @@ void FluidSimulationGPU::calculateDensityMap() {
                 int id = x + y * sdfResolution + z * sdfResolution * sdfResolution;
 
                 float cube[8];
-
-                // Bottom layer
-                cube[0] = sdf[id            ];
-                cube[1] = sdf[id + dx       ];
-                cube[2] = sdf[id + dx + dy  ];
-                cube[3] = sdf[id + dy       ];
-
-                // Top layer
-                cube[4] = sdf[id + dz];
-                cube[5] = sdf[id + dx + dz];
-                cube[6] = sdf[id + dx + dy + dz];
-                cube[7] = sdf[id + dy + dz];
+                cube[0] = sdf[id                ];
+                cube[1] = sdf[id + dx           ];
+                cube[2] = sdf[id + dx + dy      ];
+                cube[3] = sdf[id      + dy      ];
+                cube[4] = sdf[id           + dz ];
+                cube[5] = sdf[id + dx      + dz ];
+                cube[6] = sdf[id + dx + dy + dz ];
+                cube[7] = sdf[id      + dy + dz ];
 
                 // Build index
                 int cubeIndex = 0;
-
                 if (cube[0] < 0) cubeIndex |= 1;
                 if (cube[1] < 0) cubeIndex |= 2;
                 if (cube[2] < 0) cubeIndex |= 4;

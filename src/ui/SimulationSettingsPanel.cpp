@@ -14,8 +14,8 @@
 
 SimulationSettingsPanel::SimulationSettingsPanel()
     : UIPanel("Simulation Settings") {
-    simulationSettings  = &FluidSimulationGPU::getInstance()->settings;
-    renderSettings      = &FluidRenderer::getInstance()->settings;
+    simulation  = FluidSimulationGPU::getInstance();
+    renderer    = FluidRenderer::getInstance();
 }
 
 void SimulationSettingsPanel::update(double deltaTime) { }
@@ -28,50 +28,69 @@ void SimulationSettingsPanel::draw() {
     ImGui::PushItemWidth(-FLT_MIN);
     float totalWidth = ImGui::GetContentRegionAvail().x;
 
+    if (ImGui::CollapsingHeader("Domain Settings")) {
+        ImGui::PushID("Domain");
+        ImGui::Text("X:");
+        if (ImGui::DragFloat2("##domainX", glm::value_ptr(simulation->settings.xDomain), 0.01f)) {
+            renderer->updateDomainModelMatrix();
+        }
+
+        ImGui::Text("Y:");
+        if (ImGui::DragFloat2("##domainY", glm::value_ptr(simulation->settings.yDomain), 0.01f)) {
+            renderer->updateDomainModelMatrix();
+        }
+
+        ImGui::Text("Z:");
+        if (ImGui::DragFloat2("##domainZ", glm::value_ptr(simulation->settings.zDomain), 0.01f)) {
+            renderer->updateDomainModelMatrix();
+        }
+        ImGui::PopID();
+    }
+
     if (ImGui::CollapsingHeader("Particle Settings")) {
         ImGui::Text("H:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Size of Kernel");
-        ImGui::DragFloat("##H", &simulationSettings->h, 0.0001, 0.0001);
+        ImGui::DragFloat("##H", &simulation->settings.h, 0.0001, 0.0001);
 
         ImGui::Text("P_0:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Rest Density");
-        ImGui::DragFloat("##P_0", &simulationSettings->p_0, 0.001f);
+        ImGui::DragFloat("##P_0", &simulation->settings.p_0, 0.001f);
 
         ImGui::Text("K:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Stiffness");
-        ImGui::DragFloat("##k", &simulationSettings->k, 0.001f);
+        ImGui::DragFloat("##k", &simulation->settings.k, 0.001f);
 
         ImGui::Text("Mu:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Viscosity Coefficient");
-        ImGui::DragFloat("##mu", &simulationSettings->mu, 0.001f);
+        ImGui::DragFloat("##mu", &simulation->settings.mu, 0.001f);
 
         ImGui::Text("Surface Tension Threshold:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Surface Tension Threshold");
-        ImGui::DragFloat("##TT", &simulationSettings->tensionThreshold, 0.001f);
+        ImGui::DragFloat("##TT", &simulation->settings.tensionThreshold, 0.001f);
 
         ImGui::Text("Surface Tension:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Surface Tension Strength");
-        ImGui::DragFloat("##T", &simulationSettings->tension, 0.001f);
+        ImGui::DragFloat("##T", &simulation->settings.tension, 0.001f);
     }
 
     if (ImGui::CollapsingHeader("Gravity Settings")) {
-        ImGui::Checkbox("Enable##g", &simulationSettings->enableGravity);
+        ImGui::Checkbox("Enable##g", &simulation->settings.enableGravity);
 
         ImGui::Text("Gravity:");
-        ImGui::DragFloat("##g", &simulationSettings->gravity, 0.01);
+        ImGui::DragFloat("##g", &simulation->settings.gravity, 0.01);
     }
 
     if (ImGui::CollapsingHeader("CFL Settings")) {
-        ImGui::Checkbox("Enable##cfl", &simulationSettings->useCFL);
+        ImGui::Checkbox("Enable##cfl", &simulation->settings.useCFL);
 
         ImGui::Text("Safety Factor:");
-        ImGui::DragFloat("##cflSF", &simulationSettings->safetyFactor, 0.01);
+        ImGui::DragFloat("##cflSF", &simulation->settings.safetyFactor, 0.01);
     }
 
     ImGui::Separator();
@@ -112,14 +131,14 @@ void SimulationSettingsPanel::draw() {
 void SimulationSettingsPanel::SaveSettings(const std::string& path) const {
     nlohmann::json json;
 
-    json["h"] = simulationSettings->h;
-    json["p_0"] = simulationSettings->p_0;
-    json["k"] = simulationSettings->k;
-    json["mu"] = simulationSettings->mu;
-    json["tensionThreshold"] = simulationSettings->tensionThreshold;
-    json["tension"] = simulationSettings->tension;
-    json["enableGravity"] = simulationSettings->enableGravity;
-    json["gravity"] = simulationSettings->gravity;
+    json["h"]                   = simulation->settings.h;
+    json["p_0"]                 = simulation->settings.p_0;
+    json["k"]                   = simulation->settings.k;
+    json["mu"]                  = simulation->settings.mu;
+    json["tensionThreshold"]    = simulation->settings.tensionThreshold;
+    json["tension"]             = simulation->settings.tension;
+    json["enableGravity"]       = simulation->settings.enableGravity;
+    json["gravity"]             = simulation->settings.gravity;
 
     // Write safe file to disk
     std::ofstream file(path);
@@ -134,12 +153,12 @@ void SimulationSettingsPanel::LoadSettings(const std::string& path) {
     nlohmann::json json;
     file >> json;
 
-    simulationSettings->h = json.value("h", simulationSettings->h);
-    simulationSettings->p_0 = json.value("p_0", simulationSettings->p_0);
-    simulationSettings->k = json.value("k", simulationSettings->k);
-    simulationSettings->mu = json.value("mu", simulationSettings->mu);
-    simulationSettings->tensionThreshold = json.value("tensionThreshold", simulationSettings->tensionThreshold);
-    simulationSettings->tension = json.value("tension", simulationSettings->tension);
-    simulationSettings->enableGravity = json.value("enableGravity", simulationSettings->enableGravity);
-    simulationSettings->gravity = json.value("gravity", simulationSettings->gravity);
+    simulation->settings.h                  = json.value("h", simulation->settings.h);
+    simulation->settings.p_0                = json.value("p_0", simulation->settings.p_0);
+    simulation->settings.k                  = json.value("k", simulation->settings.k);
+    simulation->settings.mu                 = json.value("mu", simulation->settings.mu);
+    simulation->settings.tensionThreshold   = json.value("tensionThreshold", simulation->settings.tensionThreshold);
+    simulation->settings.tension            = json.value("tension", simulation->settings.tension);
+    simulation->settings.enableGravity      = json.value("enableGravity", simulation->settings.enableGravity);
+    simulation->settings.gravity            = json.value("gravity", simulation->settings.gravity);
 }

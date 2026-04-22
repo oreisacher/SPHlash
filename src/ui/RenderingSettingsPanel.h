@@ -19,9 +19,10 @@ private:
     FluidRenderer* renderer;
 
     static inline const char* renderModes[] {
-        "Solid Color",
+        "Color Particles",
         "Velocity",
-        "Pressure"
+        "Pressure",
+        "Solid Color"
     };
 };
 

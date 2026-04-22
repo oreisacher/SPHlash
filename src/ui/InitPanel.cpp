@@ -47,19 +47,19 @@ void InitPanel::draw() {
     ImGui::Text("X:");
     if (ImGui::DragFloat2("##saX", glm::value_ptr(simulation->initSettings.xBoundary), 0.01f)) {
         recalculateParticles();
-        renderer->rebuildSpawnAreaBox();
+        renderer->updateSpawnBoxModelMatrix();
     }
 
     ImGui::Text("Y:");
     if (ImGui::DragFloat2("##saY", glm::value_ptr(simulation->initSettings.yBoundary), 0.01f)) {
         recalculateParticles();
-        renderer->rebuildSpawnAreaBox();
+        renderer->updateSpawnBoxModelMatrix();
     }
 
     ImGui::Text("Z:");
     if (ImGui::DragFloat2("##saZ", glm::value_ptr(simulation->initSettings.zBoundary), 0.01f)) {
         recalculateParticles();
-        renderer->rebuildSpawnAreaBox();
+        renderer->updateSpawnBoxModelMatrix();
     }
 
     ImGui::Spacing();

@@ -18,7 +18,8 @@ class FluidSimulationGPU;
 enum RenderMode {
     SOLID_COLOR_PARTICLES,
     VELOCITY_PARTICLES,
-    PRESSURE_PARTICLES
+    PRESSURE_PARTICLES,
+    SOLID_COLOR
 };
 
 struct RenderingSettings {
@@ -27,7 +28,7 @@ struct RenderingSettings {
     RenderMode mode = SOLID_COLOR_PARTICLES;
 
     // SOLID_COLOR_PARTICLES
-    glm::vec3 solidColor = glm::vec3(1.0, 0.0, 0.0);
+    glm::vec3 solidColorParticles = glm::vec3(1.0, 0.0, 0.0);
 
     // VELOCITY_PARTICLES
     glm::vec3 minVelColor = glm::vec3(0.0f, 0.0f, 1.0f);
@@ -40,6 +41,9 @@ struct RenderingSettings {
     glm::vec3 maxPresColor = glm::vec3(1.0f, 0.0f, 0.0f);
     float pressureMin = 0.0f;
     float pressureMax = 1.0f;
+
+    // SOLID_COLOR
+    glm::vec3 solidColor = glm::vec3(1.0, 0.0, 0.0);
 };
 
 struct RendererParticle {
@@ -53,6 +57,7 @@ public:
     ~FluidRenderer();
     static FluidRenderer* getInstance();
 
+    void update();
     void render() const;
 
     void setCamera(Camera* cam);
@@ -61,7 +66,8 @@ public:
     Shader* getBoundaryShader() const;
 
     void updateParticleSize() const;
-    void rebuildSpawnAreaBox() const;
+    void updateSpawnBoxModelMatrix();
+    void updateDomainModelMatrix();
 
     void updateParticleData() const;
     void updateRenderingSettings() const;
@@ -87,12 +93,14 @@ private:
     void setupParticles();
     void setupSpawnAreaModel();
 
+    glm::mat4 calculateModelMatrix(glm::vec3 min, glm::vec3 max);
+
     FluidSimulationGPU* simulation;
 
     Camera* camera;
 
     Shader* particleShader;
-    Shader* boundaryShader;
+    Shader* boxShader;
     Shader* modelShader;
 
     Framebuffer* framebuffer;
@@ -105,11 +113,15 @@ private:
     // Particle
     GLuint particleVBO;
 
-    // Boundary
+    // Box Model
     GLuint boxVAO, boxVBO, boxEBO;
 
     // --- Models ---
     std::vector<Model*> models;
+
+    // --- Internal Render Data ---
+    glm::mat4 spawnBoxModel = glm::mat4(1.0f);
+    glm::mat4 domainModel = glm::mat4(1.0f);
 };
 
 #endif //FLUIDSIMSPH_FLUIDRENDERER_H

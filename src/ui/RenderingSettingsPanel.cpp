@@ -22,7 +22,6 @@ void RenderingSettingsPanel::draw() {
 
     ImGui::Begin(name.c_str());
     ImGui::PushItemWidth(-FLT_MIN);
-    float totalWidth = ImGui::GetContentRegionAvail().x;
 
     ImGui::Text("Particle Size:");
     if (ImGui::DragFloat("##ps", &renderer->settings.particleSize, 0.0001f, 0.0)) {
@@ -37,9 +36,11 @@ void RenderingSettingsPanel::draw() {
 
     switch (renderer->settings.mode) {
     case SOLID_COLOR_PARTICLES:
+        ImGui::PushID(SOLID_COLOR_PARTICLES);
         ImGui::Text("Color:");
-        if (ImGui::ColorEdit3("##scpCE", glm::value_ptr(renderer->settings.solidColor)))
+        if (ImGui::ColorEdit3("##scpCE", glm::value_ptr(renderer->settings.solidColorParticles)))
             renderer->updateRenderingSettings();
+        ImGui::PopID();
         break;
 
     case VELOCITY_PARTICLES:
@@ -76,6 +77,14 @@ void RenderingSettingsPanel::draw() {
         ImGui::Text("Maximum Pressure Color:");
         if (ImGui::ColorEdit3("##vpMaxPC", glm::value_ptr(renderer->settings.maxPresColor)))
             renderer->updateRenderingSettings();
+        break;
+
+    case SOLID_COLOR:
+        ImGui::PushID(SOLID_COLOR);
+        ImGui::Text("Color:");
+        if (ImGui::ColorEdit3("##scCE", glm::value_ptr(renderer->settings.solidColor)))
+            renderer->updateRenderingSettings();
+        ImGui::PopID();
         break;
     }
 

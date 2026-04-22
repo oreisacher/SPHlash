@@ -8,9 +8,9 @@
 #include "UIPanel.h"
 #include "rendering/FluidRenderer.h"
 
-class ModelsPanel : public UIPanel {
+class BoundariesPanel : public UIPanel {
 public:
-    explicit ModelsPanel();
+    explicit BoundariesPanel();
 
     void update(double deltaTime) override;
     void draw() override;

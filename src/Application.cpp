@@ -28,7 +28,7 @@
 #include "rendering/Mesh.h"
 #include "ui/ControlPanel.h"
 #include "ui/InitPanel.h"
-#include "ui/ModelsPanel.h"
+#include "ui/BoundariesPanel.h"
 #include "ui/RenderingSettingsPanel.h"
 
 Application::Application() {
@@ -58,7 +58,7 @@ Application::Application() {
     ui->addPanel(new SimulationSettingsPanel);
     ui->addPanel(new RenderingSettingsPanel);
     ui->addPanel(new ParticlesPanel);
-    ui->addPanel(new ModelsPanel);
+    ui->addPanel(new BoundariesPanel);
 
     // Setup Camera
     camera = new Camera({ 0.0f, 0.0f, 1.0f });
@@ -77,6 +77,9 @@ void Application::run() const {
     while (!window->shouldClose()) {
         // Simulation
         simulation->update(Time.getDeltaTime());
+
+        // Update renderer e.g. building mesh
+        renderer->update();
 
         // Render simulation into texture
         renderer->render();

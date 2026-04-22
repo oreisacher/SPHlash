@@ -64,8 +64,8 @@ add_executable(SPHlash
     src/rendering/Mesh.h
     src/rendering/Model.cpp
     src/rendering/Model.h
-    src/ui/ModelsPanel.cpp
-    src/ui/ModelsPanel.h
+        src/ui/BoundariesPanel.cpp
+        src/ui/BoundariesPanel.h
     src/cuda/Boundaries.h
     src/cuda/Boundaries.cu
 

@@ -28,6 +28,8 @@ uniform float minPres;
 uniform vec3 maxPresColor;
 uniform float maxPres;
 
+uniform vec3 solidColor;
+
 vec3 velocityToHSV(vec2 v, float maxSpeed)
 {
     float angle = atan(v.y, v.x);
@@ -109,6 +111,12 @@ void main() {
             color = mix(vec3(1.0, 0.5, 0.5), maxPresColor, t); // light red to dark red
         }
         FragColor = vec4(color, 1.0);
+    }
+
+    // SOLID COLOR
+    if (mode == 3) {
+        FragColor = vec4(solidColor, 1.0);
+        return;
     }
 
 //        FragColor = vec4(1.0, 0.0, 0.0, 1.0f);

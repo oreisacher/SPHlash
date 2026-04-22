@@ -43,12 +43,17 @@ struct InitSettings {
     float particleSpacing = 0.025f;
 
     // Spawn area
-    glm::vec2 xBoundary = { 0.1, 0.9 };
-    glm::vec2 yBoundary = { 0.1, 0.9 };
-    glm::vec2 zBoundary = { 0.1, 0.9 };
+    glm::vec2 xBoundary = { -0.5, 0.5 };
+    glm::vec2 yBoundary = { -0.5, 0.5 };
+    glm::vec2 zBoundary = { -0.5, 0.5 };
 };
 
 struct SimulationSettings {
+    // Domain
+    glm::vec2 xDomain = { -1.0f, 1.0f };
+    glm::vec2 yDomain = { -1.0f, 1.0f };
+    glm::vec2 zDomain = { -1.0f, 1.0f };
+
     // Particles
     float h = 0.2f;
     float p_0 = 1000.0f;

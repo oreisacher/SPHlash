@@ -19,10 +19,7 @@ public:
 
 private:
     FluidSimulationGPU* simulation;
-    SimulationSettings* simulationSettings;
-
     FluidRenderer* renderer;
-    RenderingSettings* renderSettings;
 
     void SaveSettings(const std::string& path) const;
     void LoadSettings(const std::string& path);
