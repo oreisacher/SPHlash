@@ -14,12 +14,13 @@
 #include "utils/Logger.h"
 #include "utils/SphereCreator.h"
 #include <vector>
-#include <nvtx3/nvtx3.hpp>
-#include <oneapi/tbb/detail/_task.h>
+
+#include "cuda/MarchingCubes.h"
 #include "glm/gtx/transform.hpp"
 
 FluidRenderer::FluidRenderer() {
     simulation = FluidSimulationGPU::getInstance();
+    simulation->updateScalarFieldSize(settings.marchingCubeResolution);
 
     // Setup OpenGL State
     glEnable(GL_DEPTH_TEST);
@@ -45,6 +46,16 @@ FluidRenderer::FluidRenderer() {
 
     // Setup shaders
     setupShaders();
+
+    // Marching cubes
+    int numCubes = (settings.marchingCubeResolution.x - 1) * (settings.marchingCubeResolution.y - 1) * (settings.marchingCubeResolution.z - 1);
+    int estimatedActiveCubes = numCubes * 0.15f;
+
+    int maxVertices = estimatedActiveCubes * 15 * 1.2f;
+    int maxIndices = estimatedActiveCubes * 15 * 1.2f;
+
+    marchingCubeMesh = new Mesh("Surface", maxVertices, maxIndices);
+    addModel(new Model("Surface", { marchingCubeMesh }));
 }
 
 FluidRenderer::~FluidRenderer() {
@@ -62,34 +73,91 @@ FluidRenderer* FluidRenderer::getInstance() {
 }
 
 void FluidRenderer::update() {
-    // // Marching cubes
-    // float3 cellSize = make_float3(
-    //     (gridMax.x - gridMin.x) / (sdfResolution - 1),
-    //     (gridMax.y - gridMin.y) / (sdfResolution - 1),
-    //     (gridMax.z - gridMin.z) / (sdfResolution - 1)
+    // Marching cubes
+    // float3 cellSizes = make_float3(
+    //     (simulation->settings.xDomain.y - simulation->settings.xDomain.x) / static_cast<float>(settings.marchingCubeResolution.x - 1),
+    //     (simulation->settings.yDomain.y - simulation->settings.yDomain.x) / static_cast<float>(settings.marchingCubeResolution.y - 1),
+    //     (simulation->settings.zDomain.y - simulation->settings.zDomain.x) / static_cast<float>(settings.marchingCubeResolution.z - 1)
+    // );
+
+    simulation->computeScalarField(settings.marchingCubeResolution);
+
+    int* d_vertexCount;
+    int* d_triangleCount;
+    cudaMalloc(&d_vertexCount, sizeof(int));
+    cudaMalloc(&d_triangleCount, sizeof(int));
+    cudaMemset(d_vertexCount, 0, sizeof(int));
+    cudaMemset(d_triangleCount, 0, sizeof(int));
+
+    cudaGraphicsMapResources(1, &marchingCubeMesh->vboResource, nullptr);
+    cudaGraphicsMapResources(1, &marchingCubeMesh->eboResource, nullptr);
+
+    Vertex* d_vertices;
+    unsigned int* d_indices;
+    size_t vboSize, eboSize;
+
+    cudaGraphicsResourceGetMappedPointer((void**)&d_vertices, &vboSize, marchingCubeMesh->vboResource);
+    cudaGraphicsResourceGetMappedPointer((void**)&d_indices, &eboSize, marchingCubeMesh->eboResource);
+
+    launchMarchingCubesKernel(
+        simulation->voxelField.d_field,
+        simulation->voxelField.d_normal,
+        settings.marchingCubeResolution,
+        { simulation->settings.xDomain.x, simulation->settings.yDomain.x, simulation->settings.zDomain.x },
+        { simulation->settings.xDomain.y, simulation->settings.yDomain.y, simulation->settings.zDomain.y },
+        d_vertexCount,
+        d_triangleCount,
+        d_vertices,
+        d_indices,
+        marchingCubeMesh->maxVertices,
+        marchingCubeMesh->maxIndices
+    );
+
+    // Unmap resources
+    cudaGraphicsUnmapResources(1, &marchingCubeMesh->vboResource, nullptr);
+    cudaGraphicsUnmapResources(1, &marchingCubeMesh->eboResource, nullptr);
+
+    int vertexCount, triangleCount;
+    cudaMemcpy(&vertexCount, d_vertexCount, sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&triangleCount, d_triangleCount, sizeof(int), cudaMemcpyDeviceToHost);
+
+    marchingCubeMesh->vertexCount = vertexCount;
+    marchingCubeMesh->indexCount = triangleCount * 3;
+
+    cudaFree(d_vertexCount);
+    cudaFree(d_triangleCount);
+
+    // if (samples.first.empty()) {
+    //     return;
+    // }
+    //
+    // glm::vec3 domainMin(
+    //     simulation->settings.xDomain.x,
+    //     simulation->settings.yDomain.x,
+    //     simulation->settings.zDomain.x
     // );
     //
     // int dx = 1;
-    // int dy = sdfResolution;
-    // int dz = sdfResolution * sdfResolution;
+    // int dy = settings.marchingCubeResolution.x;
+    // int dz = settings.marchingCubeResolution.x * settings.marchingCubeResolution.y;
     //
     // std::vector<Vertex> vertices = {};
     // std::vector<unsigned int> indices = {};
     //
-    // for (int z = 0; z < sdfResolution - 1; z++) {
-    //     for (int y = 0; y < sdfResolution - 1; y++) {
-    //         for (int x = 0; x < sdfResolution - 1; x++) {
-    //             int id = x + y * sdfResolution + z * sdfResolution * sdfResolution;
+    // for (int z = 0; z < settings.marchingCubeResolution.z - 1; z++) {
+    //     for (int y = 0; y < settings.marchingCubeResolution.y - 1; y++) {
+    //         for (int x = 0; x < settings.marchingCubeResolution.x - 1; x++) {
+    //             int id = x + y * settings.marchingCubeResolution.x + z * settings.marchingCubeResolution.x * settings.marchingCubeResolution.y;
     //
     //             float cube[8];
-    //             cube[0] = sdf[id                ];
-    //             cube[1] = sdf[id + dx           ];
-    //             cube[2] = sdf[id + dx + dy      ];
-    //             cube[3] = sdf[id      + dy      ];
-    //             cube[4] = sdf[id           + dz ];
-    //             cube[5] = sdf[id + dx      + dz ];
-    //             cube[6] = sdf[id + dx + dy + dz ];
-    //             cube[7] = sdf[id      + dy + dz ];
+    //             cube[0] = samples.first[id                ];
+    //             cube[1] = samples.first[id + dx           ];
+    //             cube[2] = samples.first[id + dx + dy      ];
+    //             cube[3] = samples.first[id      + dy      ];
+    //             cube[4] = samples.first[id           + dz ];
+    //             cube[5] = samples.first[id + dx      + dz ];
+    //             cube[6] = samples.first[id + dx + dy + dz ];
+    //             cube[7] = samples.first[id      + dy + dz ];
     //
     //             // Build index
     //             int cubeIndex = 0;
@@ -106,15 +174,25 @@ void FluidRenderer::update() {
     //             if (cubeIndex == 0 || cubeIndex == 255)
     //                 continue;
     //
+    //             float3 normals[8];
+    //             normals[0] = samples.second[id                ];
+    //             normals[1] = samples.second[id + dx           ];
+    //             normals[2] = samples.second[id + dx + dy      ];
+    //             normals[3] = samples.second[id      + dy      ];
+    //             normals[4] = samples.second[id           + dz ];
+    //             normals[5] = samples.second[id + dx      + dz ];
+    //             normals[6] = samples.second[id + dx + dy + dz ];
+    //             normals[7] = samples.second[id      + dy + dz ];
+    //
     //             glm::vec3 position[8];
-    //             position[0] = glm::vec3((x + 0) * cellSize.x, (y + 0) * cellSize.y, (z + 0)* cellSize.z) + gridMin;
-    //             position[1] = glm::vec3((x + 1) * cellSize.x, (y + 0) * cellSize.y, (z + 0)* cellSize.z) + gridMin;
-    //             position[2] = glm::vec3((x + 1) * cellSize.x, (y + 1) * cellSize.y, (z + 0) * cellSize.z) + gridMin;
-    //             position[3] = glm::vec3((x + 0) * cellSize.x, (y + 1) * cellSize.y, (z + 0) * cellSize.z) + gridMin;
-    //             position[4] = glm::vec3((x + 0) * cellSize.x, (y + 0) * cellSize.y, (z + 1) * cellSize.z) + gridMin;
-    //             position[5] = glm::vec3((x + 1) * cellSize.x, (y + 0) * cellSize.y, (z + 1) * cellSize.z) + gridMin;
-    //             position[6] = glm::vec3((x + 1) * cellSize.x, (y + 1) * cellSize.y, (z + 1) * cellSize.z) + gridMin;
-    //             position[7] = glm::vec3((x + 0) * cellSize.x, (y + 1) * cellSize.y, (z + 1) * cellSize.z) + gridMin;
+    //             position[0] = glm::vec3((x + 0) * cellSizes.x, (y + 0) * cellSizes.y, (z + 0) * cellSizes.z) + domainMin;
+    //             position[1] = glm::vec3((x + 1) * cellSizes.x, (y + 0) * cellSizes.y, (z + 0) * cellSizes.z) + domainMin;
+    //             position[2] = glm::vec3((x + 1) * cellSizes.x, (y + 1) * cellSizes.y, (z + 0) * cellSizes.z) + domainMin;
+    //             position[3] = glm::vec3((x + 0) * cellSizes.x, (y + 1) * cellSizes.y, (z + 0) * cellSizes.z) + domainMin;
+    //             position[4] = glm::vec3((x + 0) * cellSizes.x, (y + 0) * cellSizes.y, (z + 1) * cellSizes.z) + domainMin;
+    //             position[5] = glm::vec3((x + 1) * cellSizes.x, (y + 0) * cellSizes.y, (z + 1) * cellSizes.z) + domainMin;
+    //             position[6] = glm::vec3((x + 1) * cellSizes.x, (y + 1) * cellSizes.y, (z + 1) * cellSizes.z) + domainMin;
+    //             position[7] = glm::vec3((x + 0) * cellSizes.x, (y + 1) * cellSizes.y, (z + 1) * cellSizes.z) + domainMin;
     //
     //             // Add vertices
     //             int edgeVertexIndex[12] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
@@ -131,8 +209,15 @@ void FluidRenderer::update() {
     //                     cube[verts.second]
     //                 );
     //
+    //                 auto lerpedNormal = interp(
+    //                     normals[verts.first],
+    //                     normals[verts.second],
+    //                     cube[verts.first],
+    //                     cube[verts.second]
+    //                 );
+    //
     //                 edgeVertexIndex[i] = vertices.size();
-    //                 vertices.push_back({{ lerpedVertex }, { calculateNormal(x, y, z, sdfResolution, sdf) }});
+    //                 vertices.push_back({{ lerpedVertex }, { lerpedNormal.x, lerpedNormal.y, lerpedNormal.z }});
     //             }
     //
     //             // Build faces
@@ -142,16 +227,20 @@ void FluidRenderer::update() {
     //                 int index2 = triangleTable[cubeIndex][i + 2];
     //
     //                 indices.push_back(edgeVertexIndex[index0]);
-    //                 indices.push_back(edgeVertexIndex[index2]);
     //                 indices.push_back(edgeVertexIndex[index1]);
+    //                 indices.push_back(edgeVertexIndex[index2]);
     //             }
     //         }
     //     }
     // }
     //
-    // std::vector<Mesh*> meshes = { new Mesh("SDF", vertices, indices) };
-    // auto sdfModel = new Model("SDF", meshes);
-    // FluidRenderer::getInstance()->addModel(sdfModel);
+    // if (marchingCubeMesh) {
+    //     marchingCubeMesh->updateMeshData(vertices, indices);
+    // } else {
+    //     marchingCubeMesh = new Mesh("SDF", vertices, indices);
+    //
+    //     addModel(new Model("SDF", { marchingCubeMesh }));
+    // }
 }
 
 void FluidRenderer::render() const {

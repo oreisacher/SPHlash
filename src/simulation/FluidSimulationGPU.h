@@ -71,9 +71,13 @@ struct SimulationSettings {
     float safetyFactor = 0.4f;
 };
 
+struct VoxelField {
+    float* d_field     = nullptr;
+    float3* d_normal   = nullptr;
+};
+
 class FluidSimulationGPU {
 public:
-
     static FluidSimulationGPU* getInstance();
 
     void update(float deltaTime);
@@ -87,6 +91,9 @@ public:
 
     void setRendererVBO(GLuint vbo);
 
+    void updateScalarFieldSize(int3 resolution);
+    void computeScalarField(int3 resolution) const;
+
     ParticleGPU getParticle(int id) const;
 
     float cfl = 0;
@@ -94,6 +101,8 @@ public:
 
     InitSettings initSettings;
     SimulationSettings settings;
+
+    VoxelField voxelField = {};
 
     // --- Simulation State ---
     SimulationState state = UNINITIALIZED;

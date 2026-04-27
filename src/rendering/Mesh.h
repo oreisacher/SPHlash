@@ -5,6 +5,7 @@
 #ifndef SPHLASH_MESH_H
 #define SPHLASH_MESH_H
 
+#include <driver_types.h>
 #include <string>
 #include <vector_types.h>
 
@@ -12,9 +13,9 @@
 #include "glm/glm.hpp"
 
 struct Vertex {
-    glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec2 texCoord;
+    float3 position;
+    float3 normal;
+    float2 texCoord;
 };
 
 struct Triangle {
@@ -29,15 +30,32 @@ public:
         const std::vector<unsigned int>& indices
     );
 
+    Mesh(
+        const std::string& name,
+        int maxVertices,
+        int maxIndices
+    );
+
+    ~Mesh();
+
     void draw() const;
+
+    void updateMeshData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
 
     void setMaterialIndex(int index);
     int getMaterialIndex() const;
 
     std::vector<Triangle> getTriangles(glm::mat4 model) const;
 
+    // CUDA Interopt
+    cudaGraphicsResource* vboResource = nullptr;
+    cudaGraphicsResource* eboResource = nullptr;
+
+    int maxVertices, maxIndices;
+    int vertexCount, indexCount;
 private:
     void uploadToGPU();
+    void updateGPU() const;
 
     std::string name;
     int materialIndex = -1;

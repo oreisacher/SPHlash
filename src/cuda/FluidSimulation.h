@@ -5,6 +5,7 @@
 #ifndef FLUIDSIMSPH_HASHPARTICLES_H
 #define FLUIDSIMSPH_HASHPARTICLES_H
 #include "rendering/FluidRenderer.h"
+#include "simulation/FluidSimulationGPU.h"
 
 struct ParticleGPU;
 
@@ -102,6 +103,19 @@ void launchInitParticlesKernel(
 void launchResetParticlesKernel(
     ParticleGPU* particles,
     int numParticles
+);
+
+void launchVoxelFieldKernel(
+    float* field,
+    float3* normals,
+    const int3 resolution,
+    const float3 domainMin,
+    const float3 domainMax,
+    const int numParticles,
+    const ParticleGPU* particles,
+    const int* hashes,
+    const int* offsets,
+    const float h
 );
 
 #endif //FLUIDSIMSPH_HASHPARTICLES_H

@@ -5,6 +5,7 @@
 #ifndef FLUIDSIMSPH_FLUIDRENDERER_H
 #define FLUIDSIMSPH_FLUIDRENDERER_H
 
+#include <vector_functions.h>
 #include <vector_types.h>
 #include "Framebuffer.h"
 #include "Mesh.h"
@@ -44,6 +45,7 @@ struct RenderingSettings {
 
     // SOLID_COLOR
     glm::vec3 solidColor = glm::vec3(1.0, 0.0, 0.0);
+    int3 marchingCubeResolution = make_int3(128, 128, 128);
 };
 
 struct RendererParticle {
@@ -118,6 +120,8 @@ private:
 
     // --- Models ---
     std::vector<Model*> models;
+
+    Mesh* marchingCubeMesh = nullptr;
 
     // --- Internal Render Data ---
     glm::mat4 spawnBoxModel = glm::mat4(1.0f);

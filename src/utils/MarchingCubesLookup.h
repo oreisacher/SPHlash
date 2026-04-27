@@ -5,18 +5,15 @@
 #ifndef SPHLASH_MARCHINGCUBESLOOKUP_H
 #define SPHLASH_MARCHINGCUBESLOOKUP_H
 
-#include <vector>
-
-/// edgeToVertices[i] = {a, b} => edge i joins vertices a and b
-inline std::vector<std::pair<int, int>> edgeToVertices =
+__device__
+const int edgeToVertices[12][2] =
 {
     {0, 1}, {1, 2}, {2, 3}, {0, 3},
     {4, 5}, {5, 6}, {6, 7}, {4, 7},
     {0, 4}, {1, 5}, {2, 6}, {3, 7}
 };
 
-/// edgeTable[i] is a 12 bit number; i is a cubeIndex
-/// edgeTable[i][j] = 1 if isosurface intersects edge j for cubeIndex i
+__device__
 const int edgeTable[256] =
 {
     0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
@@ -53,7 +50,7 @@ const int edgeTable[256] =
     0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0
 };
 
-/// triangleTable[i] is a list of edges forming triangles for cubeIndex i
+__device__
 const int triangleTable[256][16] =
 {
     {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
@@ -313,35 +310,5 @@ const int triangleTable[256][16] =
     {0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
     {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 };
-
-inline glm::vec3 interp(glm::vec3 p1, glm::vec3 p2, float v1, float v2) {
-    if (abs(v1 - v2) < 0.0001f)
-        return p1;
-
-    const float t = -v1 / (v2 - v1 + 1e-6f);
-    return p1 + t * (p2 - p1);
-}
-
-float getSDFValue(int x, int y, int z, int resolution, const std::vector<float>& sdf) {
-    // Clamp to boundaries
-    x = std::max(0, std::min(x, resolution - 1));
-    y = std::max(0, std::min(y, resolution - 1));
-    z = std::max(0, std::min(z, resolution - 1));
-    return sdf[x + y * resolution + z * resolution * resolution];
-}
-
-glm::vec3 calculateNormal(int x, int y, int z, int resolution, const std::vector<float>& sdf) {
-    float dx = getSDFValue(x + 1, y, z, resolution, sdf) - getSDFValue(x - 1, y, z, resolution, sdf);
-    float dy = getSDFValue(x, y + 1, z, resolution, sdf) - getSDFValue(x, y - 1, z, resolution, sdf);
-    float dz = getSDFValue(x, y, z + 1, resolution, sdf) - getSDFValue(x, y, z - 1, resolution, sdf);
-
-    glm::vec3 normal = glm::vec3(dx, dy, dz);
-
-    // Check for zero-length vector to avoid NaN
-    if (glm::length(normal) > 0.0001f) {
-        return glm::normalize(normal);
-    }
-    return glm::vec3(0.0f, 1.0f, 0.0f); // Default fallback
-}
 
 #endif //SPHLASH_MARCHINGCUBESLOOKUP_H

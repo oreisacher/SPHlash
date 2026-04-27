@@ -29,6 +29,25 @@ void queryRequiredSortingStorage(
     );
 }
 
+__device__ int floorDiv(int a, int b) {
+    int q = a / b;
+    int r = a % b;
+
+    if ((r != 0) && ((r < 0) != (b < 0)))
+        q--;
+
+    return q;
+}
+
+__device__ uint floorMod(int a, int b) {
+    int r = a % b;
+
+    if ((r != 0) && ((r < 0) != (b < 0)))
+        r += b;
+
+    return (uint)r;
+}
+
 // From SebLague. Find better explanation for paper
 __device__ uint hashCell(int cellX, int cellY, int cellZ, int hashTableSize) {
     const uint blockSize = 50;
@@ -36,18 +55,19 @@ __device__ uint hashCell(int cellX, int cellY, int cellZ, int hashTableSize) {
     const uint hash2 = 9737333;
     const uint hash3 = 440817757;
 
-    // Shift cell by blocksize. Positions below -25 may produce unexpected behavior
-    uint3 uCell = make_uint3(
-        cellX + blockSize / 2,
-        cellY + blockSize / 2,
-        cellZ + blockSize / 2
+    // Calculate local position within the current block
+    uint3 localCell = make_uint3(
+        floorMod(cellX, blockSize),
+        floorMod(cellY, blockSize),
+        floorMod(cellZ, blockSize)
     );
 
-    // Calculate local position within the current block
-    uint3 localCell = uCell % blockSize;
-
     // Calculate coordinate of current block itself
-    uint3 blockID = uCell / blockSize;
+    int3 blockID = make_int3(
+        floorDiv(cellX, blockSize),
+        floorDiv(cellY, blockSize),
+        floorDiv(cellZ, blockSize)
+    );
 
     uint blockHash = blockID.x * hash1 + blockID.y * hash2 + blockID.z * hash3;
     return (localCell.x + blockSize * (localCell.y + blockSize * localCell.z) + blockHash) % hashTableSize;
@@ -583,5 +603,110 @@ void launchResetParticlesKernel(
 
     resetParticlesKernel<<<blocks, threadsPerBlock>>>(
         particles, numParticles
+    );
+}
+
+__global__ void voxelFieldKernel(
+    float* field,
+    float3* normals,
+    const int3 resolution,
+    const float3 domainMin,
+    const float3 domainMax,
+    const int numParticles,
+    const ParticleGPU* particles,
+    const int* hashes,
+    const int* offsets,
+    const float h
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+    const int cellCount = resolution.x * resolution.y * resolution.z;
+
+    if (id >= cellCount)
+        return;
+
+    // Convert index to 3d cell pos
+    int x = id % resolution.x;
+    int y = (id / resolution.x) % resolution.y;
+    int z = id / (resolution.x * resolution.y);
+
+    float3 cellSizes = make_float3(
+        (domainMax.x - domainMin.x) / (resolution.x - 1),
+        (domainMax.y - domainMin.y) / (resolution.y - 1),
+        (domainMax.z - domainMin.z) / (resolution.z - 1)
+    );
+
+    float4 samplePosition = make_float4(
+        domainMin.x + x * cellSizes.x,
+        domainMin.y + y * cellSizes.y,
+        domainMin.z + z * cellSizes.z,
+        0.0
+    );
+
+    // Get cell of sample point
+    int cellX = floor(samplePosition.x / h);
+    int cellY = floor(samplePosition.y / h);
+    int cellZ = floor(samplePosition.z / h);
+
+    float4 n = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    float c = 0.0f;
+    float h2 = h * h;
+
+    // Find neighbors
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                uint hash = hashCell(cellX + dx, cellY + dy, cellZ + dz, numParticles);
+                int offset = offsets[hash];
+
+                if (offset == -1)
+                    continue;
+
+                while (offset < numParticles) {
+                    int neighborIndex = offset;
+                    offset++;
+
+                    uint neighborHash = hashes[neighborIndex];
+                    if (neighborHash != hash)
+                        break;
+
+                    const ParticleGPU particle = particles[neighborIndex];
+                    const float4 diff = samplePosition - particle.position;
+
+                    // Check if within radius
+                    float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
+                    if (distSq < h2) {
+                        float invDensity = 1.0f / (particle.properties.y + 1e-6f);
+
+                        // Color field
+                        n += particle.properties.x * invDensity * poly6KernelGradient(diff, h);
+                        c += particle.properties.x * invDensity * poly6Kernel(diff, h);
+                    }
+                }
+            }
+        }
+    }
+
+    field[id] = c - 0.5f;
+    normals[id] = make_float3(-n.x, -n.y, -n.z);
+}
+
+void launchVoxelFieldKernel(
+    float* field,
+    float3* normals,
+    const int3 resolution,
+    const float3 domainMin,
+    const float3 domainMax,
+    const int numParticles,
+    const ParticleGPU* particles,
+    const int* hashes,
+    const int* offsets,
+    const float h
+) {
+    int threadsPerBlock = 256;
+    int cells = resolution.x * resolution.y * resolution.z;
+    int blocks = (cells + threadsPerBlock - 1) / threadsPerBlock;
+
+    voxelFieldKernel<<<blocks, threadsPerBlock>>>(
+        field, normals, resolution, domainMin, domainMax, numParticles, particles, hashes, offsets, h
     );
 }
