@@ -14,7 +14,7 @@
 #include "cuda/Boundaries.h"
 #include "cuda/FluidSimulation.h"
 #include "glad/gl.h"
-#include "utils/MarchingCubesLookup.h"
+#include "../cuda/MarchingCubesLookup.h"
 
 FluidSimulationGPU::FluidSimulationGPU() {
     cudaSetDevice(0);
@@ -191,9 +191,9 @@ void FluidSimulationGPU::updateScalarFieldSize(int3 resolution) {
     cudaMalloc(&voxelField.d_normal, sampleCount * sizeof(float3));
 }
 
-void FluidSimulationGPU::computeScalarField(const int3 resolution) const {
+VoxelField FluidSimulationGPU::computeScalarField(const int3 resolution) const {
     if (particleCount == 0 || state == PAUSED)
-        return;
+        return {};
 
     launchVoxelFieldKernel(
         voxelField.d_field,
@@ -207,6 +207,11 @@ void FluidSimulationGPU::computeScalarField(const int3 resolution) const {
         d_offsets,
         settings.h
     );
+
+    return {
+        voxelField.d_field,
+        voxelField.d_normal
+    };
 }
 
 ParticleGPU FluidSimulationGPU::getParticle(const int id) const {

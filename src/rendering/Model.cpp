@@ -9,9 +9,12 @@
 #include <filesystem>
 #include <format>
 #include <iostream>
+#include "FluidRenderer.h"
 #include "tiny_obj_loader.h"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtx/transform.hpp"
+#include <glm/gtx/matrix_decompose.hpp>
+#include <thrust/system/cuda/error.h>
 
 Model::Model(const std::string& path) {
     name = std::filesystem::path(path).stem().string();
@@ -87,53 +90,93 @@ Model::Model(const std::string& path) {
             indices.push_back(vertexToIndex[key]);
         }
 
-        auto mesh = new Mesh(shape.name, vertices, indices);
+        auto mesh = std::make_unique<Mesh>(shape.name, vertices, indices);
 
         // Material
         if (shape.mesh.material_ids[0] != -1) {
             auto mat = materials[shape.mesh.material_ids[0]];
 
-            Material material;
-            material.name = mat.name;
-            material.albedo = { mat.diffuse[0], mat.diffuse[1], mat.diffuse[2] };
+            // Create default material
+            Material material(mat.name, Shader::createDefault());
+            material.setVec3("albedo", {mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]});
 
             mesh->setMaterialIndex(this->materials.size());
             this->materials.push_back(material);
         }
 
-        meshes.push_back(mesh);
+        meshes.push_back(std::move(mesh));
     }
+
+    // Add default model material if no other material was loaded
+    Material material("Default", Shader::createDefault());
+    material.setVec3("albedo", { 1.0f, 1.0f, 1.0f });
+    this->materials.push_back(material);
 }
 
-Model::Model(const std::string& name, const std::vector<Mesh*>& meshes) : name(name), meshes(meshes) {}
+Model::Model(const std::string& name, std::vector<std::unique_ptr<Mesh>> meshes) : name(name), meshes(std::move(meshes)) {}
 
-void Model::draw(const Shader* shader) const {
+void Model::draw(const glm::mat4& view, const glm::mat4& projection) const {
+    if (materials.empty()) {
+        std::cerr << "Model " << name << " does not have any materials attached." << std::endl;
+        return;
+    }
+
     for (const auto& mesh : meshes) {
-        shader->setMat4("model", modelMatrix);
-
         // Set material
         int matIndex = mesh->getMaterialIndex();
         if (matIndex != -1) {
-            shader->setVec3("albedo", materials[matIndex].albedo);
-        } else {
-            shader->setVec3("albedo", glm::vec3(1.0));
-        }
+            // Bind material
+            auto material = materials[matIndex];
+            material.bind();
 
-        // Draw mesh
-        mesh->draw();
+            // Update model matrix in materials shader
+            material.getShader()->setMat4("view", view);
+            material.getShader()->setMat4("projection", projection);
+            material.getShader()->setMat4("model", modelMatrix);
+
+            // Draw mesh
+            mesh->draw();
+        } else {
+            std::cerr << "Mesh " << mesh->getName() << " does not have a material" << std::endl;
+        }
     }
 }
 
-Transform* Model::getTransform() {
+Transform Model::getTransform() const {
+    return transform;
+}
+
+Transform* Model::getTransformReference() {
     return &transform;
 }
 
+void Model::setTransform(Transform transform) {
+    this->transform = transform;
+    updateTransform();
+}
+
+void Model::setTransform(glm::mat4 transform) {
+    glm::vec3 skew;
+    glm::vec4 perspective;
+
+    glm::decompose(
+        transform,
+        this->transform.scale,
+        this->transform.rotation,
+        this->transform.position,
+        skew,
+        perspective
+    );
+
+    modelMatrix = transform;
+}
+
 void Model::updateTransform() {
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, transform.position);
-    model *= glm::mat4_cast(glm::quat(glm::radians(transform.rotation)));
-    model = glm::scale(model, transform.scale);
-    modelMatrix = model;
+    glm::mat4 T = glm::translate(glm::mat4(1.0f), transform.position);
+    glm::mat4 R = glm::mat4_cast(transform.rotation);
+    glm::mat4 S = glm::scale(glm::mat4(1.0f), transform.scale);
+
+    modelMatrix = T * R * S;
 }
 
 std::string Model::getName() const {
@@ -149,4 +192,18 @@ std::vector<Triangle> Model::getTriangles() const {
     }
 
     return triangles;
+}
+
+int Model::addMaterial(const Material& material) {
+    int matIndex = materials.size();
+    materials.push_back(material);
+    return matIndex;
+}
+
+void Model::setVisible(const bool on) {
+    visible = on;
+}
+
+bool Model::isVisible() const {
+    return visible;
 }

@@ -6,6 +6,7 @@
 #include <format>
 #include "imgui.h"
 #include "ImGuiFileDialog.h"
+#include "glm/gtc/quaternion.hpp"
 #include "glm/gtc/type_ptr.inl"
 
 BoundariesPanel::BoundariesPanel()
@@ -59,7 +60,7 @@ void BoundariesPanel::draw() {
                 if (ImGui::Button(models[i]->getName().c_str(), ImVec2(-FLT_MIN, 19))) {
                     selected = i;
                     selectedModel = models[i];
-                    selectedTransform = selectedModel->getTransform();
+                    selectedTransform = selectedModel->getTransformReference();
                 }
 
                 if (isSelected) {
@@ -103,12 +104,15 @@ void BoundariesPanel::draw() {
             ImGui::Begin("Properties");
             ImGui::PushItemWidth(-FLT_MIN);
 
+            glm::vec3 eulerRotation = glm::degrees(glm::eulerAngles(selectedTransform->rotation));
+
             ImGui::Text("Position (x, y, z):");
             if (ImGui::DragFloat3("##modelPos", glm::value_ptr(selectedTransform->position), 0.01f)) {
                 selectedModel->updateTransform();
             }
             ImGui::Text("Rotation (x, y, z):");
-            if (ImGui::DragFloat3("##modelRot", glm::value_ptr(selectedTransform->rotation), 0.01f)) {
+            if (ImGui::DragFloat3("##modelRot", glm::value_ptr(eulerRotation), 0.01f)) {
+                selectedTransform->rotation = glm::quat(glm::radians(eulerRotation));
                 selectedModel->updateTransform();
             }
             ImGui::Text("Scale (x, y, z):");

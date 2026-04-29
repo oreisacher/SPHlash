@@ -12,9 +12,10 @@
 Mesh::Mesh(
     const std::string& name,
     const std::vector<Vertex>& vertices,
-    const std::vector<unsigned int>& indices
+    const std::vector<unsigned int>& indices,
+    GLenum primitiveMode
 )
-    : name(name), vertices(vertices), indices(indices)
+    : name(name), vertices(vertices), indices(indices), primitiveMode(primitiveMode)
 {
     vertexCount = vertices.size();
     indexCount = indices.size();
@@ -66,7 +67,11 @@ Mesh::~Mesh() {
 
 void Mesh::draw() const {
     glBindVertexArray(vao);
-    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr);
+    glDrawElements(primitiveMode, indexCount, GL_UNSIGNED_INT, nullptr);
+}
+
+std::string Mesh::getName() const {
+    return name;
 }
 
 void Mesh::updateMeshData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {

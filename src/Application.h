@@ -5,7 +5,10 @@
 #ifndef FLUIDSIMSPH_APPLICATION_H
 #define FLUIDSIMSPH_APPLICATION_H
 
+#include "rendering/Editor.h"
 #include "rendering/FluidRenderer.h"
+#include "rendering/FluidSurfaceMesher.h"
+#include "rendering/Scene.h"
 #include "rendering/Window.h"
 #include "simulation/FluidSimulationGPU.h"
 #include "ui/UIManager.h"
@@ -20,13 +23,16 @@ public:
     void processEvents() const;
 
 private:
+    Editor* editor;
     FluidSimulationGPU* simulation;
     FluidRenderer* renderer;
+
+    FluidSurfaceMesher* surfaceMesher;
 
     UIManager* ui;
     Window* window;
 
-    Camera* camera;
+    Scene scene;
 };
 
 #endif //FLUIDSIMSPH_APPLICATION_H

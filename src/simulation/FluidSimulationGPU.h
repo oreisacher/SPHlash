@@ -92,7 +92,7 @@ public:
     void setRendererVBO(GLuint vbo);
 
     void updateScalarFieldSize(int3 resolution);
-    void computeScalarField(int3 resolution) const;
+    VoxelField computeScalarField(int3 resolution) const;
 
     ParticleGPU getParticle(int id) const;
 

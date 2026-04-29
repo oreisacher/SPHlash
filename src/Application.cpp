@@ -43,11 +43,15 @@ Application::Application() {
         return;
     }
 
+    editor = new Editor(scene);
+
     // Simulation
     simulation = FluidSimulationGPU::getInstance();
 
     // Rendering
     renderer = FluidRenderer::getInstance();
+
+    surfaceMesher = new FluidSurfaceMesher();
 
     // Setup UI
     ui = new UIManager(window->getNativeWindow());
@@ -60,17 +64,17 @@ Application::Application() {
     ui->addPanel(new ParticlesPanel);
     ui->addPanel(new BoundariesPanel);
 
-    // Setup Camera
-    camera = new Camera({ 0.0f, 0.0f, 1.0f });
-    renderer->setCamera(camera);
+    // Setup scene
+    scene.setCamera(std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 1.0f)));
 }
 
 Application::~Application() {
     // delete simulation;
     // delete renderer;
+    delete surfaceMesher;
     delete ui;
-    delete camera;
     delete window;
+    delete editor;
 }
 
 void Application::run() const {
@@ -78,11 +82,11 @@ void Application::run() const {
         // Simulation
         simulation->update(Time.getDeltaTime());
 
-        // Update renderer e.g. building mesh
-        renderer->update();
+        // Build fluid surface if necessary
+        surfaceMesher->generateMesh();
 
         // Render simulation into texture
-        renderer->render();
+        renderer->render(scene);
 
         // Update & Draw UI
         ui->update(Time.getDeltaTime());
@@ -104,7 +108,7 @@ void Application::processEvents() const {
             renderer->setSize(e.resize.size.x, e.resize.size.y);
 
             // Update camera aspect ratio
-            camera->setAspectRatio(e.resize.size.x / e.resize.size.y);
+            scene.getCamera()->setAspectRatio(e.resize.size.x / e.resize.size.y);
             break;
         case PanelEvent::MOUSEDOWN:
             if (e.mouse.button == 2)
@@ -115,13 +119,13 @@ void Application::processEvents() const {
                 window->setCursorMode(Window::CursorMode::CURSOR_NORMAL);
 
                 // Reset camera to ignore first delta to avoid jump
-                camera->reset();
+                scene.getCamera()->reset();
             }
             break;
         case PanelEvent::MOUSEHOLD:
             if (e.mouse.button == 2) {
                 // Update camera if holding
-                camera->update(Time.getDeltaTime());
+                scene.getCamera()->update(Time.getDeltaTime());
             }
             break;
         default: break;

@@ -8,6 +8,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include "../../../../../../usr/lib/gcc/x86_64-pc-linux-gnu/14.3.1/include/c++/memory"
 #include "glm/fwd.hpp"
 #include "glad/gl.h"
 
@@ -41,6 +43,10 @@ public:
     void setVec3(const std::string& name, const glm::vec3& value) const;
 
     GLuint getId() const;
+
+    // --- Factory ---
+    static std::shared_ptr<Shader> createDefault();
+    static std::shared_ptr<Shader> createBox();
 
 private:
     std::unordered_map<Type, std::string> sources;

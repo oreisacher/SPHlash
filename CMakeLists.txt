@@ -53,7 +53,7 @@ add_executable(SPHlash
     src/ui/ParticlesPanel.cpp
     src/utils/InputManager.cpp
     src/utils/Camera.cpp
-    src/Application.cpp
+        src/Application.cpp
     src/ui/InitPanel.cpp
     src/ui/InitPanel.h
     src/ui/ControlPanel.cpp
@@ -68,13 +68,22 @@ add_executable(SPHlash
     src/ui/BoundariesPanel.h
     src/cuda/Boundaries.h
     src/cuda/Boundaries.cu
-    src/utils/MarchingCubesLookup.h
+    src/cuda/MarchingCubesLookup.h
     src/cuda/MarchingCubes.h
     src/cuda/MarchingCubes.cu
 
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
+    src/rendering/FluidSurfaceMesher.cpp
+    src/rendering/FluidSurfaceMesher.h
+    src/utils/Primitives.h
+    src/rendering/Material.cpp
+    src/rendering/Material.h
+        src/rendering/Scene.cpp
+        src/rendering/Scene.h
+        src/rendering/Editor.cpp
+        src/rendering/Editor.h
 )
 
 add_library(imgui

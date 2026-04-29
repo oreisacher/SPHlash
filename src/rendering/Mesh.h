@@ -27,7 +27,8 @@ public:
     Mesh(
         const std::string& name,
         const std::vector<Vertex>& vertices,
-        const std::vector<unsigned int>& indices
+        const std::vector<unsigned int>& indices,
+        GLenum primitiveMode = GL_TRIANGLES
     );
 
     Mesh(
@@ -39,6 +40,8 @@ public:
     ~Mesh();
 
     void draw() const;
+
+    std::string getName() const;
 
     void updateMeshData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
 
@@ -58,12 +61,13 @@ private:
     void updateGPU() const;
 
     std::string name;
-    int materialIndex = -1;
+    int materialIndex = 0;
 
     std::vector<Vertex>         vertices = {};
     std::vector<unsigned int>   indices  = {};
 
     GLuint vao, vbo, ebo;
+    GLenum primitiveMode                 = GL_TRIANGLES;
 };
 
 #endif //SPHLASH_MESH_H

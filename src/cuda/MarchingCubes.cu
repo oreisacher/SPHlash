@@ -1,5 +1,6 @@
 #include "MarchingCubes.h"
-#include "utils/MarchingCubesLookup.h"
+
+#include "MarchingCubesLookup.h"
 
 __device__ inline float3 operator+(const float3& a, const float3& b) {
     return make_float3(

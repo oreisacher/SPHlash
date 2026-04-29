@@ -175,3 +175,29 @@ void Shader::setVec3(const std::string& name, const glm::vec3& value) const {
 GLuint Shader::getId() const {
     return shader;
 }
+
+std::shared_ptr<Shader> Shader::createDefault() {
+    auto shader = std::make_shared<Shader>(
+        std::initializer_list<std::pair<std::string, Type>>({
+            { "assets/shaders/model.vert", VERTEX },
+            { "assets/shaders/model.frag", FRAGMENT }
+        })
+    );
+
+    shader->compile();
+
+    return shader;
+}
+
+std::shared_ptr<Shader> Shader::createBox() {
+    auto shader = std::make_shared<Shader>(
+        std::initializer_list<std::pair<std::string, Type>>({
+            { "assets/shaders/box.vert", VERTEX },
+            { "assets/shaders/box.frag", FRAGMENT }
+        })
+    );
+
+    shader->compile();
+
+    return shader;
+}

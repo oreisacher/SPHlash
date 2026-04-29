@@ -10,6 +10,7 @@
 #include "Framebuffer.h"
 #include "Mesh.h"
 #include "Model.h"
+#include "Scene.h"
 #include "Shader.h"
 #include "glad/gl.h"
 #include "utils/Camera.h"
@@ -60,7 +61,8 @@ public:
     static FluidRenderer* getInstance();
 
     void update();
-    void render() const;
+
+    void render(const Scene& scene) const;
 
     void setCamera(Camera* cam);
 
@@ -78,6 +80,8 @@ public:
     void addModel(Model* model);
     void removeModel(int index);
     std::vector<Model*> getModels() const;
+
+    void setSurfaceModel(Model* model);
 
     // Framebuffer texture
     GLuint getTextureId() const;
@@ -119,13 +123,11 @@ private:
     GLuint boxVAO, boxVBO, boxEBO;
 
     // --- Models ---
+    std::vector<Model*> editorModels;
     std::vector<Model*> models;
 
-    Mesh* marchingCubeMesh = nullptr;
-
-    // --- Internal Render Data ---
-    glm::mat4 spawnBoxModel = glm::mat4(1.0f);
-    glm::mat4 domainModel = glm::mat4(1.0f);
+    Model* spawnAreaModel = nullptr;
+    Model* surfaceModel = nullptr;
 };
 
 #endif //FLUIDSIMSPH_FLUIDRENDERER_H

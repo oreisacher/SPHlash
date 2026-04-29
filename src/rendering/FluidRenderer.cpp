@@ -17,10 +17,10 @@
 
 #include "cuda/MarchingCubes.h"
 #include "glm/gtx/transform.hpp"
+#include "utils/Primitives.h"
 
 FluidRenderer::FluidRenderer() {
     simulation = FluidSimulationGPU::getInstance();
-    simulation->updateScalarFieldSize(settings.marchingCubeResolution);
 
     // Setup OpenGL State
     glEnable(GL_DEPTH_TEST);
@@ -46,16 +46,6 @@ FluidRenderer::FluidRenderer() {
 
     // Setup shaders
     setupShaders();
-
-    // Marching cubes
-    int numCubes = (settings.marchingCubeResolution.x - 1) * (settings.marchingCubeResolution.y - 1) * (settings.marchingCubeResolution.z - 1);
-    int estimatedActiveCubes = numCubes * 0.15f;
-
-    int maxVertices = estimatedActiveCubes * 15 * 1.2f;
-    int maxIndices = estimatedActiveCubes * 15 * 1.2f;
-
-    marchingCubeMesh = new Mesh("Surface", maxVertices, maxIndices);
-    addModel(new Model("Surface", { marchingCubeMesh }));
 }
 
 FluidRenderer::~FluidRenderer() {
@@ -80,52 +70,52 @@ void FluidRenderer::update() {
     //     (simulation->settings.zDomain.y - simulation->settings.zDomain.x) / static_cast<float>(settings.marchingCubeResolution.z - 1)
     // );
 
-    simulation->computeScalarField(settings.marchingCubeResolution);
-
-    int* d_vertexCount;
-    int* d_triangleCount;
-    cudaMalloc(&d_vertexCount, sizeof(int));
-    cudaMalloc(&d_triangleCount, sizeof(int));
-    cudaMemset(d_vertexCount, 0, sizeof(int));
-    cudaMemset(d_triangleCount, 0, sizeof(int));
-
-    cudaGraphicsMapResources(1, &marchingCubeMesh->vboResource, nullptr);
-    cudaGraphicsMapResources(1, &marchingCubeMesh->eboResource, nullptr);
-
-    Vertex* d_vertices;
-    unsigned int* d_indices;
-    size_t vboSize, eboSize;
-
-    cudaGraphicsResourceGetMappedPointer((void**)&d_vertices, &vboSize, marchingCubeMesh->vboResource);
-    cudaGraphicsResourceGetMappedPointer((void**)&d_indices, &eboSize, marchingCubeMesh->eboResource);
-
-    launchMarchingCubesKernel(
-        simulation->voxelField.d_field,
-        simulation->voxelField.d_normal,
-        settings.marchingCubeResolution,
-        { simulation->settings.xDomain.x, simulation->settings.yDomain.x, simulation->settings.zDomain.x },
-        { simulation->settings.xDomain.y, simulation->settings.yDomain.y, simulation->settings.zDomain.y },
-        d_vertexCount,
-        d_triangleCount,
-        d_vertices,
-        d_indices,
-        marchingCubeMesh->maxVertices,
-        marchingCubeMesh->maxIndices
-    );
-
-    // Unmap resources
-    cudaGraphicsUnmapResources(1, &marchingCubeMesh->vboResource, nullptr);
-    cudaGraphicsUnmapResources(1, &marchingCubeMesh->eboResource, nullptr);
-
-    int vertexCount, triangleCount;
-    cudaMemcpy(&vertexCount, d_vertexCount, sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&triangleCount, d_triangleCount, sizeof(int), cudaMemcpyDeviceToHost);
-
-    marchingCubeMesh->vertexCount = vertexCount;
-    marchingCubeMesh->indexCount = triangleCount * 3;
-
-    cudaFree(d_vertexCount);
-    cudaFree(d_triangleCount);
+    // simulation->computeScalarField(settings.marchingCubeResolution);
+    //
+    // int* d_vertexCount;
+    // int* d_triangleCount;
+    // cudaMalloc(&d_vertexCount, sizeof(int));
+    // cudaMalloc(&d_triangleCount, sizeof(int));
+    // cudaMemset(d_vertexCount, 0, sizeof(int));
+    // cudaMemset(d_triangleCount, 0, sizeof(int));
+    //
+    // cudaGraphicsMapResources(1, &marchingCubeMesh->vboResource, nullptr);
+    // cudaGraphicsMapResources(1, &marchingCubeMesh->eboResource, nullptr);
+    //
+    // Vertex* d_vertices;
+    // unsigned int* d_indices;
+    // size_t vboSize, eboSize;
+    //
+    // cudaGraphicsResourceGetMappedPointer((void**)&d_vertices, &vboSize, marchingCubeMesh->vboResource);
+    // cudaGraphicsResourceGetMappedPointer((void**)&d_indices, &eboSize, marchingCubeMesh->eboResource);
+    //
+    // launchMarchingCubesKernel(
+    //     simulation->voxelField.d_field,
+    //     simulation->voxelField.d_normal,
+    //     settings.marchingCubeResolution,
+    //     { simulation->settings.xDomain.x, simulation->settings.yDomain.x, simulation->settings.zDomain.x },
+    //     { simulation->settings.xDomain.y, simulation->settings.yDomain.y, simulation->settings.zDomain.y },
+    //     d_vertexCount,
+    //     d_triangleCount,
+    //     d_vertices,
+    //     d_indices,
+    //     marchingCubeMesh->maxVertices,
+    //     marchingCubeMesh->maxIndices
+    // );
+    //
+    // // Unmap resources
+    // cudaGraphicsUnmapResources(1, &marchingCubeMesh->vboResource, nullptr);
+    // cudaGraphicsUnmapResources(1, &marchingCubeMesh->eboResource, nullptr);
+    //
+    // int vertexCount, triangleCount;
+    // cudaMemcpy(&vertexCount, d_vertexCount, sizeof(int), cudaMemcpyDeviceToHost);
+    // cudaMemcpy(&triangleCount, d_triangleCount, sizeof(int), cudaMemcpyDeviceToHost);
+    //
+    // marchingCubeMesh->vertexCount = vertexCount;
+    // marchingCubeMesh->indexCount = triangleCount * 3;
+    //
+    // cudaFree(d_vertexCount);
+    // cudaFree(d_triangleCount);
 
     // if (samples.first.empty()) {
     //     return;
@@ -243,44 +233,56 @@ void FluidRenderer::update() {
     // }
 }
 
-void FluidRenderer::render() const {
-    // Update shader
-    particleShader->bind();
-    particleShader->setMat4("projection", camera->getProjectionMatrix());
-    particleShader->setMat4("view", camera->getViewMatrix());
+void FluidRenderer::render(const Scene& scene) const {
+    // // Update shader
+    // particleShader->bind();
+    // particleShader->setMat4("projection", camera->getProjectionMatrix());
+    // particleShader->setMat4("view", camera->getViewMatrix());
 
     // Render into framebuffer
     framebuffer->bind();
     glViewport(0, 0, framebuffer->getSize().x, framebuffer->getSize().y);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Draw particles
-    if (simulation->particleCount != 0) {
-        glBindVertexArray(vao);
-        glDrawElementsInstanced(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0, simulation->particleCount);
-    }
+    // // Draw particles
+    // if (simulation->particleCount != 0) {
+    //     glBindVertexArray(vao);
+    //     glDrawElementsInstanced(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0, simulation->particleCount);
+    // }
+    //
+    // boxShader->bind();
+    // boxShader->setMat4("view", camera->getViewMatrix());
+    // boxShader->setMat4("projection", camera->getProjectionMatrix());
+    // glBindVertexArray(boxVAO);
+    //
+    // // Draw domain box
+    // boxShader->setMat4("model", domainModel);
+    // boxShader->setVec3("color", glm::vec3(0.2f, 0.6f, 1.0f));
+    // glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+    //
+    // // Draw spawn box
+    // boxShader->setMat4("model", spawnBoxModel);
+    // boxShader->setVec3("color", glm::vec3(1.0f, 0.3f, 0.3f));
+    // glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+    //
+    // modelShader->bind();
+    // modelShader->setMat4("projection", camera->getProjectionMatrix());
+    // modelShader->setMat4("view", camera->getViewMatrix());
+    //
+    // // Draw surface model
+    // if (surfaceModel && surfaceModel->isVisible())
+    //     surfaceModel->draw(modelShader);
 
-    boxShader->bind();
-    boxShader->setMat4("view", camera->getViewMatrix());
-    boxShader->setMat4("projection", camera->getProjectionMatrix());
-    glBindVertexArray(boxVAO);
+    // Camera transform
+    auto camera = scene.getCamera();
+    auto view = camera->getViewMatrix();
+    auto projection = camera->getProjectionMatrix();
 
-    // Draw domain box
-    boxShader->setMat4("model", domainModel);
-    boxShader->setVec3("color", glm::vec3(0.2f, 0.6f, 1.0f));
-    glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+    for (const auto model : scene.getModels()) {
+        if (!model->isVisible())
+            continue;
 
-    // Draw spawn box
-    boxShader->setMat4("model", spawnBoxModel);
-    boxShader->setVec3("color", glm::vec3(1.0f, 0.3f, 0.3f));
-    glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
-
-    modelShader->bind();
-    modelShader->setMat4("projection", camera->getProjectionMatrix());
-    modelShader->setMat4("view", camera->getViewMatrix());
-
-    for (const auto model : models) {
-        model->draw(modelShader);
+        model->draw(view, projection);
     }
 }
 
@@ -314,7 +316,7 @@ void FluidRenderer::updateSpawnBoxModelMatrix() {
         simulation->initSettings.zBoundary.x
     );
 
-    spawnBoxModel = calculateModelMatrix(min , max);
+    // spawnAreaModel->setTransform(calculateModelMatrix(min, max));
 }
 
 void FluidRenderer::updateDomainModelMatrix() {
@@ -330,7 +332,7 @@ void FluidRenderer::updateDomainModelMatrix() {
         simulation->settings.zDomain.x
     );
 
-    domainModel = calculateModelMatrix(min , max);
+    // domainModel = calculateModelMatrix(min , max);
 }
 
 GLuint FluidRenderer::getTextureId() const {
@@ -431,47 +433,21 @@ void FluidRenderer::setupParticles() {
 }
 
 void FluidRenderer::setupSpawnAreaModel() {
-    glGenVertexArrays(1, &boxVAO);
-    glBindVertexArray(boxVAO);
-
-    glGenBuffers(1, &boxVBO);
-    glGenBuffers(1, &boxEBO);
-
-    // Simple cube data
+    // spawnAreaModel = new Model(
+    //     "Particle Spawn Area",
+    //     { new Mesh(
+    //         "PSA",
+    //         Primitives::BoxGeometry::GetVertices(),
+    //         Primitives::BoxGeometry::GetWireframeIndices(),
+    //         GL_LINES)
+    //     }
+    // );
     //
-    //      7 -------- 6
-    //     /|         /|
-    //    3 -------- 2 |
-    //    | |        | |
-    //    | 4 -------| 5
-    //    |/         |/
-    //    0 -------- 1
-
-    float vertices[] = {
-        -1.0f, -1.0f, -1.0f, // 0
-         1.0f, -1.0f, -1.0f, // 1
-         1.0f,  1.0f, -1.0f, // 2
-        -1.0f,  1.0f, -1.0f, // 3
-        -1.0f, -1.0f,  1.0f, // 4
-         1.0f, -1.0f,  1.0f, // 5
-         1.0f,  1.0f,  1.0f, // 6
-        -1.0f,  1.0f,  1.0f  // 7
-    };
-
-    unsigned int indices[] = {
-        0, 1, 1, 2, 2, 3, 3, 0,
-        4, 5, 5, 6, 6, 7, 7, 4,
-        0, 4, 1, 5, 2, 6, 3, 7
-    };
-
-    glBindBuffer(GL_ARRAY_BUFFER, boxVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, boxEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
+    // Material boxMaterial("Wireframe", Shader::createBox());
+    // boxMaterial.setVec3("color", glm::vec3(1.0f, 0.3f, 0.3f));
+    // spawnAreaModel->addMaterial(boxMaterial);
+    //
+    // editorModels.push_back(spawnAreaModel);
 }
 
 glm::mat4 FluidRenderer::calculateModelMatrix(glm::vec3 min, glm::vec3 max) {
@@ -526,4 +502,8 @@ void FluidRenderer::removeModel(int index) {
 
 std::vector<Model*> FluidRenderer::getModels() const {
     return models;
+}
+
+void FluidRenderer::setSurfaceModel(Model* model) {
+    surfaceModel = model;
 }
