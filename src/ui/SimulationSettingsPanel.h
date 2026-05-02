@@ -6,19 +6,21 @@
 #define FLUIDSIMSPH_SETTINGSPANEL_H
 
 #include "UIPanel.h"
+#include "rendering/Editor.h"
 #include "rendering/FluidRenderer.h"
 #include "simulation/FluidSimulation.h"
-#include "simulation/FluidSimulationGPU.h"
+#include "simulation/FluidSimulation.h"
 
 class SimulationSettingsPanel : public UIPanel {
 public:
-    explicit SimulationSettingsPanel();
+    explicit SimulationSettingsPanel(Editor* editor);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
-    FluidSimulationGPU* simulation;
+    Editor* editor;
+    FluidSimulation* simulation;
     FluidRenderer* renderer;
 
     void SaveSettings(const std::string& path) const;

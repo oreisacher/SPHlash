@@ -10,7 +10,7 @@
 #include "rendering/FluidSurfaceMesher.h"
 #include "rendering/Scene.h"
 #include "rendering/Window.h"
-#include "simulation/FluidSimulationGPU.h"
+#include "simulation/FluidSimulation.h"
 #include "ui/UIManager.h"
 #include "utils/Camera.h"
 
@@ -24,7 +24,7 @@ public:
 
 private:
     Editor* editor;
-    FluidSimulationGPU* simulation;
+    FluidSimulation* simulation;
     FluidRenderer* renderer;
 
     FluidSurfaceMesher* surfaceMesher;

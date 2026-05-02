@@ -8,6 +8,7 @@
 #include <vector_functions.h>
 
 #include "tiny_obj_loader.h"
+#include "utils/Primitives.h"
 
 Mesh::Mesh(
     const std::string& name,
@@ -105,6 +106,15 @@ std::vector<Triangle> Mesh::getTriangles(glm::mat4 model) const {
     // }
     //
     // return triangles;
+}
+
+std::unique_ptr<Mesh> Mesh::createBox(const std::string& name) {
+    return std::make_unique<Mesh>(
+        name,
+        Primitives::BoxGeometry::GetVertices(),
+        Primitives::BoxGeometry::GetWireframeIndices(),
+        GL_LINES
+    );
 }
 
 void Mesh::uploadToGPU() {

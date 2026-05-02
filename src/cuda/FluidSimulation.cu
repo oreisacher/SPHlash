@@ -1,6 +1,6 @@
 #include "FluidSimulation.h"
 #include "simulation/FluidSimulation.h"
-#include "simulation/FluidSimulationGPU.h"
+#include "simulation/FluidSimulation.h"
 #include "cuda/Kernels.cuh"
 #include "cuda/Math.cuh"
 
@@ -421,9 +421,7 @@ __global__ void updateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
     const float deltaTime,
-    const float2 x,
-    const float2 y,
-    const float2 z,
+    const CudaAABB domain,
     const float gravity
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -441,7 +439,7 @@ __global__ void updateParticlesKernel(
     const float4 force = particle->pressureForce + particle->viscosityForce + particle->surfaceTensionForce;
     const float4 acceleration = force / particle->properties.y + make_float4(0.0f, gravity, 0.0f, 0.0f);
 
-
+    // TODO - Implement correctly
     // particle->velocity += (0.5f * deltaTime) * acceleration;
     // particle->position += deltaTime * particle->velocity;
     // particle->velocity += (0.5f * deltaTime) * acceleration;
@@ -449,34 +447,34 @@ __global__ void updateParticlesKernel(
     particle->velocity += deltaTime * acceleration;
     particle->position += deltaTime * particle->velocity;
 
-    // Simple boundaries
-    if (particle->position.x < x.x) {
-        particle->position.x = x.x;
+    // Domain boundaries
+    if (particle->position.x < domain.min.x) {
+        particle->position.x = domain.min.x;
         particle->velocity.x *= -0.4f;
     }
 
-    if (particle->position.x > x.y) {
-        particle->position.x = x.y;
+    if (particle->position.x > domain.max.x) {
+        particle->position.x = domain.max.x;
         particle->velocity.x *= -0.4f;
     }
 
-    if (particle->position.y < y.x) {
-        particle->position.y = y.x;
+    if (particle->position.y < domain.min.y) {
+        particle->position.y = domain.min.y;
         particle->velocity.y *= -0.4f;
     }
 
-    if (particle->position.y > y.y) {
-        particle->position.y = y.y;
+    if (particle->position.y > domain.max.y) {
+        particle->position.y = domain.max.y;
         particle->velocity.y *= -0.4f;
     }
 
-    if (particle->position.z < z.x) {
-        particle->position.z = z.x;
+    if (particle->position.z < domain.min.z) {
+        particle->position.z = domain.min.z;
         particle->velocity.z *= -0.4f;
     }
 
-    if (particle->position.z > z.y) {
-        particle->position.z = z.y;
+    if (particle->position.z > domain.max.z) {
+        particle->position.z = domain.max.z;
         particle->velocity.z *= -0.4f;
     }
 }
@@ -485,16 +483,14 @@ void launchUpdateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
     const float deltaTime,
-    const float2 x,
-    const float2 y,
-    const float2 z,
+    const CudaAABB domain,
     const float gravity
 ) {
     int threadsPerBlock = 256;
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     updateParticlesKernel<<<blocks, threadsPerBlock>>>(
-        particles, numParticles, deltaTime, x, y, z, gravity
+        particles, numParticles, deltaTime, domain, gravity
     );
 }
 

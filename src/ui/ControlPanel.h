@@ -6,7 +6,7 @@
 #define FLUIDSIMSPH_CONTROLPANEL_H
 
 #include "UIPanel.h"
-#include "simulation/FluidSimulationGPU.h"
+#include "simulation/FluidSimulation.h"
 
 class ControlPanel : public UIPanel {
 public:
@@ -16,7 +16,7 @@ public:
     void draw() override;
 
 private:
-    FluidSimulationGPU* simulation;
+    FluidSimulation* simulation;
 
     float timeStep = 0.0;
     float stepSize = 16.666667;

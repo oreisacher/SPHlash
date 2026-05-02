@@ -6,6 +6,7 @@
 #define SPHLASH_MESH_H
 
 #include <driver_types.h>
+#include <memory>
 #include <string>
 #include <vector_types.h>
 
@@ -56,6 +57,9 @@ public:
 
     int maxVertices, maxIndices;
     int vertexCount, indexCount;
+
+    // --- Factory ---
+    static std::unique_ptr<Mesh> createBox(const std::string& name);
 private:
     void uploadToGPU();
     void updateGPU() const;

@@ -5,7 +5,7 @@
 #ifndef FLUIDSIMSPH_HASHPARTICLES_H
 #define FLUIDSIMSPH_HASHPARTICLES_H
 #include "rendering/FluidRenderer.h"
-#include "simulation/FluidSimulationGPU.h"
+#include "simulation/FluidSimulation.h"
 
 struct ParticleGPU;
 
@@ -79,9 +79,7 @@ void launchUpdateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
     const float deltaTime,
-    const float2 x,
-    const float2 y,
-    const float2 z,
+    const CudaAABB domain,
     const float gravity
 );
 

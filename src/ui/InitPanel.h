@@ -6,19 +6,21 @@
 #define FLUIDSIMSPH_INITPANEL_H
 
 #include "UIPanel.h"
+#include "rendering/Editor.h"
 #include "rendering/FluidRenderer.h"
-#include "simulation/FluidSimulationGPU.h"
+#include "simulation/FluidSimulation.h"
 
 class InitPanel : public UIPanel{
 public:
-    explicit InitPanel();
+    explicit InitPanel(Editor* editor);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
-    FluidSimulationGPU* simulation;
+    FluidSimulation* simulation;
     FluidRenderer* renderer;
+    Editor* editor;
 
     int particlesToSpawn = 0;
     float spawnVolume = 0;

@@ -6,7 +6,7 @@
 #define FLUIDSIMSPH_STATISTICSPANEL_H
 
 #include "UIPanel.h"
-#include "simulation/FluidSimulationGPU.h"
+#include "simulation/FluidSimulation.h"
 
 #define UPDATE_TIME 0.2f
 #define FPS_TIMES_COUNT 100
@@ -20,7 +20,7 @@ public:
     void draw() override;
 
 private:
-    FluidSimulationGPU* simulation;
+    FluidSimulation* simulation;
 
     double fpsTimer = 0.0;
     int frames = 0;

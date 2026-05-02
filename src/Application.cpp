@@ -43,23 +43,23 @@ Application::Application() {
         return;
     }
 
-    editor = new Editor(scene);
-
     // Simulation
-    simulation = FluidSimulationGPU::getInstance();
+    simulation = FluidSimulation::getInstance();
 
     // Rendering
     renderer = FluidRenderer::getInstance();
 
     surfaceMesher = new FluidSurfaceMesher();
 
+    editor = new Editor(scene, simulation);
+
     // Setup UI
     ui = new UIManager(window->getNativeWindow());
     ui->addPanel(new SimulationPanel);
     ui->addPanel(new ControlPanel);
     ui->addPanel(new StatisticsPanel);
-    ui->addPanel(new InitPanel);
-    ui->addPanel(new SimulationSettingsPanel);
+    ui->addPanel(new InitPanel(editor));
+    ui->addPanel(new SimulationSettingsPanel(editor));
     ui->addPanel(new RenderingSettingsPanel);
     ui->addPanel(new ParticlesPanel);
     ui->addPanel(new BoundariesPanel);

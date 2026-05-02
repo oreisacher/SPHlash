@@ -6,15 +6,13 @@
 
 #include <format>
 #include <iostream>
-#include <ostream>
-
 #include "imgui_internal.h"
 #include "glm/gtc/type_ptr.inl"
 
-InitPanel::InitPanel()
-    : UIPanel("Init Settings")
+InitPanel::InitPanel(Editor* editor)
+    : UIPanel("Init Settings"), editor(editor)
 {
-    simulation = FluidSimulationGPU::getInstance();
+    simulation = FluidSimulation::getInstance();
     renderer = FluidRenderer::getInstance();
 
     recalculateParticles();
@@ -44,22 +42,16 @@ void InitPanel::draw() {
 
     ImGui::SeparatorText("Area");
 
-    ImGui::Text("X:");
-    if (ImGui::DragFloat2("##saX", glm::value_ptr(simulation->initSettings.xBoundary), 0.01f)) {
+    ImGui::Text("Center: ");
+    if (ImGui::DragFloat3("##saCenter", glm::value_ptr(simulation->initSettings.spawnArea.center), 0.01f)) {
         recalculateParticles();
-        renderer->updateSpawnBoxModelMatrix();
+        editor->updateSpawnAreaTransform();
     }
 
-    ImGui::Text("Y:");
-    if (ImGui::DragFloat2("##saY", glm::value_ptr(simulation->initSettings.yBoundary), 0.01f)) {
+    ImGui::Text("Size: ");
+    if (ImGui::DragFloat3("##saSize", glm::value_ptr(simulation->initSettings.spawnArea.size), 0.01f)) {
         recalculateParticles();
-        renderer->updateSpawnBoxModelMatrix();
-    }
-
-    ImGui::Text("Z:");
-    if (ImGui::DragFloat2("##saZ", glm::value_ptr(simulation->initSettings.zBoundary), 0.01f)) {
-        recalculateParticles();
-        renderer->updateSpawnBoxModelMatrix();
+        editor->updateSpawnAreaTransform();
     }
 
     ImGui::Spacing();
@@ -104,15 +96,14 @@ void InitPanel::draw() {
 }
 
 void InitPanel::recalculateParticles() {
-    float width         = simulation->initSettings.xBoundary.y - simulation->initSettings.xBoundary.x;
-    float height        = simulation->initSettings.yBoundary.y - simulation->initSettings.yBoundary.x;
-    float depth         = simulation->initSettings.zBoundary.y - simulation->initSettings.zBoundary.x;
-
-    int countX = std::floor(width  / simulation->initSettings.particleSpacing + 1e-5) + 1;
-    int countY = std::floor(height / simulation->initSettings.particleSpacing + 1e-5) + 1;
-    int countZ = std::floor(depth  / simulation->initSettings.particleSpacing + 1e-5) + 1;
+    const glm::vec3 size = simulation->initSettings.spawnArea.size;
+    int countX = std::floor(size.x / simulation->initSettings.particleSpacing + 1e-5) + 1;
+    int countY = std::floor(size.y / simulation->initSettings.particleSpacing + 1e-5) + 1;
+    int countZ = std::floor(size.z / simulation->initSettings.particleSpacing + 1e-5) + 1;
 
     particlesToSpawn = countX * countY * countZ;
-    spawnVolume = width * height * depth;
+    spawnVolume = simulation->initSettings.spawnArea.volume();
+
+    // TODO - Check if correct
     massPerParticle = simulation->initSettings.totalMass * (spawnVolume / particlesToSpawn);
 }

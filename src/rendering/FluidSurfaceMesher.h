@@ -6,7 +6,7 @@
 #define SPHLASH_FLUIDSURFACEMESHER_H
 
 #include "rendering/FluidRenderer.h"
-#include "simulation/FluidSimulationGPU.h"
+#include "simulation/FluidSimulation.h"
 
 class FluidSurfaceMesher {
 public:
@@ -16,7 +16,7 @@ public:
 
 private:
     FluidRenderer* renderer;
-    FluidSimulationGPU* simulation;
+    FluidSimulation* simulation;
 
     Mesh* surfaceMesh;
 };

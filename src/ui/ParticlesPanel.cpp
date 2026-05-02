@@ -5,11 +5,11 @@
 #include "ParticlesPanel.h"
 #include <format>
 #include "imgui.h"
-#include "simulation/FluidSimulationGPU.h"
+#include "simulation/FluidSimulation.h"
 
 ParticlesPanel::ParticlesPanel()
     : UIPanel("Particles") {
-    simulation = FluidSimulationGPU::getInstance();
+    simulation = FluidSimulation::getInstance();
     renderer = FluidRenderer::getInstance();
 }
 

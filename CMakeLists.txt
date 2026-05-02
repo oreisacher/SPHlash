@@ -47,7 +47,7 @@ add_executable(SPHlash
     src/utils/Time.cpp
     src/utils/Logger.cpp
     src/ui/SimulationSettingsPanel.cpp
-    src/simulation/FluidSimulationGPU.cpp
+        src/simulation/FluidSimulation.cpp
     src/cuda/FluidSimulation.cu
     src/cuda/Kernels.cuh
     src/ui/ParticlesPanel.cpp
@@ -84,6 +84,8 @@ add_executable(SPHlash
         src/rendering/Scene.h
         src/rendering/Editor.cpp
         src/rendering/Editor.h
+        src/utils/AABB.cpp
+        src/utils/AABB.h
 )
 
 add_library(imgui

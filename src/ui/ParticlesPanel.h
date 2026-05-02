@@ -9,7 +9,7 @@
 #include "glad/gl.h"
 #include "rendering/FluidRenderer.h"
 #include "rendering/Shader.h"
-#include "simulation/FluidSimulationGPU.h"
+#include "simulation/FluidSimulation.h"
 
 class ParticlesPanel : public UIPanel {
 public:
@@ -19,7 +19,7 @@ public:
     void draw() override;
 
 private:
-    FluidSimulationGPU* simulation;
+    FluidSimulation* simulation;
     FluidRenderer* renderer;
 
     ParticleGPU particle;

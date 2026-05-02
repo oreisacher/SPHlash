@@ -15,7 +15,7 @@
 #include "glad/gl.h"
 #include "utils/Camera.h"
 
-class FluidSimulationGPU;
+class FluidSimulation;
 
 enum RenderMode {
     SOLID_COLOR_PARTICLES,
@@ -60,18 +60,14 @@ public:
     ~FluidRenderer();
     static FluidRenderer* getInstance();
 
-    void update();
+    // void update();
 
     void render(const Scene& scene) const;
-
-    void setCamera(Camera* cam);
 
     Shader* getParticleShader() const;
     Shader* getBoundaryShader() const;
 
     void updateParticleSize() const;
-    void updateSpawnBoxModelMatrix();
-    void updateDomainModelMatrix();
 
     void updateParticleData() const;
     void updateRenderingSettings() const;
@@ -101,9 +97,7 @@ private:
 
     glm::mat4 calculateModelMatrix(glm::vec3 min, glm::vec3 max);
 
-    FluidSimulationGPU* simulation;
-
-    Camera* camera;
+    FluidSimulation* simulation;
 
     Shader* particleShader;
     Shader* boxShader;

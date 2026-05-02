@@ -113,6 +113,10 @@ Model::Model(const std::string& path) {
     this->materials.push_back(material);
 }
 
+Model::Model(const std::string& name, std::unique_ptr<Mesh> mesh) : name(name) {
+    meshes.push_back(std::move(mesh));
+}
+
 Model::Model(const std::string& name, std::vector<std::unique_ptr<Mesh>> meshes) : name(name), meshes(std::move(meshes)) {}
 
 void Model::draw(const glm::mat4& view, const glm::mat4& projection) const {
@@ -206,4 +210,8 @@ void Model::setVisible(const bool on) {
 
 bool Model::isVisible() const {
     return visible;
+}
+
+std::unique_ptr<Model> Model::createCubeModel(const std::string& name) {
+    return std::make_unique<Model>(name, Mesh::createBox(name + " Mesh"));
 }

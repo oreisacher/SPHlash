@@ -1,320 +1,420 @@
 //
-// Created by ruut on 3/9/26.
+// Created by ruut on 3/16/26.
 //
 
-#define GLM_ENABLE_EXPERIMENTAL
-
 #include "FluidSimulation.h"
-#include "glm/glm.hpp"
-#include <random>
+#include <algorithm>
+#include <cuda_runtime_api.h>
+#include <cuda_gl_interop.h>
 #include <iostream>
-#include "glm/gtx/norm.hpp"
-#include <chrono>
-#include <omp.h>
+#include <ostream>
+#include <random>
+#include <nvtx3/nvToolsExt.h>
 
-#include "FluidSimulationGPU.h"
+#include "cuda/Boundaries.h"
+#include "cuda/FluidSimulation.h"
+#include "glad/gl.h"
+#include "../cuda/MarchingCubesLookup.h"
 
-FluidSimulation::FluidSimulation(int particleCount, float xMin, float yMin, float xMax, float yMax) {
-    // Setup particles
-    particles.reserve(particleCount);
-
-    const int cols = std::ceil(std::sqrt(particleCount));
-    const int rows = std::ceil(static_cast<float>(particleCount) / cols);
-
-    float stepSizeX = static_cast<float>(xMax - xMin) / (cols - 1);
-    float stepSizeY = rows > 1 ? static_cast<float>(yMax - yMin) / (rows - 1) : 0;
-
-    int count = 0;
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dist(-0.01f, 0.01f);
-
-    for (int r = 0; r < rows && count < particleCount; r++) {
-        for (int c = 0; c < cols && count < particleCount; c++) {
-            float x = xMin + c * stepSizeX + dist(gen);
-            float y = yMin + r * stepSizeY + dist(gen);
-
-            particles.push_back({
-                { x, y },
-                glm::vec2(0.0),
-                1000 * stepSizeX * stepSizeX,
-                { x, y },
-            });
-
-            count++;
-        }
-    }
-
-    // Update h
-    settings.h = 2.0f * std::min(stepSizeX, stepSizeY);
-    grid.cellSize = settings.h;
-
-    // Reset density
-    settings.p_0 = 1000.0f;
+FluidSimulation::FluidSimulation() {
+    cudaSetDevice(0);
 }
 
-void FluidSimulation::update(float deltaTime) {
-    // Rebuild grid data structure
-    grid.clear();
+FluidSimulation::~FluidSimulation() {
+    cudaFree(d_particles);
+    cudaFree(d_sortedParticles);
+    cudaFree(d_particleHashes);
+    cudaFree(d_sortedParticleHashes);
+    cudaFree(d_offsets);
+    cudaFree(d_particleIndices);
+    cudaFree(d_sortedParticleIndices);
+    cudaFree(d_sortTempStorage);
 
-    for (int i = 0 ; i < particles.size(); i++) {
-        grid.insert(i, particles[i].position);
-    }
-
-    calculateDensityPressure();
-    calculateSPHForces();
-    applyMouseForce();
-    updateParticles(deltaTime);
+    cudaGraphicsUnmapResources(1, &rendererResource, nullptr);
 }
 
-int FluidSimulation::getParticleCount() const {
-    return particles.size();
+FluidSimulation* FluidSimulation::getInstance() {
+    static FluidSimulation instance;
+    return &instance;
 }
 
-const Particle* FluidSimulation::getData() const {
-    return particles.data();
+void FluidSimulation::update(const float deltaTime) {
+    if (state == UNINITIALIZED || state == PAUSED)
+        return;
+
+    // Reset old data
+    cudaMemset(d_offsets,   -1, particleCount * sizeof(int));
+
+    launchHashParticles(
+        particleCount,
+        d_particles,
+        d_particleHashes,
+        d_particleIndices,
+        settings.h
+    );
+
+    sortParticlesByHash(
+        particleCount,
+        d_sortTempStorage,
+        sortTempStorageBytes,
+        d_particleHashes,
+        d_sortedParticleHashes,
+        d_particleIndices,
+        d_sortedParticleIndices
+    );
+
+    launchBuildOffsetsKernel(
+        particleCount,
+        d_sortedParticleHashes,
+        d_offsets
+    );
+
+    launchReorderParticlesKernel(
+        particleCount,
+        d_particles,
+        d_sortedParticleIndices,
+        d_sortedParticles
+    );
+
+    launchDensityPressureKernel(
+        particleCount,
+        d_sortedParticles,
+        d_sortedParticleHashes,
+        d_offsets,
+        settings.h,
+        settings.k,
+        settings.p_0
+    );
+
+    launchSphForcesKernel(
+        particleCount,
+        d_sortedParticles,
+        d_sortedParticleHashes,
+        d_offsets,
+        settings.h,
+        settings.mu,
+        settings.tensionThreshold,
+        settings.tension
+    );
+
+    // --- CFL ---
+    float maxVelocity = getMaxVelocity(particleCount, d_sortedParticles);
+    cfl = settings.safetyFactor * settings.h / (maxVelocity + 1e-5f);
+
+    launchUpdateParticlesKernel(
+        d_sortedParticles,
+        particleCount,
+        settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
+        settings.domainArea.toCudaAABB(),
+        settings.enableGravity ? settings.gravity : 0.0f
+    );
+
+    size_t numBytes;
+    cudaGraphicsMapResources(1, &rendererResource);
+    cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_rendererParticles), &numBytes, rendererResource);
+
+    launchRenderPrepareKernel(
+        particleCount,
+        d_sortedParticles,
+        d_rendererParticles
+    );
+
+    cudaGraphicsUnmapResources(1, &rendererResource);
+
+    std::swap(d_particles, d_sortedParticles);
+}
+
+void FluidSimulation::step(float deltaTime) {
+    if (state == UNINITIALIZED)
+        return;
+
+    state = RUNNING;
+    update(deltaTime);
+    state = PAUSED;
+}
+
+void FluidSimulation::start() {
+    // Preprocess boundary density map
+    // calculateDensityMap();
+
+    state = RUNNING;
+}
+
+void FluidSimulation::pause() {
+    state = PAUSED;
 }
 
 void FluidSimulation::reset() {
-    for (int i = 0 ; i < particles.size(); i++) {
-        particles[i].position = particles[i].startPosition;
-        particles[i].velocity = { 0.0, 0.0 };
-    }
+    state = PAUSED;
+
+    launchResetParticlesKernel(d_particles, particleCount);
+
+    // Copy reset data to renderer vbo
+    launchRenderPrepareKernel(
+        particleCount,
+        d_particles,
+        d_rendererParticles
+    );
 }
 
-void FluidSimulation::updateBoundaries(float width, float height) {
-    this->width = width;
-    this->height = height;
+void FluidSimulation::setRendererVBO(const GLuint vbo) {
+    if (rendererResource) cudaGraphicsUnregisterResource(rendererResource);
+
+    cudaGraphicsGLRegisterBuffer(
+        &rendererResource,
+        vbo,
+        cudaGraphicsRegisterFlagsWriteDiscard
+    );
+
+    size_t numBytes;
+    cudaGraphicsMapResources(1, &rendererResource);
+    cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_rendererParticles), &numBytes, rendererResource);
+
+    launchRenderPrepareKernel(
+        particleCount,
+        d_particles,
+        d_rendererParticles
+    );
+
+    cudaGraphicsUnmapResources(1, &rendererResource);
 }
 
-void FluidSimulation::updateMousePos(float x, float y) {
-    this->mouseX = x;
+void FluidSimulation::updateScalarFieldSize(int3 resolution) {
+    if (voxelField.d_field) cudaFree(voxelField.d_field);
+    if (voxelField.d_normal) cudaFree(voxelField.d_normal);
 
-    // Flip y position as simulation as y0 at the bottom and not the top
-    this->mouseY = height - y;
+    int sampleCount = resolution.x * resolution.y * resolution.z;
+
+    cudaMalloc(&voxelField.d_field, sampleCount * sizeof(float));
+    cudaMalloc(&voxelField.d_normal, sampleCount * sizeof(float3));
 }
 
-void FluidSimulation::updateMouseForceDirection(float direction) {
-    this->mouseForceDirection = direction;
+VoxelField FluidSimulation::computeScalarField(const int3 resolution) const {
+    // if (particleCount == 0 || state == PAUSED)
+    //     return {};
+    //
+    // launchVoxelFieldKernel(
+    //     voxelField.d_field,
+    //     voxelField.d_normal,
+    //     resolution,
+    //     { settings.xDomain.x, settings.yDomain.x, settings.zDomain.x },
+    //     { settings.xDomain.y, settings.yDomain.y, settings.zDomain.y },
+    //     particleCount,
+    //     d_particles,
+    //     d_sortedParticleHashes,
+    //     d_offsets,
+    //     settings.h
+    // );
+
+    return {
+        voxelField.d_field,
+        voxelField.d_normal
+    };
 }
 
-void FluidSimulation::updateMouseRadius(float direction) {
-    this->mouseRadius += 0.01f * direction;
+ParticleGPU FluidSimulation::getParticle(const int id) const {
+    ParticleGPU particle;
+
+    if (state == UNINITIALIZED)
+        return particle;
+
+    if (id < 0 || id >= particleCount)
+        return particle;
+
+    cudaMemcpy(&particle, &d_particles[id], sizeof(ParticleGPU), cudaMemcpyDeviceToHost);
+    return particle;
 }
 
-float FluidSimulation::getMouseRadius() const { return mouseRadius; }
+void FluidSimulation::calculateDensityMap() {
+    // Get triangle data
+    std::vector<Triangle> meshTriangles;
 
-SimulationSettings* FluidSimulation::getSimulationSettings() { return &settings; }
-
-void FluidSimulation::calculateDensityPressure() {
-    #pragma omp parallel for
-    for (int i = 0 ; i < particles.size() ; i++) {
-        Particle& p = particles[i];
-
-        p.density = 0.0f;
-
-        for (auto o : grid.getNeighbors(p.position)) {
-            Particle& other = particles[o];
-            p.density += other.mass * poly6Kernel2D(p.position - other.position);
-        }
-
-        p.pressure = settings.k * (p.density - settings.p_0);
-        p.pressure = std::max(0.0f, p.pressure);
-    }
-}
-
-void FluidSimulation::calculateSPHForces() {
-    #pragma omp parallel for
-    for (int i = 0 ; i < particles.size() ; i++) {
-        Particle& p = particles[i];
-
-        p.pressureForce = glm::vec2(0.0f);
-        p.viscosityForce = glm::vec2(0.0f);
-        p.surfaceTensionForce = glm::vec2(0.0f);
-
-        glm::vec2 n = glm::vec2(0.0f);
-        float c = 0.0f;
-
-        for (auto o : grid.getNeighbors(p.position)) {
-            if (i == o) continue;
-
-            Particle& other = particles[o];
-
-            p.pressureForce += other.mass * ((p.pressure + other.pressure) / (2.0f * other.density)) * spikyKernelGradient2D(p.position - other.position);
-            p.viscosityForce += other.mass * ((other.velocity - p.velocity) / other.density) * viscosityLaplacianKernel2D(p.position - other.position);
-            n += other.mass * (1.0f / other.density) * poly6KernelGradient2D(p.position - other.position);
-            c += other.mass * (1.0f / other.density) * poly6LaplacianKernel2D(p.position - other.position);
-        }
-
-        p.pressureForce *= -1.0f;
-        p.viscosityForce *= settings.mu;
-
-        if (glm::length(n) > 10.0f)
-            p.surfaceTensionForce = -1.0f * settings.tension * c * (n / glm::length(n));
-    }
-}
-
-void FluidSimulation::applyMouseForce() {
-    #pragma omp parallel for
-    for (int i = 0; i < particles.size(); i++) {
-        Particle& p = particles[i];
-
-        glm::vec2 dir = p.position - glm::vec2(mouseX, mouseY);
-        float dist2 = glm::length2(dir);
-
-        if (dist2 < mouseRadius * mouseRadius) {
-            float dist = std::sqrt(dist2);
-
-            glm::vec2 forceDir = (dist > 0.0001f) ? dir / dist : glm::vec2(0.0f);
-
-            float falloff = 1.0f - (dist / mouseRadius);
-            p.velocity += mouseForceDirection * forceDir * mouseRadius * falloff;
-        }
-    }
-}
-
-void FluidSimulation::updateParticles(float deltaTime) {
-    #pragma omp parallel for
-    for (int i = 0; i < particles.size(); i++) {
-        Particle& p = particles[i];
-
-        glm::vec2 force = p.pressureForce + p.viscosityForce + p.surfaceTensionForce;
-        glm::vec2 acceleration = force / p.density;
-
-        if (settings.enableGravity)
-            acceleration += glm::vec2(0.0f, settings.gravity);
-
-        p.velocity += acceleration * (0.5f * deltaTime);
-        p.position += p.velocity * deltaTime;
-        p.velocity += acceleration * (0.5f * deltaTime);
-
-        // Simple boundaries
-        if (p.position.x < 0) {
-            p.position.x = 0;
-            p.velocity.x *= -1.0f;
-        }
-
-        if (p.position.x > width) {
-            p.position.x = width;
-            p.velocity.x *= -1.0f;
-        }
-
-        if (p.position.y < 0) {
-            p.position.y = 0;
-            p.velocity.y *= -1.0f;
-        }
-
-        if (p.position.y > height) {
-            p.position.y = height;
-            p.velocity.y *= -1.0f;
-        }
-    }
-}
-
-float FluidSimulation::poly6Kernel3D(float r) const {
-    float r2 = r * r;
-    float h2 = settings.h * settings.h;
-
-    if (r2 >= 0.0f && r2 <= h2) {
-        return (315.0f / (64.0f * std::numbers::pi * pow(settings.h, 9))) * pow(h2 - r2, 3);
+    for (auto model : FluidRenderer::getInstance()->getModels()) {
+        auto modelTriangles = model->getTriangles();
+        meshTriangles.insert(meshTriangles.end(), modelTriangles.begin(), modelTriangles.end());
     }
 
-    return 0.0f;
+    std::cout << meshTriangles.size() << std::endl;
+
+    Triangle* d_triangles;
+    cudaMalloc(&d_triangles, meshTriangles.size() * sizeof(Triangle));
+    cudaMemcpy(d_triangles, meshTriangles.data(), meshTriangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
+
+    // SDF
+    int sdfResolution = 64;
+
+    float* d_sdf;
+    cudaMalloc(&d_sdf, sdfResolution * sdfResolution * sdfResolution * sizeof(float));
+
+    glm::vec3 gridMin = { 0.0, 0.0, 0.0f };
+    glm::vec3 gridMax = { 1.0, 1.0, 1.0f };
+
+    launchSdfKernel(
+        meshTriangles.size(),
+        d_triangles,
+        d_sdf,
+        sdfResolution * sdfResolution * sdfResolution,
+        sdfResolution,
+        { gridMin.x, gridMin.y, gridMin.z },
+        { gridMax.x, gridMax.y, gridMax.z }
+    );
+
+    std::vector<float> sdf(sdfResolution * sdfResolution * sdfResolution);
+    cudaMemcpy(sdf.data(), d_sdf, sdf.size() * sizeof(float), cudaMemcpyDeviceToHost);
+
+    cudaDeviceSynchronize();
+
+    // Marching cubes
+    // float3 cellSize = make_float3(
+    //     (gridMax.x - gridMin.x) / (sdfResolution - 1),
+    //     (gridMax.y - gridMin.y) / (sdfResolution - 1),
+    //     (gridMax.z - gridMin.z) / (sdfResolution - 1)
+    // );
+    //
+    // int dx = 1;
+    // int dy = sdfResolution;
+    // int dz = sdfResolution * sdfResolution;
+    //
+    // std::vector<Vertex> vertices = {};
+    // std::vector<unsigned int> indices = {};
+    //
+    // for (int z = 0; z < sdfResolution - 1; z++) {
+    //     for (int y = 0; y < sdfResolution - 1; y++) {
+    //         for (int x = 0; x < sdfResolution - 1; x++) {
+    //             int id = x + y * sdfResolution + z * sdfResolution * sdfResolution;
+    //
+    //             float cube[8];
+    //             cube[0] = sdf[id                ];
+    //             cube[1] = sdf[id + dx           ];
+    //             cube[2] = sdf[id + dx + dy      ];
+    //             cube[3] = sdf[id      + dy      ];
+    //             cube[4] = sdf[id           + dz ];
+    //             cube[5] = sdf[id + dx      + dz ];
+    //             cube[6] = sdf[id + dx + dy + dz ];
+    //             cube[7] = sdf[id      + dy + dz ];
+    //
+    //             // Build index
+    //             int cubeIndex = 0;
+    //             if (cube[0] < 0) cubeIndex |= 1;
+    //             if (cube[1] < 0) cubeIndex |= 2;
+    //             if (cube[2] < 0) cubeIndex |= 4;
+    //             if (cube[3] < 0) cubeIndex |= 8;
+    //             if (cube[4] < 0) cubeIndex |= 16;
+    //             if (cube[5] < 0) cubeIndex |= 32;
+    //             if (cube[6] < 0) cubeIndex |= 64;
+    //             if (cube[7] < 0) cubeIndex |= 128;
+    //
+    //             // Skip empty / full cells
+    //             if (cubeIndex == 0 || cubeIndex == 255)
+    //                 continue;
+    //
+    //             glm::vec3 position[8];
+    //             position[0] = glm::vec3((x + 0) * cellSize.x, (y + 0) * cellSize.y, (z + 0)* cellSize.z) + gridMin;
+    //             position[1] = glm::vec3((x + 1) * cellSize.x, (y + 0) * cellSize.y, (z + 0)* cellSize.z) + gridMin;
+    //             position[2] = glm::vec3((x + 1) * cellSize.x, (y + 1) * cellSize.y, (z + 0) * cellSize.z) + gridMin;
+    //             position[3] = glm::vec3((x + 0) * cellSize.x, (y + 1) * cellSize.y, (z + 0) * cellSize.z) + gridMin;
+    //             position[4] = glm::vec3((x + 0) * cellSize.x, (y + 0) * cellSize.y, (z + 1) * cellSize.z) + gridMin;
+    //             position[5] = glm::vec3((x + 1) * cellSize.x, (y + 0) * cellSize.y, (z + 1) * cellSize.z) + gridMin;
+    //             position[6] = glm::vec3((x + 1) * cellSize.x, (y + 1) * cellSize.y, (z + 1) * cellSize.z) + gridMin;
+    //             position[7] = glm::vec3((x + 0) * cellSize.x, (y + 1) * cellSize.y, (z + 1) * cellSize.z) + gridMin;
+    //
+    //             // Add vertices
+    //             int edgeVertexIndex[12] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+    //             for (int i = 0 ; i < 12 ; i++) {
+    //                 if ((edgeTable[cubeIndex] & (1 << i)) == 0)
+    //                     continue;
+    //
+    //                 auto verts = edgeToVertices[i];
+    //
+    //                 auto lerpedVertex = interp(
+    //                     position[verts.first],
+    //                     position[verts.second],
+    //                     cube[verts.first],
+    //                     cube[verts.second]
+    //                 );
+    //
+    //                 edgeVertexIndex[i] = vertices.size();
+    //                 vertices.push_back({{ lerpedVertex }, { calculateNormal(x, y, z, sdfResolution, sdf) }});
+    //             }
+    //
+    //             // Build faces
+    //             for (int i = 0 ; triangleTable[cubeIndex][i] != -1 ; i+= 3) {
+    //                 int index0 = triangleTable[cubeIndex][i    ];
+    //                 int index1 = triangleTable[cubeIndex][i + 1];
+    //                 int index2 = triangleTable[cubeIndex][i + 2];
+    //
+    //                 indices.push_back(edgeVertexIndex[index0]);
+    //                 indices.push_back(edgeVertexIndex[index2]);
+    //                 indices.push_back(edgeVertexIndex[index1]);
+    //             }
+    //         }
+    //     }
+    // }
+    //
+    // std::vector<Mesh*> meshes = { new Mesh("SDF", vertices, indices) };
+    // auto sdfModel = new Model("SDF", meshes);
+    // FluidRenderer::getInstance()->addModel(sdfModel);
 }
 
-float FluidSimulation::poly6Kernel2D(glm::vec2 dist) const {
-    float r2 = glm::length2(dist);
-    float h2 = settings.h * settings.h;
+void FluidSimulation::initParticles() {
+    // Delete old particle data
+    particleCount = 0;
 
-    if (r2 <= h2) {
-        float x = h2 - r2;
-        return 4.0f / (std::numbers::pi * pow(settings.h, 8)) * x * x * x;
-    }
+    if (d_particleHashes)           cudaFree(d_particleHashes);
+    if (d_sortedParticleHashes)     cudaFree(d_sortedParticleHashes);
+    if (d_sortedParticles)          cudaFree(d_sortedParticles);
+    if (d_particleIndices)          cudaFree(d_particleIndices);
+    if (d_sortedParticleIndices)    cudaFree(d_sortedParticleIndices);
+    if (d_offsets)                  cudaFree(d_offsets);
+    if (d_sortTempStorage)          cudaFree(d_sortTempStorage);
 
-    return 0.0f;
-}
+    // Setup new particles
+    glm::vec3 spawnAreaSize = initSettings.spawnArea.size;
 
-glm::vec2 FluidSimulation::poly6KernelGradient2D(glm::vec2 dist) const {
-    float r2 = glm::length2(dist);
-    float h2 = settings.h * settings.h;
+    int countX          = std::floor(spawnAreaSize.x / initSettings.particleSpacing + 1e-5f) + 1;
+    int countY          = std::floor(spawnAreaSize.y / initSettings.particleSpacing + 1e-5f) + 1;
+    int countZ          = std::floor(spawnAreaSize.z / initSettings.particleSpacing + 1e-5f) + 1;
 
-    if (r2 > 0 && r2 < settings.h * settings.h) {
-        float x = h2 - r2;
-        float factor = -24.0f / (std::numbers::pi * pow(settings.h, 8)) * x * x;
-        return factor * dist;
-    }
+    particleCount       = countX * countY * countZ;
 
-    return glm::vec2(0.0f);
-}
+    // Allocate memory on gpu
+    cudaMalloc(reinterpret_cast<void**>(&d_particles), particleCount * sizeof(ParticleGPU));
+    cudaMalloc(reinterpret_cast<void**>(&d_sortedParticles), particleCount * sizeof(ParticleGPU));
+    cudaMalloc(reinterpret_cast<void**>(&d_particleHashes), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_sortedParticleHashes), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_particleIndices), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_sortedParticleIndices), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_offsets), particleCount * sizeof(int));
 
-float FluidSimulation::poly6LaplacianKernel2D(glm::vec2 dist) const {
-    float r2 = glm::length2(dist);
-    float h2 = settings.h * settings.h;
+    // Allocate memory for CUB sorting
+    queryRequiredSortingStorage(
+        particleCount,
+        sortTempStorageBytes,
+        d_particleHashes,
+        d_sortedParticleHashes,
+        d_particleIndices,
+        d_sortedParticleIndices
+    );
 
-    if (r2 < h2 && r2 > 0.0f) {
-        float term1 = 24.0f / (static_cast<float>(std::numbers::pi) * pow(settings.h, 8));
-        float term2 = h2 - r2;
-        float term3 = 4.0f * r2 - h2;
+    cudaMalloc(&d_sortTempStorage, sortTempStorageBytes);
 
-        return term1 * term2 * term3;
-    }
+    // TODO - Check if this is correct
+    float mass = initSettings.totalMass * (initSettings.spawnArea.volume() / particleCount);
+    glm::vec3 spawnAreaMinimum = initSettings.spawnArea.min();
 
-    return 0.0f;
-}
+    // Set particle data
+    launchInitParticlesKernel(
+        particleCount,
+        d_particles,
+        { countX, countY, countZ },
+        { spawnAreaMinimum.x, spawnAreaMinimum.y, spawnAreaMinimum.z },
+        initSettings.particleSpacing,
+        mass
+    );
 
-float FluidSimulation::spikyKernel3D(float r) const {
-    if (r >= 0.0f && r <= settings.h) {
-        float x = settings.h - r;
-        return (15.0f / (std::numbers::pi * pow(settings.h, 6))) * x * x * x;
-    }
+    cudaDeviceSynchronize();
+    cudaMemcpy(d_sortedParticles, d_particles, particleCount * sizeof(ParticleGPU), cudaMemcpyDeviceToDevice);
+    cudaDeviceSynchronize();
 
-    return 0.0f;
-}
-
-float FluidSimulation::spikyKernel2D(glm::vec2 dist) const {
-    float r = std::abs(glm::length(dist));
-
-    if (r <= settings.h) {
-        float x = settings.h - r;
-        return 10.0f / (std::numbers::pi * pow(settings.h, 6)) * x * x * x;
-    }
-
-    return 0.0f;
-}
-
-glm::vec2 FluidSimulation::spikyKernelGradient2D(glm::vec2 dist) const {
-    float r = glm::length(dist);
-
-    if (r > 0 && r < settings.h) {
-        float x = settings.h - r;
-        float factor = (-30.0f / (std::numbers::pi * pow(settings.h, 5))) * x * x;
-        return factor * (dist / r);
-    }
-
-    return glm::vec2(0.0f);
-}
-
-float FluidSimulation::viscosityKernel2D(float r) const {
-    if (r >= 0.0f && r <= settings.h) {
-        return
-            (15.0f / (2.0f * std::numbers::pi * pow(settings.h, 3)))
-        *   (   -(r * r * r) / (2.0f * pow(settings.h, 3))
-                + (r * r) / pow(settings.h, 2)
-                + settings.h / (2.0f * r)
-                - 1.0f
-            );
-    }
-
-    return 0.0f;
-}
-
-float FluidSimulation::viscosityLaplacianKernel2D(glm::vec2 dist) const {
-    float r = glm::length(dist);
-
-    if (r <= settings.h) {
-        return (45.0f / (std::numbers::pi * pow(settings.h, 6))) * (settings.h - r);
-    }
-
-    return 0.0f;
+    state = PAUSED;
 }

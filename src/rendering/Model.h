@@ -20,6 +20,7 @@ struct Transform {
 class Model {
 public:
     Model(const std::string& path);
+    Model(const std::string& name, std::unique_ptr<Mesh> mesh);
     Model(const std::string& name, std::vector<std::unique_ptr<Mesh>> meshes);
 
     void draw(const glm::mat4& view, const glm::mat4& projection) const;
@@ -40,6 +41,8 @@ public:
     void setVisible(bool on);
     bool isVisible() const;
 
+    // --- Factory ---
+    static std::unique_ptr<Model> createCubeModel(const std::string& name);
 private:
     std::string name = "Undefined";
 

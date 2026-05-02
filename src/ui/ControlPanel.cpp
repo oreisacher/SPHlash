@@ -8,7 +8,7 @@
 
 ControlPanel::ControlPanel()
     : UIPanel("Controls") {
-    simulation = FluidSimulationGPU::getInstance();
+    simulation = FluidSimulation::getInstance();
 }
 
 void ControlPanel::update(double deltaTime) { }

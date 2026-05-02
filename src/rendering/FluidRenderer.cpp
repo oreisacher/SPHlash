@@ -7,20 +7,14 @@
 
 #include "rendering/FluidRenderer.h"
 #include <glad/gl.h>
-
-#include "Mesh.h"
 #include "../simulation/FluidSimulation.h"
-#include "GLFW/glfw3.h"
 #include "utils/Logger.h"
 #include "utils/SphereCreator.h"
 #include <vector>
-
-#include "cuda/MarchingCubes.h"
 #include "glm/gtx/transform.hpp"
-#include "utils/Primitives.h"
 
 FluidRenderer::FluidRenderer() {
-    simulation = FluidSimulationGPU::getInstance();
+    simulation = FluidSimulation::getInstance();
 
     // Setup OpenGL State
     glEnable(GL_DEPTH_TEST);
@@ -42,7 +36,6 @@ FluidRenderer::FluidRenderer() {
 
     // Setup Spawn Area box
     setupSpawnAreaModel();
-    updateSpawnBoxModelMatrix();
 
     // Setup shaders
     setupShaders();
@@ -62,7 +55,7 @@ FluidRenderer* FluidRenderer::getInstance() {
     return &instance;
 }
 
-void FluidRenderer::update() {
+// void FluidRenderer::update() {
     // Marching cubes
     // float3 cellSizes = make_float3(
     //     (simulation->settings.xDomain.y - simulation->settings.xDomain.x) / static_cast<float>(settings.marchingCubeResolution.x - 1),
@@ -231,25 +224,20 @@ void FluidRenderer::update() {
     //
     //     addModel(new Model("SDF", { marchingCubeMesh }));
     // }
-}
+// }
 
 void FluidRenderer::render(const Scene& scene) const {
     // // Update shader
-    // particleShader->bind();
-    // particleShader->setMat4("projection", camera->getProjectionMatrix());
-    // particleShader->setMat4("view", camera->getViewMatrix());
+
 
     // Render into framebuffer
     framebuffer->bind();
     glViewport(0, 0, framebuffer->getSize().x, framebuffer->getSize().y);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // // Draw particles
-    // if (simulation->particleCount != 0) {
-    //     glBindVertexArray(vao);
-    //     glDrawElementsInstanced(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0, simulation->particleCount);
-    // }
-    //
+    // Draw particles
+
+
     // boxShader->bind();
     // boxShader->setMat4("view", camera->getViewMatrix());
     // boxShader->setMat4("projection", camera->getProjectionMatrix());
@@ -278,16 +266,21 @@ void FluidRenderer::render(const Scene& scene) const {
     auto view = camera->getViewMatrix();
     auto projection = camera->getProjectionMatrix();
 
+    particleShader->bind();
+    particleShader->setMat4("projection", camera->getProjectionMatrix());
+    particleShader->setMat4("view", camera->getViewMatrix());
+
+    if (simulation->particleCount != 0) {
+        glBindVertexArray(vao);
+        glDrawElementsInstanced(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0, simulation->particleCount);
+    }
+
     for (const auto model : scene.getModels()) {
         if (!model->isVisible())
             continue;
 
         model->draw(view, projection);
     }
-}
-
-void FluidRenderer::setCamera(Camera* cam) {
-    camera = cam;
 }
 
 Shader* FluidRenderer::getParticleShader() const {
@@ -301,38 +294,6 @@ Shader* FluidRenderer::getBoundaryShader() const {
 void FluidRenderer::updateParticleSize() const {
     particleShader->bind();
     particleShader->setFloat("size", settings.particleSize);
-}
-
-void FluidRenderer::updateSpawnBoxModelMatrix() {
-    glm::vec3 max(
-        simulation->initSettings.xBoundary.y,
-        simulation->initSettings.yBoundary.y,
-        simulation->initSettings.zBoundary.y
-    );
-
-    glm::vec3 min(
-        simulation->initSettings.xBoundary.x,
-        simulation->initSettings.yBoundary.x,
-        simulation->initSettings.zBoundary.x
-    );
-
-    // spawnAreaModel->setTransform(calculateModelMatrix(min, max));
-}
-
-void FluidRenderer::updateDomainModelMatrix() {
-    glm::vec3 max(
-        simulation->settings.xDomain.y,
-        simulation->settings.yDomain.y,
-        simulation->settings.zDomain.y
-    );
-
-    glm::vec3 min(
-        simulation->settings.xDomain.x,
-        simulation->settings.yDomain.x,
-        simulation->settings.zDomain.x
-    );
-
-    // domainModel = calculateModelMatrix(min , max);
 }
 
 GLuint FluidRenderer::getTextureId() const {

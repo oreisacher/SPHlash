@@ -9,7 +9,7 @@
 
 StatisticsPanel::StatisticsPanel()
     : UIPanel("Statistics") {
-    simulation = FluidSimulationGPU::getInstance();
+    simulation = FluidSimulation::getInstance();
 }
 
 void StatisticsPanel::update(double deltaTime) {

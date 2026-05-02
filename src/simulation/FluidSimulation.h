@@ -1,168 +1,140 @@
 //
-// Created by ruut on 3/9/26.
+// Created by ruut on 3/16/26.
 //
 
-#ifndef FLUIDSIMSPH_FLUIDSIMULATION_H
-#define FLUIDSIMSPH_FLUIDSIMULATION_H
+#ifndef FLUIDSIMSPH_FLUIDSIMULATIONGPU_H
+#define FLUIDSIMSPH_FLUIDSIMULATIONGPU_H
 
-#include <cmath>
-#include <iostream>
-#include <unordered_map>
-#include <vector>
+#include "glm/glm.hpp"
+#include "rendering/Shader.h"
+#include <cuda_runtime.h>
 
-#include "FluidSimulationGPU.h"
-#include "glm/vec2.hpp"
+#include "rendering/FluidRenderer.h"
+#include "utils/AABB.h"
 
-struct Particle {
-    glm::vec2 position;
-    glm::vec2 velocity;
-    float mass;
-
-    glm::vec2 startPosition;
-
-    // Per-Frame data
-    float density;
-    float pressure;
-
-    glm::vec2 pressureForce;
-    glm::vec2 viscosityForce;
-    glm::vec2 surfaceTensionForce;
+enum ParticleType {
+    GHOST   = 0,
+    NORMAL  = 1
 };
 
-struct SpatialGrid {
-    int hash(int x, int y) {
-        return (x * 73856093) ^ (y * 19349663);
-    }
-
-    void insert(int id, glm::vec2 pos) {
-        int cellX = std::floor(pos.x / cellSize);
-        int cellY = std::floor(pos.y / cellSize);
-
-        int h = hash(cellX, cellY);
-        grid[h].push_back(id);
-    }
-
-    std::vector<int> getNeighbors(glm::vec2 pos) {
-        int cellX = std::floor(pos.x / cellSize);
-        int cellY = std::floor(pos.y / cellSize);
-
-        std::vector<int> neighbors;
-
-        for (int y = -1 ; y <= 1 ; y++) {
-            for (int x = -1 ; x <= 1 ; x++) {
-                int h = hash(cellX + x, cellY + y);
-
-                auto it = grid.find(h);
-                if (it == grid.end())
-                    continue;
-
-                for (int id : it->second)
-                    neighbors.push_back(id);
-            }
-        }
-
-        return neighbors;
-    }
-
-    void clear() {
-        grid.clear();
-    }
-
-    std::unordered_map<int, std::vector<int>> grid;
-    float cellSize;
+enum SimulationState {
+    UNINITIALIZED,
+    PAUSED,
+    RUNNING
 };
 
-// struct SimulationSettings {
-//     float h = 20.0f;
-//     float p_0 = 0.0f;
-//     float k = 0.7f;
-//     float mu = 0.3f;
-//     float tension = 0.001f;
-//
-//     bool enableGravity = false;
-//     float gravity = -9.878;
-// };
+struct ParticleGPU {
+    float4 position                 = { 0.0f, 0.0f, 0.0f, 0.0f };   // vec4 to avoid padding issues
+    float4 startPosition            = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float4 velocity                 = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float4 properties               = { -1.0f, -1.0f, -1.0f, -1.0f };   // x: mass, y: density, z: pressure, w: id
+    float4 flags                    = { 0.0f, 0.0f, 0.0f, 0.0f };   // x: type, y: undefined, z: undefined, w: undefined
+
+    // SPH Forces
+    float4 pressureForce            = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float4 viscosityForce           = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float4 surfaceTensionForce      = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+    // Debugging
+    float4 debugging                = { 0.0f, 0.0f, 0.0f, 0.0f };
+};
+
+struct InitSettings {
+    float totalMass = 1000.0f;
+    float particleSpacing = 0.025f;
+
+    // Spawn area
+    AABB spawnArea = {
+        { 0.0f, 0.0f, 0.0f },
+        { 1.0f, 1.0f, 1.0f }
+    };
+};
+
+struct SimulationSettings {
+    // Domain
+    AABB domainArea = {
+        { 0.0f, 0.0f, 0.0f },
+        { 2.0f, 2.0f, 2.0f }
+    };
+
+    // Particles
+    float h = 0.2f;
+    float p_0 = 1000.0f;
+    float k = 0.7f;
+    float mu = 0.1f;
+    float tensionThreshold = 8.0f;
+    float tension = 0.001f;
+
+    // Gravity
+    bool enableGravity = false;
+    float gravity = -9.878;
+
+    // CFL
+    bool useCFL = true;
+    float safetyFactor = 0.4f;
+};
+
+struct VoxelField {
+    float* d_field     = nullptr;
+    float3* d_normal   = nullptr;
+};
 
 class FluidSimulation {
 public:
-    FluidSimulation(int particleCount, float xMin, float yMin, float xMax, float yMax);
+    static FluidSimulation* getInstance();
 
     void update(float deltaTime);
+    void step(float deltaTime);
 
-    int getParticleCount() const;
-    const Particle* getData() const;
-
+    void start();
+    void pause();
     void reset();
 
-    void updateBoundaries(float width, float height);
-    void updateMousePos(float x, float y);
-    void updateMouseForceDirection(float direction);
-    void updateMouseRadius(float direction);
+    void initParticles();
 
-    float getMouseRadius() const;
+    void setRendererVBO(GLuint vbo);
 
-    SimulationSettings* getSimulationSettings();
+    void updateScalarFieldSize(int3 resolution);
+    VoxelField computeScalarField(int3 resolution) const;
 
-private:
-    // Calculations
-    void calculateDensityPressure();
-    void calculateSPHForces();
-    void applyMouseForce();
+    ParticleGPU getParticle(int id) const;
 
-    void updateParticles(float deltaTime);
+    float cfl = 0;
+    int particleCount = 0;
 
-    // Kernels
-    float poly6Kernel3D(float r) const;
-
-    float poly6Kernel2D(glm::vec2 dist) const;
-    glm::vec2 poly6KernelGradient2D(glm::vec2 dist) const;
-    float poly6LaplacianKernel2D(glm::vec2 dist) const;
-
-    float spikyKernel3D(float r) const;
-    float spikyKernel2D(glm::vec2 dist) const;
-    glm::vec2 spikyKernelGradient2D(glm::vec2 dist) const;
-
-    float viscosityKernel2D(float r) const;
-    float viscosityLaplacianKernel2D(glm::vec2 dist) const;
-
-    SpatialGrid grid;
-    std::vector<Particle> particles;
-
-    // Boundaries
-    float width = 1, height = 1;
-
-    // Mouse
-    float mouseX, mouseY;
-    float mouseForceDirection = 0.0f;
-    float mouseRadius = 0.1f;
-
-    // float h = 0.0f;
-    // float p_0 = 1000.0f;
-
-    // Settings
+    InitSettings initSettings;
     SimulationSettings settings;
 
-    // Constants
-    // float k = 2000.0f;
-    // float mu = 100.0f;
-    // float tension = 2.0f;
+    VoxelField voxelField = {};
 
-    // Without gravity
-    // float k = 0.7f;
-    // float mu = 0.3f;
-    // float tension = 0.001f;
+    // --- Simulation State ---
+    SimulationState state = UNINITIALIZED;
+private:
+    FluidSimulation();
+    ~FluidSimulation();
 
-    // With gravity
-    // float k = 1.0f;
-    // float mu = 0.1f;
-    // float tension = 0.1f;
+    // --- Particles ---
+    ParticleGPU* d_particles            = nullptr;
+    ParticleGPU* d_sortedParticles      = nullptr;
 
-    // Cache
-    // float h2;
-    // float h3;
-    // float h5;
-    // float h6;
-    // float h8;
+    // --- Spatial Hashing ---
+    int* d_particleHashes               = nullptr;
+    int* d_sortedParticleHashes         = nullptr;
+    int* d_offsets                      = nullptr;
+
+    // --- Common ---
+    int* d_particleIndices              = nullptr;
+    int* d_sortedParticleIndices        = nullptr;
+
+    // --- Sorting Storage ---
+    void* d_sortTempStorage             = nullptr;
+    size_t sortTempStorageBytes         = 0;
+
+    // --- Rendering ---
+    cudaGraphicsResource* rendererResource = nullptr;
+    RendererParticle* d_rendererParticles = nullptr;
+
+    void calculateDensityMap();
 };
 
-#endif //FLUIDSIMSPH_FLUIDSIMULATION_H
+#endif //FLUIDSIMSPH_FLUIDSIMULATIONGPU_H

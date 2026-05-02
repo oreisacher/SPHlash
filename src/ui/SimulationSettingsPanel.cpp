@@ -10,11 +10,11 @@
 #include "nlohmann/json.hpp"
 #include "ImGuiFileDialog.h"
 #include "glm/gtc/type_ptr.inl"
-#include "simulation/FluidSimulationGPU.h"
+#include "simulation/FluidSimulation.h"
 
-SimulationSettingsPanel::SimulationSettingsPanel()
-    : UIPanel("Simulation Settings") {
-    simulation  = FluidSimulationGPU::getInstance();
+SimulationSettingsPanel::SimulationSettingsPanel(Editor* editor)
+    : UIPanel("Simulation Settings"), editor(editor) {
+    simulation  = FluidSimulation::getInstance();
     renderer    = FluidRenderer::getInstance();
 }
 
@@ -30,19 +30,14 @@ void SimulationSettingsPanel::draw() {
 
     if (ImGui::CollapsingHeader("Domain Settings")) {
         ImGui::PushID("Domain");
-        ImGui::Text("X:");
-        if (ImGui::DragFloat2("##domainX", glm::value_ptr(simulation->settings.xDomain), 0.01f)) {
-            renderer->updateDomainModelMatrix();
+        ImGui::Text("Center:");
+        if (ImGui::DragFloat3("##domainCenter", glm::value_ptr(simulation->settings.domainArea.center), 0.01f)) {
+            editor->updateDomainAreaTransform();
         }
 
-        ImGui::Text("Y:");
-        if (ImGui::DragFloat2("##domainY", glm::value_ptr(simulation->settings.yDomain), 0.01f)) {
-            renderer->updateDomainModelMatrix();
-        }
-
-        ImGui::Text("Z:");
-        if (ImGui::DragFloat2("##domainZ", glm::value_ptr(simulation->settings.zDomain), 0.01f)) {
-            renderer->updateDomainModelMatrix();
+        ImGui::Text("Size:");
+        if (ImGui::DragFloat3("##domainSize", glm::value_ptr(simulation->settings.domainArea.size), 0.01f)) {
+            editor->updateDomainAreaTransform();
         }
         ImGui::PopID();
     }
