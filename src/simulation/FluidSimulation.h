@@ -11,6 +11,7 @@
 
 #include "rendering/FluidRenderer.h"
 #include "utils/AABB.h"
+#include "utils/VoxelField.h"
 
 enum ParticleType {
     GHOST   = 0,
@@ -58,7 +59,7 @@ struct SimulationSettings {
     };
 
     // Particles
-    float h = 0.2f;
+    float h = 0.05f;
     float p_0 = 1000.0f;
     float k = 0.7f;
     float mu = 0.1f;
@@ -74,16 +75,23 @@ struct SimulationSettings {
     float safetyFactor = 0.4f;
 };
 
-struct VoxelField {
-    float* d_field     = nullptr;
-    float3* d_normal   = nullptr;
-};
-
 class FluidSimulation {
 public:
     static FluidSimulation* getInstance();
 
+    /*
+     * Calculates density, pressure, etc. values for the current particles.
+     * At the end d_particles contains the sorted particles!
+     */
+    void updateParticles();
+
+    /*
+     * Updates the simulation by the given timestep. First calculates density, pressure, etc.
+     * with updateParticles(). Then calculates SPH specific forces. Using CFL, updates the positions
+     * and velocities of each particle.
+     */
     void update(float deltaTime);
+
     void step(float deltaTime);
 
     void start();
@@ -94,8 +102,8 @@ public:
 
     void setRendererVBO(GLuint vbo);
 
-    void updateScalarFieldSize(int3 resolution);
-    VoxelField computeScalarField(int3 resolution) const;
+    // --- VoxelField ---
+    bool computeVoxelField(const VoxelField& field) const;
 
     ParticleGPU getParticle(int id) const;
 
@@ -104,8 +112,6 @@ public:
 
     InitSettings initSettings;
     SimulationSettings settings;
-
-    VoxelField voxelField = {};
 
     // --- Simulation State ---
     SimulationState state = UNINITIALIZED;

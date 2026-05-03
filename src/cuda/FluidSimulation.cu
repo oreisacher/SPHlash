@@ -603,11 +603,8 @@ void launchResetParticlesKernel(
 }
 
 __global__ void voxelFieldKernel(
-    float* field,
-    float3* normals,
-    const int3 resolution,
-    const float3 domainMin,
-    const float3 domainMax,
+    const VoxelField field,
+    const CudaAABB domain,
     const int numParticles,
     const ParticleGPU* particles,
     const int* hashes,
@@ -615,26 +612,27 @@ __global__ void voxelFieldKernel(
     const float h
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
-    const int cellCount = resolution.x * resolution.y * resolution.z;
+    const int cellCount = field.resolution.x * field.resolution.y * field.resolution.z;
 
     if (id >= cellCount)
         return;
 
     // Convert index to 3d cell pos
-    int x = id % resolution.x;
-    int y = (id / resolution.x) % resolution.y;
-    int z = id / (resolution.x * resolution.y);
+    int x = id % field.resolution.x;
+    int y = (id / field.resolution.x) % field.resolution.y;
+    int z = id / (field.resolution.x * field.resolution.y);
+
 
     float3 cellSizes = make_float3(
-        (domainMax.x - domainMin.x) / (resolution.x - 1),
-        (domainMax.y - domainMin.y) / (resolution.y - 1),
-        (domainMax.z - domainMin.z) / (resolution.z - 1)
+        (domain.max.x - domain.min.x) / (field.resolution.x - 1),
+        (domain.max.y - domain.min.y) / (field.resolution.y - 1),
+        (domain.max.z - domain.min.z) / (field.resolution.z - 1)
     );
 
     float4 samplePosition = make_float4(
-        domainMin.x + x * cellSizes.x,
-        domainMin.y + y * cellSizes.y,
-        domainMin.z + z * cellSizes.z,
+        domain.min.x + x * cellSizes.x,
+        domain.min.y + y * cellSizes.y,
+        domain.min.z + z * cellSizes.z,
         0.0
     );
 
@@ -645,6 +643,7 @@ __global__ void voxelFieldKernel(
 
     float4 n = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     float c = 0.0f;
+    // float h2 = field.smoothingRadius * field.smoothingRadius;
     float h2 = h * h;
 
     // Find neighbors
@@ -682,16 +681,13 @@ __global__ void voxelFieldKernel(
         }
     }
 
-    field[id] = c - 0.5f;
-    normals[id] = make_float3(-n.x, -n.y, -n.z);
+    field.d_color[id] = c - 0.5f;
+    field.d_normal[id] = make_float3(-n.x, -n.y, -n.z);
 }
 
 void launchVoxelFieldKernel(
-    float* field,
-    float3* normals,
-    const int3 resolution,
-    const float3 domainMin,
-    const float3 domainMax,
+    const VoxelField& field,
+    const CudaAABB& domain,
     const int numParticles,
     const ParticleGPU* particles,
     const int* hashes,
@@ -699,10 +695,10 @@ void launchVoxelFieldKernel(
     const float h
 ) {
     int threadsPerBlock = 256;
-    int cells = resolution.x * resolution.y * resolution.z;
+    int cells = field.resolution.x * field.resolution.y * field.resolution.z;
     int blocks = (cells + threadsPerBlock - 1) / threadsPerBlock;
 
     voxelFieldKernel<<<blocks, threadsPerBlock>>>(
-        field, normals, resolution, domainMin, domainMax, numParticles, particles, hashes, offsets, h
+        field, domain, numParticles, particles, hashes, offsets, h
     );
 }

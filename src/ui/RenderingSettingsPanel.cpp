@@ -9,8 +9,8 @@
 #include "imgui.h"
 #include "glm/gtc/type_ptr.hpp"
 
-RenderingSettingsPanel::RenderingSettingsPanel()
-    : UIPanel("Rendering Settings") {
+RenderingSettingsPanel::RenderingSettingsPanel(FluidSurfaceMesher* surfaceMesher)
+    : UIPanel("Rendering Settings"), surfaceMesher(surfaceMesher) {
     renderer = FluidRenderer::getInstance();
 }
 
@@ -23,20 +23,21 @@ void RenderingSettingsPanel::draw() {
     ImGui::Begin(name.c_str());
     ImGui::PushItemWidth(-FLT_MIN);
 
-    ImGui::Text("Particle Size:");
-    if (ImGui::DragFloat("##ps", &renderer->settings.particleSize, 0.0001f, 0.0)) {
-        renderer->updateParticleSize();
-    }
-
-    ImGui::SeparatorText("Rendering Mode");
-
+    ImGui::Text("Rendering Mode:");
     if (ImGui::Combo("##rmode", reinterpret_cast<int*>(&renderer->settings.mode), renderModes, IM_ARRAYSIZE(renderModes))) {
         renderer->updateRenderingSettings();
+        surfaceMesher->updateSettings();
     }
 
+    ImGui::Spacing();
+    ImGui::Separator();
     switch (renderer->settings.mode) {
     case SOLID_COLOR_PARTICLES:
         ImGui::PushID(SOLID_COLOR_PARTICLES);
+        ImGui::Text("Size:");
+        if (ImGui::DragFloat("##ps", &renderer->settings.particleSize, 0.0001f, 0.0)) {
+            renderer->updateParticleSize();
+        }
         ImGui::Text("Color:");
         if (ImGui::ColorEdit3("##scpCE", glm::value_ptr(renderer->settings.solidColorParticles)))
             renderer->updateRenderingSettings();
@@ -44,6 +45,11 @@ void RenderingSettingsPanel::draw() {
         break;
 
     case VELOCITY_PARTICLES:
+        ImGui::Text("Size:");
+        if (ImGui::DragFloat("##ps", &renderer->settings.particleSize, 0.0001f, 0.0)) {
+            renderer->updateParticleSize();
+        }
+
         ImGui::Text("Minimum Velocity:");
         if (ImGui::DragFloat("##vpMinV", &renderer->settings.velocityMin, 0.01f))
             renderer->updateRenderingSettings();
@@ -62,6 +68,11 @@ void RenderingSettingsPanel::draw() {
         break;
 
     case PRESSURE_PARTICLES:
+        ImGui::Text("Size:");
+        if (ImGui::DragFloat("##ps", &renderer->settings.particleSize, 0.0001f, 0.0)) {
+            renderer->updateParticleSize();
+        }
+
         ImGui::Text("Minimum Pressure:");
         if (ImGui::DragFloat("##vpMinP", &renderer->settings.pressureMin, 0.01f))
             renderer->updateRenderingSettings();
@@ -79,11 +90,27 @@ void RenderingSettingsPanel::draw() {
             renderer->updateRenderingSettings();
         break;
 
-    case SOLID_COLOR:
-        ImGui::PushID(SOLID_COLOR);
+    case MARCHING_CUBES:
+        ImGui::PushID(MARCHING_CUBES);
         ImGui::Text("Color:");
-        if (ImGui::ColorEdit3("##scCE", glm::value_ptr(renderer->settings.solidColor)))
-            renderer->updateRenderingSettings();
+        if (ImGui::ColorEdit3("##mcColor", glm::value_ptr(surfaceMesher->settings.color))) {
+            surfaceMesher->updateSettings();
+        }
+
+        ImGui::Text("Resolution:");
+        if (ImGui::DragInt3("##mcResolution", glm::value_ptr(surfaceMesher->settings.resolution), 1, 1, 1024, "%d", ImGuiSliderFlags_AlwaysClamp)) {
+            surfaceMesher->updateVoxelFieldSize();
+        }
+
+        ImGui::Text("Iso Level:");
+        if (ImGui::DragFloat("##mcIsoLevel", &surfaceMesher->settings.isoLevel, 0.001f, -0.499f, 0.5f, "%.3f", ImGuiSliderFlags_AlwaysClamp)) {
+            surfaceMesher->updateSettings();
+        }
+
+        if (ImGui::Checkbox("Smoooth Normals##mcSmoothNormals", &surfaceMesher->settings.smoothNormals)) {
+            surfaceMesher->updateSettings();
+        }
+
         ImGui::PopID();
         break;
     }

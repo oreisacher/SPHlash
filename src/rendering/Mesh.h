@@ -51,12 +51,16 @@ public:
 
     std::vector<Triangle> getTriangles(glm::mat4 model) const;
 
-    // CUDA Interopt
-    cudaGraphicsResource* vboResource = nullptr;
-    cudaGraphicsResource* eboResource = nullptr;
+    cudaGraphicsResource* getVerticesResource() const;
+    cudaGraphicsResource* getIndicesResource() const;
 
-    int maxVertices, maxIndices;
-    int vertexCount, indexCount;
+    void setVertexCount(int vertexCount);
+    int getVertexCount() const;
+    int getMaxVertexCount() const;
+
+    void setIndexCount(int indexCount);
+    int getIndexCount() const;
+    int getMaxIndexCount() const;
 
     // --- Factory ---
     static std::unique_ptr<Mesh> createBox(const std::string& name);
@@ -72,6 +76,13 @@ private:
 
     GLuint vao, vbo, ebo;
     GLenum primitiveMode                 = GL_TRIANGLES;
+
+    int maxVertices = 0, maxIndices = 0;
+    int vertexCount = 0, indexCount = 0;
+
+    // --- CUDA Interopt ---
+    cudaGraphicsResource* verticesResource = nullptr;
+    cudaGraphicsResource* indicesResource  = nullptr;
 };
 
 #endif //SPHLASH_MESH_H

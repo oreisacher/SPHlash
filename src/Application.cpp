@@ -49,18 +49,18 @@ Application::Application() {
     // Rendering
     renderer = FluidRenderer::getInstance();
 
-    surfaceMesher = new FluidSurfaceMesher();
+    surfaceMesher = new FluidSurfaceMesher(scene);
 
     editor = new Editor(scene, simulation);
 
     // Setup UI
     ui = new UIManager(window->getNativeWindow());
     ui->addPanel(new SimulationPanel);
-    ui->addPanel(new ControlPanel);
+    ui->addPanel(new ControlPanel(surfaceMesher));
     ui->addPanel(new StatisticsPanel);
-    ui->addPanel(new InitPanel(editor));
+    ui->addPanel(new InitPanel(editor, surfaceMesher));
     ui->addPanel(new SimulationSettingsPanel(editor));
-    ui->addPanel(new RenderingSettingsPanel);
+    ui->addPanel(new RenderingSettingsPanel(surfaceMesher));
     ui->addPanel(new ParticlesPanel);
     ui->addPanel(new BoundariesPanel);
 
@@ -69,8 +69,6 @@ Application::Application() {
 }
 
 Application::~Application() {
-    // delete simulation;
-    // delete renderer;
     delete surfaceMesher;
     delete ui;
     delete window;

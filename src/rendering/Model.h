@@ -37,6 +37,7 @@ public:
     std::vector<Triangle> getTriangles() const;
 
     int addMaterial(const Material& material);
+    Material& getMaterial(int index);
 
     void setVisible(bool on);
     bool isVisible() const;

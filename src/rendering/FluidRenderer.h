@@ -21,7 +21,7 @@ enum RenderMode {
     SOLID_COLOR_PARTICLES,
     VELOCITY_PARTICLES,
     PRESSURE_PARTICLES,
-    SOLID_COLOR
+    MARCHING_CUBES
 };
 
 struct RenderingSettings {
@@ -43,10 +43,6 @@ struct RenderingSettings {
     glm::vec3 maxPresColor = glm::vec3(1.0f, 0.0f, 0.0f);
     float pressureMin = 0.0f;
     float pressureMax = 1.0f;
-
-    // SOLID_COLOR
-    glm::vec3 solidColor = glm::vec3(1.0, 0.0, 0.0);
-    int3 marchingCubeResolution = make_int3(128, 128, 128);
 };
 
 struct RendererParticle {
@@ -60,8 +56,6 @@ public:
     ~FluidRenderer();
     static FluidRenderer* getInstance();
 
-    // void update();
-
     void render(const Scene& scene) const;
 
     Shader* getParticleShader() const;
@@ -71,11 +65,6 @@ public:
 
     void updateParticleData() const;
     void updateRenderingSettings() const;
-
-    void addModel(const std::string& path);
-    void addModel(Model* model);
-    void removeModel(int index);
-    std::vector<Model*> getModels() const;
 
     void setSurfaceModel(Model* model);
 
@@ -93,9 +82,6 @@ private:
     void setupShaders();
     void setupSphereModel();
     void setupParticles();
-    void setupSpawnAreaModel();
-
-    glm::mat4 calculateModelMatrix(glm::vec3 min, glm::vec3 max);
 
     FluidSimulation* simulation;
 
@@ -112,16 +98,6 @@ private:
 
     // Particle
     GLuint particleVBO;
-
-    // Box Model
-    GLuint boxVAO, boxVBO, boxEBO;
-
-    // --- Models ---
-    std::vector<Model*> editorModels;
-    std::vector<Model*> models;
-
-    Model* spawnAreaModel = nullptr;
-    Model* surfaceModel = nullptr;
 };
 
 #endif //FLUIDSIMSPH_FLUIDRENDERER_H

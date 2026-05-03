@@ -3,10 +3,8 @@
 //
 
 #include "Mesh.h"
-
 #include <cuda_gl_interop.h>
 #include <vector_functions.h>
-
 #include "tiny_obj_loader.h"
 #include "utils/Primitives.h"
 
@@ -19,7 +17,10 @@ Mesh::Mesh(
     : name(name), vertices(vertices), indices(indices), primitiveMode(primitiveMode)
 {
     vertexCount = vertices.size();
+    maxVertices = vertexCount;
+
     indexCount = indices.size();
+    maxIndices = indexCount;
 
     uploadToGPU();
 }
@@ -54,13 +55,14 @@ Mesh::Mesh(const std::string& name, int maxVertices, int maxIndices)
     glBindVertexArray(0);
 
     // Register buffer with CUDA
-    cudaGraphicsGLRegisterBuffer(&vboResource, vbo, cudaGraphicsRegisterFlagsWriteDiscard);
-    cudaGraphicsGLRegisterBuffer(&eboResource, ebo, cudaGraphicsRegisterFlagsWriteDiscard);
+    cudaGraphicsGLRegisterBuffer(&verticesResource, vbo, cudaGraphicsRegisterFlagsWriteDiscard);
+    cudaGraphicsGLRegisterBuffer(&indicesResource, ebo, cudaGraphicsRegisterFlagsWriteDiscard);
 }
 
 Mesh::~Mesh() {
-    if (vboResource) cudaGraphicsUnregisterResource(vboResource);
-    if (eboResource) cudaGraphicsUnregisterResource(eboResource);
+    if (verticesResource) cudaGraphicsUnregisterResource(verticesResource);
+    if (indicesResource) cudaGraphicsUnregisterResource(indicesResource);
+
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &ebo);
@@ -78,6 +80,9 @@ std::string Mesh::getName() const {
 void Mesh::updateMeshData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {
     this->vertices = vertices;
     this->indices = indices;
+
+    vertexCount = vertices.size();
+    indexCount = indices.size();
 
     updateGPU();
 }
@@ -106,6 +111,38 @@ std::vector<Triangle> Mesh::getTriangles(glm::mat4 model) const {
     // }
     //
     // return triangles;
+}
+
+cudaGraphicsResource* Mesh::getVerticesResource() const {
+    return verticesResource;
+}
+
+cudaGraphicsResource* Mesh::getIndicesResource() const {
+    return indicesResource;
+}
+
+void Mesh::setVertexCount(int vertexCount) {
+    this->vertexCount = vertexCount;
+}
+
+int Mesh::getVertexCount() const {
+    return vertexCount;
+}
+
+int Mesh::getMaxVertexCount() const {
+    return maxVertices;
+}
+
+void Mesh::setIndexCount(int indexCount) {
+    this->indexCount = indexCount;
+}
+
+int Mesh::getIndexCount() const {
+    return indexCount;
+}
+
+int Mesh::getMaxIndexCount() const {
+    return maxIndices;
 }
 
 std::unique_ptr<Mesh> Mesh::createBox(const std::string& name) {
@@ -149,8 +186,8 @@ void Mesh::updateGPU() const {
     glBindVertexArray(vao);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertexCount * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 }

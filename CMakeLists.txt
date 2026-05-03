@@ -86,6 +86,7 @@ add_executable(SPHlash
         src/rendering/Editor.h
         src/utils/AABB.cpp
         src/utils/AABB.h
+        src/utils/VoxelField.h
 )
 
 add_library(imgui

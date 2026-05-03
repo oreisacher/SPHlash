@@ -7,22 +7,24 @@
 
 #include "UIPanel.h"
 #include "rendering/FluidRenderer.h"
+#include "rendering/FluidSurfaceMesher.h"
 
 class RenderingSettingsPanel : public UIPanel {
 public:
-    explicit RenderingSettingsPanel();
+    explicit RenderingSettingsPanel(FluidSurfaceMesher* surfaceMesher);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
     FluidRenderer* renderer;
+    FluidSurfaceMesher* surfaceMesher;
 
     static inline const char* renderModes[] {
-        "Color Particles",
+        "Particles",
         "Velocity",
         "Pressure",
-        "Solid Color"
+        "Marching Cubes Surface"
     };
 };
 

@@ -8,11 +8,12 @@
 #include "UIPanel.h"
 #include "rendering/Editor.h"
 #include "rendering/FluidRenderer.h"
+#include "rendering/FluidSurfaceMesher.h"
 #include "simulation/FluidSimulation.h"
 
 class InitPanel : public UIPanel{
 public:
-    explicit InitPanel(Editor* editor);
+    explicit InitPanel(Editor* editor, FluidSurfaceMesher* mesher);
 
     void update(double deltaTime) override;
     void draw() override;
@@ -20,6 +21,7 @@ public:
 private:
     FluidSimulation* simulation;
     FluidRenderer* renderer;
+    FluidSurfaceMesher* mesher;
     Editor* editor;
 
     int particlesToSpawn = 0;

@@ -6,17 +6,19 @@
 #define FLUIDSIMSPH_CONTROLPANEL_H
 
 #include "UIPanel.h"
+#include "rendering/FluidSurfaceMesher.h"
 #include "simulation/FluidSimulation.h"
 
 class ControlPanel : public UIPanel {
 public:
-    explicit ControlPanel();
+    explicit ControlPanel(FluidSurfaceMesher* mesher);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
     FluidSimulation* simulation;
+    FluidSurfaceMesher* mesher;
 
     float timeStep = 0.0;
     float stepSize = 16.666667;

@@ -9,8 +9,8 @@
 #include "imgui_internal.h"
 #include "glm/gtc/type_ptr.inl"
 
-InitPanel::InitPanel(Editor* editor)
-    : UIPanel("Init Settings"), editor(editor)
+InitPanel::InitPanel(Editor* editor, FluidSurfaceMesher* mesher)
+    : UIPanel("Init Settings"), editor(editor), mesher(mesher)
 {
     simulation = FluidSimulation::getInstance();
     renderer = FluidRenderer::getInstance();
@@ -90,6 +90,7 @@ void InitPanel::draw() {
     if (ImGui::Button("Spawn Particles", ImVec2(totalWidth, 0))) {
         simulation->initParticles();
         renderer->updateParticleData();
+        mesher->generateMesh(true);
     }
 
     ImGui::End();

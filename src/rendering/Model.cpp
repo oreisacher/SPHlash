@@ -204,6 +204,14 @@ int Model::addMaterial(const Material& material) {
     return matIndex;
 }
 
+Material& Model::getMaterial(const int index) {
+    if (index < 0 || index >= materials.size()) {
+        std::cerr << "Material index out of bounds" << std::endl;
+    }
+
+    return materials[index];
+}
+
 void Model::setVisible(const bool on) {
     visible = on;
 }

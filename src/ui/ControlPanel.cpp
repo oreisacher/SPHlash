@@ -6,8 +6,8 @@
 #include "imgui.h"
 #include <iostream>
 
-ControlPanel::ControlPanel()
-    : UIPanel("Controls") {
+ControlPanel::ControlPanel(FluidSurfaceMesher* mesher)
+    : UIPanel("Controls"), mesher(mesher) {
     simulation = FluidSimulation::getInstance();
 }
 
@@ -30,11 +30,15 @@ void ControlPanel::draw() {
     if (ImGui::IsKeyPressed(ImGuiKey_Space) && simulation->state != UNINITIALIZED)
         simulation->state == PAUSED ? simulation->start() : simulation->pause();
 
-    if (ImGui::Button("Reset Simulation", ImVec2(totalWidth, 0)))
+    if (ImGui::Button("Reset Simulation", ImVec2(totalWidth, 0))) {
         simulation->reset();
+        mesher->generateMesh(true);
+    }
 
-    if (ImGui::IsKeyPressed(ImGuiKey_R) && simulation->state != UNINITIALIZED)
+    if (ImGui::IsKeyPressed(ImGuiKey_R) && simulation->state != UNINITIALIZED) {
         simulation->reset();
+        mesher->generateMesh(true);
+    }
 
     ImGui::Separator();
 

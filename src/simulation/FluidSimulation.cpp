@@ -38,8 +38,8 @@ FluidSimulation* FluidSimulation::getInstance() {
     return &instance;
 }
 
-void FluidSimulation::update(const float deltaTime) {
-    if (state == UNINITIALIZED || state == PAUSED)
+void FluidSimulation::updateParticles() {
+    if (state == UNINITIALIZED)
         return;
 
     // Reset old data
@@ -86,9 +86,18 @@ void FluidSimulation::update(const float deltaTime) {
         settings.p_0
     );
 
+    std::swap(d_particles, d_sortedParticles);
+}
+
+void FluidSimulation::update(const float deltaTime) {
+    if (state == UNINITIALIZED  || state == PAUSED)
+        return;
+
+    updateParticles();
+
     launchSphForcesKernel(
         particleCount,
-        d_sortedParticles,
+        d_particles,
         d_sortedParticleHashes,
         d_offsets,
         settings.h,
@@ -98,11 +107,11 @@ void FluidSimulation::update(const float deltaTime) {
     );
 
     // --- CFL ---
-    float maxVelocity = getMaxVelocity(particleCount, d_sortedParticles);
+    float maxVelocity = getMaxVelocity(particleCount, d_particles);
     cfl = settings.safetyFactor * settings.h / (maxVelocity + 1e-5f);
 
     launchUpdateParticlesKernel(
-        d_sortedParticles,
+        d_particles,
         particleCount,
         settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
         settings.domainArea.toCudaAABB(),
@@ -115,13 +124,11 @@ void FluidSimulation::update(const float deltaTime) {
 
     launchRenderPrepareKernel(
         particleCount,
-        d_sortedParticles,
+        d_particles,
         d_rendererParticles
     );
 
     cudaGraphicsUnmapResources(1, &rendererResource);
-
-    std::swap(d_particles, d_sortedParticles);
 }
 
 void FluidSimulation::step(float deltaTime) {
@@ -155,6 +162,8 @@ void FluidSimulation::reset() {
         d_particles,
         d_rendererParticles
     );
+
+    updateParticles();
 }
 
 void FluidSimulation::setRendererVBO(const GLuint vbo) {
@@ -179,17 +188,34 @@ void FluidSimulation::setRendererVBO(const GLuint vbo) {
     cudaGraphicsUnmapResources(1, &rendererResource);
 }
 
-void FluidSimulation::updateScalarFieldSize(int3 resolution) {
-    if (voxelField.d_field) cudaFree(voxelField.d_field);
-    if (voxelField.d_normal) cudaFree(voxelField.d_normal);
+bool FluidSimulation::computeVoxelField(const VoxelField& field) const {
+    if (particleCount == 0 || state == UNINITIALIZED)
+        return false;
 
-    int sampleCount = resolution.x * resolution.y * resolution.z;
+    launchVoxelFieldKernel(
+        field,
+        settings.domainArea.toCudaAABB(),
+        particleCount,
+        d_particles,
+        d_sortedParticleHashes,
+        d_offsets,
+        settings.h
+    );
 
-    cudaMalloc(&voxelField.d_field, sampleCount * sizeof(float));
-    cudaMalloc(&voxelField.d_normal, sampleCount * sizeof(float3));
+    return true;
 }
 
-VoxelField FluidSimulation::computeScalarField(const int3 resolution) const {
+// void FluidSimulation::updateVoxelFieldSize(int3 resolution) {
+//     if (voxelField.d_field) cudaFree(voxelField.d_field);
+//     if (voxelField.d_normal) cudaFree(voxelField.d_normal);
+//
+//     int sampleCount = resolution.x * resolution.y * resolution.z;
+//
+//     cudaMalloc(&voxelField.d_field, sampleCount * sizeof(float));
+//     cudaMalloc(&voxelField.d_normal, sampleCount * sizeof(float3));
+// }
+
+// VoxelField FluidSimulation::computeVoxelField(const int3 resolution) const {
     // if (particleCount == 0 || state == PAUSED)
     //     return {};
     //
@@ -206,11 +232,11 @@ VoxelField FluidSimulation::computeScalarField(const int3 resolution) const {
     //     settings.h
     // );
 
-    return {
-        voxelField.d_field,
-        voxelField.d_normal
-    };
-}
+//     return {
+//         voxelField.d_field,
+//         voxelField.d_normal
+//     };
+// }
 
 ParticleGPU FluidSimulation::getParticle(const int id) const {
     ParticleGPU particle;
@@ -417,4 +443,7 @@ void FluidSimulation::initParticles() {
     cudaDeviceSynchronize();
 
     state = PAUSED;
+
+    // Update density, pressure, etc. once to ensure proper marching cubes rendering
+    updateParticles();
 }
