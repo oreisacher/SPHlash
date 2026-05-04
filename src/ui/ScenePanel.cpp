@@ -10,6 +10,7 @@
 #include "misc/cpp/imgui_stdlib.h"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtc/type_ptr.inl"
+#include "rendering/AreaModel.h"
 #include "rendering/Editor.h"
 #include "rendering/ForceModel.h"
 #include "rendering/Scene.h"
@@ -175,11 +176,15 @@ void ScenePanel::draw() {
         if (ImGui::DragFloat3("##modelPos", glm::value_ptr(transform.position), 0.01f)) {
             selectedModel->setTransform(transform);
         }
-        ImGui::Text("Rotation (x, y, z):");
-        if (ImGui::DragFloat3("##modelRot", glm::value_ptr(eulerRotation), 0.01f)) {
-            transform.rotation = glm::quat(glm::radians(eulerRotation));
-            selectedModel->setTransform(transform);
+
+        if (!dynamic_cast<AreaModel*>(selectedModel)) {
+            ImGui::Text("Rotation (x, y, z):");
+            if (ImGui::DragFloat3("##modelRot", glm::value_ptr(eulerRotation), 0.01f)) {
+                transform.rotation = glm::quat(glm::radians(eulerRotation));
+                selectedModel->setTransform(transform);
+            }
         }
+
         ImGui::Text("Scale (x, y, z):");
         if (ImGui::DragFloat3("##modelScl", glm::value_ptr(transform.scale), 0.01f)) {
             selectedModel->setTransform(transform);
