@@ -12,9 +12,9 @@
 #include "utils/SphereCreator.h"
 #include <vector>
 
-FluidRenderer::FluidRenderer() {
-    simulation = FluidSimulation::getInstance();
-
+FluidRenderer::FluidRenderer(Scene& scene, FluidSimulation* simulation)
+    : simulation(simulation)
+{
     // Setup OpenGL State
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -24,26 +24,13 @@ FluidRenderer::FluidRenderer() {
     framebuffer->addColorAttachment();
     framebuffer->addDepthBuffer();
 
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    // Setup sphere
-    setupSphereModel();
-
-    // Setup particle
-    setupParticles();
-
-    // Setup shaders
-    setupShaders();
+    // Setup particles
+    setupParticles(scene);
+    updateRenderingSettings();
 }
 
 FluidRenderer::~FluidRenderer() {
     delete framebuffer;
-}
-
-FluidRenderer* FluidRenderer::getInstance() {
-    static FluidRenderer instance;
-    return &instance;
 }
 
 void FluidRenderer::render(const Scene& scene) const {
@@ -57,16 +44,6 @@ void FluidRenderer::render(const Scene& scene) const {
     auto view = camera->getViewMatrix();
     auto projection = camera->getProjectionMatrix();
 
-    // Draw particles if particles are there and no marching cubes is active
-    if (simulation->particleCount != 0 && settings.mode != MARCHING_CUBES) {
-        particleShader->bind();
-        particleShader->setMat4("projection", camera->getProjectionMatrix());
-        particleShader->setMat4("view", camera->getViewMatrix());
-
-        glBindVertexArray(vao);
-        glDrawElementsInstanced(GL_TRIANGLES, sphereIndexCount, GL_UNSIGNED_INT, 0, simulation->particleCount);
-    }
-
     for (const auto model : scene.getModels()) {
         if (!model->isVisible())
             continue;
@@ -77,10 +54,6 @@ void FluidRenderer::render(const Scene& scene) const {
 
 Shader* FluidRenderer::getParticleShader() const {
     return particleShader;
-}
-
-Shader* FluidRenderer::getBoundaryShader() const {
-    return boxShader;
 }
 
 void FluidRenderer::updateParticleSize() const {
@@ -100,49 +73,25 @@ void FluidRenderer::setSize(int width, int height) const {
 
 GLuint FluidRenderer::getParticleVBO() const { return particleVBO; }
 
-void FluidRenderer::setupShaders() {
-    // Particle Shader
-    particleShader = new Shader({
-        { "assets/shaders/default.vert", Shader::VERTEX },
-        { "assets/shaders/default.frag", Shader::FRAGMENT },
-    });
+void FluidRenderer::setupParticles(Scene& scene) {
+    // Create particle model
+    auto particleModel = std::make_unique<Model>(
+        "Particle",
+        Mesh::createSphere("Particle Mesh", 4, 2)
+    );
+    this->particleModel = particleModel.get();
 
-    particleShader->compile();
-    particleShader->bind();
+    Material particleMaterial("Particle", Shader::createParticle());
+    this->particleShader = particleMaterial.getShader();
 
-    // Set default settings
-    particleShader->setInt("mode", settings.mode);
-    particleShader->setFloat("size", settings.particleSize);
-    particleShader->setVec3("particleColor", settings.solidColorParticles);
-}
+    particleModel->addMaterial(particleMaterial);
+    particleModel->setVisible(false);
 
-void FluidRenderer::setupSphereModel() {
-    // Generate mesh data for sphere
-    std::vector<SphereVertex> vertices;
-    std::vector<unsigned int> indices;
-    createSphere(vertices, indices, 4, 2);
-    sphereIndexCount = indices.size();
+    scene.addModel(std::move(particleModel));
 
-    // Vertex buffer
-    glGenBuffers(1, &sphereVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, sphereVBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(SphereVertex), vertices.data(), GL_STATIC_DRAW);
+    // Setup instancing data
+    glBindVertexArray(this->particleModel->getMeshes()[0]->getVAO());
 
-    // Index buffer
-    glGenBuffers(1, &sphereEBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sphereEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
-
-    // Position
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(SphereVertex), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    // Normal
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(SphereVertex), (void*)offsetof(SphereVertex, normal));
-    glEnableVertexAttribArray(1);
-}
-
-void FluidRenderer::setupParticles() {
     glGenBuffers(1, &particleVBO);
     glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
 
@@ -158,25 +107,23 @@ void FluidRenderer::setupParticles() {
     glEnableVertexAttribArray(4);
     glVertexAttribDivisor(4, 1);
 
-    // glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, flags));
-    // glEnableVertexAttribArray(5);
-    // glVertexAttribDivisor(5, 1)
-    //
-    // glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleGPU), (void*)offsetof(ParticleGPU, debugging));
-    // glEnableVertexAttribArray(6);
-    // glVertexAttribDivisor(6, 1);
+    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(RendererParticle), (void*)offsetof(RendererParticle, flags));
+    glEnableVertexAttribArray(5);
+    glVertexAttribDivisor(5, 1);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-    // simulation->setRendererVBO(particleVBO);
 }
 
 void FluidRenderer::updateParticleData() const {
     glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(RendererParticle) * simulation->particleCount, nullptr, GL_DYNAMIC_DRAW);
     simulation->setRendererVBO(particleVBO);
+    particleModel->setInstanceCount(simulation->particleCount);
+    particleModel->setVisible(true);
 }
 
 void FluidRenderer::updateRenderingSettings() const {
+    // Update particle shader
     particleShader->bind();
 
     particleShader->setInt("mode", settings.mode);
@@ -193,4 +140,9 @@ void FluidRenderer::updateRenderingSettings() const {
     particleShader->setVec3("maxPresColor", settings.maxPresColor);
     particleShader->setFloat("minPres", settings.pressureMin);
     particleShader->setFloat("maxPres", settings.pressureMax);
+
+    // Update particle visibility
+    if (simulation->state != UNINITIALIZED) {
+        particleModel->setVisible(settings.mode != MARCHING_CUBES);
+    }
 }

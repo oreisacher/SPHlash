@@ -6,6 +6,7 @@
 #define SPHLASH_MODEL_H
 
 #include <string>
+
 #include "Material.h"
 #include "Mesh.h"
 #include "Shader.h"
@@ -36,11 +37,15 @@ public:
 
     std::vector<Triangle> getTriangles() const;
 
+    std::vector<Mesh*> getMeshes() const;
+
     int addMaterial(const Material& material);
     Material& getMaterial(int index);
 
     void setVisible(bool on);
     bool isVisible() const;
+
+    void setInstanceCount(int c);
 
     // --- Factory ---
     static std::unique_ptr<Model> createCubeModel(const std::string& name);
@@ -54,6 +59,8 @@ private:
 
     std::vector<std::unique_ptr<Mesh>> meshes   = {};
     std::vector<Material> materials             = {};
+
+    int instanceCount = 0;
 };
 
 #endif //SPHLASH_MODEL_H

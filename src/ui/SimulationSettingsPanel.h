@@ -8,12 +8,10 @@
 #include "UIPanel.h"
 #include "rendering/Editor.h"
 #include "rendering/FluidRenderer.h"
-#include "simulation/FluidSimulation.h"
-#include "simulation/FluidSimulation.h"
 
 class SimulationSettingsPanel : public UIPanel {
 public:
-    explicit SimulationSettingsPanel(Editor* editor);
+    explicit SimulationSettingsPanel(Editor* editor, FluidSimulation* simulation, FluidRenderer* renderer);
 
     void update(double deltaTime) override;
     void draw() override;

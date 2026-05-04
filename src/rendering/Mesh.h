@@ -9,7 +9,6 @@
 #include <memory>
 #include <string>
 #include <vector_types.h>
-
 #include "glad/gl.h"
 #include "glm/glm.hpp"
 
@@ -41,6 +40,7 @@ public:
     ~Mesh();
 
     void draw() const;
+    void drawInstanced(int count) const;
 
     std::string getName() const;
 
@@ -62,8 +62,11 @@ public:
     int getIndexCount() const;
     int getMaxIndexCount() const;
 
+    GLuint getVAO() const;
+
     // --- Factory ---
     static std::unique_ptr<Mesh> createBox(const std::string& name);
+    static std::unique_ptr<Mesh> createSphere(const std::string& name, int sectorCount, int stackCount);
 private:
     void uploadToGPU();
     void updateGPU() const;

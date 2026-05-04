@@ -201,3 +201,16 @@ std::shared_ptr<Shader> Shader::createBox() {
 
     return shader;
 }
+
+std::shared_ptr<Shader> Shader::createParticle() {
+    auto shader = std::make_shared<Shader>(
+        std::initializer_list<std::pair<std::string, Type>>({
+            { "assets/shaders/particle.vert", VERTEX },
+            { "assets/shaders/particle.frag", FRAGMENT }
+        })
+    );
+
+    shader->compile();
+
+    return shader;
+}

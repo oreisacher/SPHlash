@@ -12,11 +12,9 @@
 #include "glm/gtc/type_ptr.inl"
 #include "simulation/FluidSimulation.h"
 
-SimulationSettingsPanel::SimulationSettingsPanel(Editor* editor)
-    : UIPanel("Simulation Settings"), editor(editor) {
-    simulation  = FluidSimulation::getInstance();
-    renderer    = FluidRenderer::getInstance();
-}
+SimulationSettingsPanel::SimulationSettingsPanel(Editor* editor, FluidSimulation* simulation, FluidRenderer* renderer)
+    : UIPanel("Simulation Settings"), editor(editor), simulation(simulation), renderer(renderer)
+{ }
 
 void SimulationSettingsPanel::update(double deltaTime) { }
 

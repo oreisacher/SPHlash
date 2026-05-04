@@ -13,7 +13,7 @@
 
 class ParticlesPanel : public UIPanel {
 public:
-    explicit ParticlesPanel();
+    explicit ParticlesPanel(FluidSimulation* simulation, FluidRenderer* renderer);
 
     void update(double deltaTime) override;
     void draw() override;

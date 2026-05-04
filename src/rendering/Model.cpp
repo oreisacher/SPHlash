@@ -139,7 +139,11 @@ void Model::draw(const glm::mat4& view, const glm::mat4& projection) const {
             material.getShader()->setMat4("model", modelMatrix);
 
             // Draw mesh
-            mesh->draw();
+            if (instanceCount > 0) {
+                mesh->drawInstanced(instanceCount);
+            } else {
+                mesh->draw();
+            }
         } else {
             std::cerr << "Mesh " << mesh->getName() << " does not have a material" << std::endl;
         }
@@ -198,6 +202,16 @@ std::vector<Triangle> Model::getTriangles() const {
     return triangles;
 }
 
+std::vector<Mesh*> Model::getMeshes() const {
+    std::vector<Mesh*> rawMeshes;
+    rawMeshes.reserve(meshes.size());
+
+    for (auto& m : meshes)
+        rawMeshes.push_back(m.get());
+
+    return rawMeshes;
+}
+
 int Model::addMaterial(const Material& material) {
     int matIndex = materials.size();
     materials.push_back(material);
@@ -218,6 +232,10 @@ void Model::setVisible(const bool on) {
 
 bool Model::isVisible() const {
     return visible;
+}
+
+void Model::setInstanceCount(int c) {
+    instanceCount = c;
 }
 
 std::unique_ptr<Model> Model::createCubeModel(const std::string& name) {

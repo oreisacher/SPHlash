@@ -21,6 +21,7 @@ enum RenderMode {
     SOLID_COLOR_PARTICLES,
     VELOCITY_PARTICLES,
     PRESSURE_PARTICLES,
+    SURFACE_PARTICLES,
     MARCHING_CUBES
 };
 
@@ -38,7 +39,7 @@ struct RenderingSettings {
     float velocityMin = 0.0f;
     float velocityMax = 1.0f;
 
-    // VELOCITY_PARTICLES
+    // PRESSURE_PARTICLES
     glm::vec3 minPresColor = glm::vec3(0.0f, 0.0f, 1.0f);
     glm::vec3 maxPresColor = glm::vec3(1.0f, 0.0f, 0.0f);
     float pressureMin = 0.0f;
@@ -49,24 +50,22 @@ struct RendererParticle {
     float4 position;
     float4 velocity;
     float4 properties;
+    float4 flags;
 };
 
 class FluidRenderer {
 public:
+    FluidRenderer(Scene& scene, FluidSimulation* simulation);
     ~FluidRenderer();
-    static FluidRenderer* getInstance();
 
     void render(const Scene& scene) const;
 
     Shader* getParticleShader() const;
-    Shader* getBoundaryShader() const;
 
     void updateParticleSize() const;
 
     void updateParticleData() const;
     void updateRenderingSettings() const;
-
-    void setSurfaceModel(Model* model);
 
     // Framebuffer texture
     GLuint getTextureId() const;
@@ -77,24 +76,14 @@ public:
     RenderingSettings settings;
 
 private:
-    FluidRenderer();
-
-    void setupShaders();
-    void setupSphereModel();
-    void setupParticles();
+    void setupParticles(Scene& scene);
 
     FluidSimulation* simulation;
 
+    Model* particleModel                = nullptr;
     Shader* particleShader;
-    Shader* boxShader;
-    Shader* modelShader;
 
     Framebuffer* framebuffer;
-    GLuint vao;
-
-    // Sphere
-    GLuint sphereVBO, sphereEBO;
-    int sphereIndexCount;
 
     // Particle
     GLuint particleVBO;

@@ -200,13 +200,6 @@ __global__ void densityPressureKernel(
     if (id >= numParticles)
         return;
 
-    // Boundary particles
-    if (particles[id].flags.x == 0.0) {
-        particles[id].properties.y = 1000;
-        particles[id].properties.z = 0.0;
-        return;
-    }
-
     float4 pos = particles[id].position;
 
     // Get cell of particle
@@ -288,10 +281,6 @@ __global__ void sphForcesKernel(
     if (id >= numParticles)
         return;
 
-    if (particles[id].flags.x == 0.0) {
-        return;
-    }
-
     // int pi = particleIndex[id];
     ParticleGPU* particle = &particles[id];
 
@@ -363,13 +352,15 @@ __global__ void sphForcesKernel(
 
     particle->pressureForce = -1.0f * particle->pressureForce;
     particle->viscosityForce = mu * particle->viscosityForce;
-    particle->debugging.x = 0.0f;
+
+    // Flag for surface particle
+    particle->flags.x = 0.0f;
 
     float lenN = sqrtf(n.x * n.x + n.y * n.y + n.z * n.z);
     if (lenN > tensionThreshold) {
         float4 normalizedN = n / (lenN + 1e-6f);
         particle->surfaceTensionForce = -1.0f * tension * c * normalizedN;
-        particle->debugging.x = lenN;
+        particle->flags.x = 1.0f;
     }
 }
 
@@ -430,10 +421,6 @@ __global__ void updateParticlesKernel(
         return;
 
     ParticleGPU* particle = &particles[id];
-
-    // Skip ghost particles
-    if (particle->flags.x == 0.0)
-        return;
 
     // Update position
     const float4 force = particle->pressureForce + particle->viscosityForce + particle->surfaceTensionForce;
@@ -507,6 +494,7 @@ __global__ void renderPrepareKernel(
     rendererParticles[id].position = particles[id].position;
     rendererParticles[id].velocity = particles[id].velocity;
     rendererParticles[id].properties = particles[id].properties;
+    rendererParticles[id].flags = particles[id].flags;
 }
 
 void launchRenderPrepareKernel(
@@ -549,7 +537,7 @@ __global__ void initParticlesKernel(
     particle->startPosition = particle->position;
     particle->velocity = { 0.0, 0.0, 0.0, 0.0 };
     particle->properties = { mass, 0.0, 0.0, 0.0 };
-    particle->flags = { NORMAL, 0.0, 0.0, 0.0 };
+    particle->flags = { 0.0, 0.0, 0.0, 0.0 };
     particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     particle->surfaceTensionForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);

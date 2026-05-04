@@ -11,7 +11,7 @@
 
 class ControlPanel : public UIPanel {
 public:
-    explicit ControlPanel(FluidSurfaceMesher* mesher);
+    explicit ControlPanel(FluidSimulation* simulation, FluidSurfaceMesher* mesher);
 
     void update(double deltaTime) override;
     void draw() override;

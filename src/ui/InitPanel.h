@@ -13,7 +13,7 @@
 
 class InitPanel : public UIPanel{
 public:
-    explicit InitPanel(Editor* editor, FluidSurfaceMesher* mesher);
+    explicit InitPanel(Editor* editor, FluidSimulation* simulation, FluidRenderer* renderer, FluidSurfaceMesher* mesher);
 
     void update(double deltaTime) override;
     void draw() override;

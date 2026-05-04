@@ -21,7 +21,7 @@ struct PanelEvent {
 
 class SimulationPanel : public UIPanel {
 public:
-    explicit SimulationPanel();
+    explicit SimulationPanel(GLuint textureId);
 
     void update(double deltaTime) override;
     void draw() override;

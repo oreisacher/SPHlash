@@ -11,7 +11,7 @@
 
 class RenderingSettingsPanel : public UIPanel {
 public:
-    explicit RenderingSettingsPanel(FluidSurfaceMesher* surfaceMesher);
+    explicit RenderingSettingsPanel(FluidRenderer* renderer, FluidSurfaceMesher* surfaceMesher);
 
     void update(double deltaTime) override;
     void draw() override;
@@ -21,9 +21,10 @@ private:
     FluidSurfaceMesher* surfaceMesher;
 
     static inline const char* renderModes[] {
-        "Particles",
-        "Velocity",
-        "Pressure",
+        "Particles - Solid Color",
+        "Particles - Velocity",
+        "Particles - Pressure",
+        "Particles - Surface",
         "Marching Cubes Surface"
     };
 };

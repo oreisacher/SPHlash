@@ -7,9 +7,8 @@
 #include <format>
 #include "imgui.h"
 
-StatisticsPanel::StatisticsPanel()
-    : UIPanel("Statistics") {
-    simulation = FluidSimulation::getInstance();
+StatisticsPanel::StatisticsPanel(FluidSimulation* simulation)
+    : UIPanel("Statistics"), simulation(simulation) {
 }
 
 void StatisticsPanel::update(double deltaTime) {

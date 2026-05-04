@@ -16,6 +16,7 @@ public:
 
     void addModel(std::unique_ptr<Model> model);
     void removeModel(const Model* model);
+    void removeModel(const int index);
     void removeModel(const std::string& name);
 
     std::vector<Model*> getModels() const;

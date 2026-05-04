@@ -80,13 +80,13 @@ add_executable(SPHlash
     src/utils/Primitives.h
     src/rendering/Material.cpp
     src/rendering/Material.h
-        src/rendering/Scene.cpp
-        src/rendering/Scene.h
-        src/rendering/Editor.cpp
-        src/rendering/Editor.h
-        src/utils/AABB.cpp
-        src/utils/AABB.h
-        src/utils/VoxelField.h
+    src/rendering/Scene.cpp
+    src/rendering/Scene.h
+    src/rendering/Editor.cpp
+    src/rendering/Editor.h
+    src/utils/AABB.cpp
+    src/utils/AABB.h
+    src/utils/VoxelField.h
 )
 
 add_library(imgui

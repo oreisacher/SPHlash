@@ -7,13 +7,8 @@
 
 #include "glm/glm.hpp"
 
-struct SphereVertex {
-    glm::vec3 position;
-    glm::vec3 normal;
-};
-
-inline void createSphere(
-    std::vector<SphereVertex>& vertices,
+inline void createSphereData(
+    std::vector<Vertex>& vertices,
     std::vector<unsigned int>& indices,
     int sectorCount = 16,
     int stackCount = 16
@@ -31,9 +26,11 @@ inline void createSphere(
             float x = xy * cos(sectorAngle);
             float y = xy * sin(sectorAngle);
 
-            SphereVertex v;
-            v.position = glm::vec3(x, y, z);
-            v.normal   = glm::normalize(v.position);
+            glm::vec3 normal = glm::normalize(glm::vec3(x, y, z));
+
+            Vertex v;
+            v.position = { x, y, z };
+            v.normal   = { normal.x, normal.y, normal.z };
 
             vertices.push_back(v);
         }

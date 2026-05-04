@@ -33,11 +33,6 @@ FluidSimulation::~FluidSimulation() {
     cudaGraphicsUnmapResources(1, &rendererResource, nullptr);
 }
 
-FluidSimulation* FluidSimulation::getInstance() {
-    static FluidSimulation instance;
-    return &instance;
-}
-
 void FluidSimulation::updateParticles() {
     if (state == UNINITIALIZED)
         return;
@@ -86,6 +81,17 @@ void FluidSimulation::updateParticles() {
         settings.p_0
     );
 
+    launchSphForcesKernel(
+        particleCount,
+        d_sortedParticles,
+        d_sortedParticleHashes,
+        d_offsets,
+        settings.h,
+        settings.mu,
+        settings.tensionThreshold,
+        settings.tension
+    );
+
     std::swap(d_particles, d_sortedParticles);
 }
 
@@ -94,17 +100,6 @@ void FluidSimulation::update(const float deltaTime) {
         return;
 
     updateParticles();
-
-    launchSphForcesKernel(
-        particleCount,
-        d_particles,
-        d_sortedParticleHashes,
-        d_offsets,
-        settings.h,
-        settings.mu,
-        settings.tensionThreshold,
-        settings.tension
-    );
 
     // --- CFL ---
     float maxVelocity = getMaxVelocity(particleCount, d_particles);
@@ -156,14 +151,14 @@ void FluidSimulation::reset() {
 
     launchResetParticlesKernel(d_particles, particleCount);
 
+    updateParticles();
+
     // Copy reset data to renderer vbo
     launchRenderPrepareKernel(
         particleCount,
         d_particles,
         d_rendererParticles
     );
-
-    updateParticles();
 }
 
 void FluidSimulation::setRendererVBO(const GLuint vbo) {
@@ -252,43 +247,43 @@ ParticleGPU FluidSimulation::getParticle(const int id) const {
 }
 
 void FluidSimulation::calculateDensityMap() {
-    // Get triangle data
-    std::vector<Triangle> meshTriangles;
-
-    for (auto model : FluidRenderer::getInstance()->getModels()) {
-        auto modelTriangles = model->getTriangles();
-        meshTriangles.insert(meshTriangles.end(), modelTriangles.begin(), modelTriangles.end());
-    }
-
-    std::cout << meshTriangles.size() << std::endl;
-
-    Triangle* d_triangles;
-    cudaMalloc(&d_triangles, meshTriangles.size() * sizeof(Triangle));
-    cudaMemcpy(d_triangles, meshTriangles.data(), meshTriangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
-
-    // SDF
-    int sdfResolution = 64;
-
-    float* d_sdf;
-    cudaMalloc(&d_sdf, sdfResolution * sdfResolution * sdfResolution * sizeof(float));
-
-    glm::vec3 gridMin = { 0.0, 0.0, 0.0f };
-    glm::vec3 gridMax = { 1.0, 1.0, 1.0f };
-
-    launchSdfKernel(
-        meshTriangles.size(),
-        d_triangles,
-        d_sdf,
-        sdfResolution * sdfResolution * sdfResolution,
-        sdfResolution,
-        { gridMin.x, gridMin.y, gridMin.z },
-        { gridMax.x, gridMax.y, gridMax.z }
-    );
-
-    std::vector<float> sdf(sdfResolution * sdfResolution * sdfResolution);
-    cudaMemcpy(sdf.data(), d_sdf, sdf.size() * sizeof(float), cudaMemcpyDeviceToHost);
-
-    cudaDeviceSynchronize();
+    // // Get triangle data
+    // std::vector<Triangle> meshTriangles;
+    //
+    // for (auto model : FluidRenderer::getInstance()->getModels()) {
+    //     auto modelTriangles = model->getTriangles();
+    //     meshTriangles.insert(meshTriangles.end(), modelTriangles.begin(), modelTriangles.end());
+    // }
+    //
+    // std::cout << meshTriangles.size() << std::endl;
+    //
+    // Triangle* d_triangles;
+    // cudaMalloc(&d_triangles, meshTriangles.size() * sizeof(Triangle));
+    // cudaMemcpy(d_triangles, meshTriangles.data(), meshTriangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
+    //
+    // // SDF
+    // int sdfResolution = 64;
+    //
+    // float* d_sdf;
+    // cudaMalloc(&d_sdf, sdfResolution * sdfResolution * sdfResolution * sizeof(float));
+    //
+    // glm::vec3 gridMin = { 0.0, 0.0, 0.0f };
+    // glm::vec3 gridMax = { 1.0, 1.0, 1.0f };
+    //
+    // launchSdfKernel(
+    //     meshTriangles.size(),
+    //     d_triangles,
+    //     d_sdf,
+    //     sdfResolution * sdfResolution * sdfResolution,
+    //     sdfResolution,
+    //     { gridMin.x, gridMin.y, gridMin.z },
+    //     { gridMax.x, gridMax.y, gridMax.z }
+    // );
+    //
+    // std::vector<float> sdf(sdfResolution * sdfResolution * sdfResolution);
+    // cudaMemcpy(sdf.data(), d_sdf, sdf.size() * sizeof(float), cudaMemcpyDeviceToHost);
+    //
+    // cudaDeviceSynchronize();
 
     // Marching cubes
     // float3 cellSize = make_float3(

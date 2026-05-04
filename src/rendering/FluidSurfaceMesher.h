@@ -18,13 +18,13 @@ struct MesherSettings {
 
 class FluidSurfaceMesher {
 public:
-    FluidSurfaceMesher(Scene& scene);
+    FluidSurfaceMesher(Scene& scene, FluidSimulation* simulation, FluidRenderer* renderer);
     ~FluidSurfaceMesher();
 
     void generateMesh(bool force = false) const;
     void updateVoxelFieldSize();
 
-    void updateSettings();
+    void updateSettings() const;
 
     MesherSettings settings;
 private:

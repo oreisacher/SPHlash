@@ -6,9 +6,8 @@
 #include "imgui.h"
 #include <iostream>
 
-ControlPanel::ControlPanel(FluidSurfaceMesher* mesher)
-    : UIPanel("Controls"), mesher(mesher) {
-    simulation = FluidSimulation::getInstance();
+ControlPanel::ControlPanel(FluidSimulation* simulation, FluidSurfaceMesher* mesher)
+    : UIPanel("Controls"), simulation(simulation), mesher(mesher) {
 }
 
 void ControlPanel::update(double deltaTime) { }

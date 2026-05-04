@@ -9,10 +9,9 @@
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtc/type_ptr.inl"
 
-BoundariesPanel::BoundariesPanel()
-    : UIPanel("Boundaries") {
-    renderer = FluidRenderer::getInstance();
-}
+BoundariesPanel::BoundariesPanel(Scene& scene, FluidRenderer* renderer)
+    : UIPanel("Boundaries"), renderer(renderer), scene(&scene)
+{ }
 
 void BoundariesPanel::update(double deltaTime) { }
 
@@ -29,14 +28,14 @@ void BoundariesPanel::draw() {
         if (ImGuiFileDialog::Instance()->Display("LoadModel")) {
             if (ImGuiFileDialog::Instance()->IsOk()) {
                 std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-                renderer->addModel(filePathName.c_str());
+                scene->addModel(std::make_unique<Model>(filePathName.c_str()));
             }
 
             ImGuiFileDialog::Instance()->Close();
         }
 
         // --- Scene ---
-        std::vector<Model*> models = renderer->getModels();
+        std::vector<Model*> models = scene->getModels();
 
         if (ImGui::BeginTable("Models", 2, ImGuiTableFlags_SizingStretchProp)) {
             ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch);
@@ -83,7 +82,7 @@ void BoundariesPanel::draw() {
                         selectedTransform = nullptr;
                     }
 
-                    renderer->removeModel(i);
+                    scene->removeModel(i);
                 }
                 ImGui::PopID();
             }

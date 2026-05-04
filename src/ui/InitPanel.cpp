@@ -9,12 +9,9 @@
 #include "imgui_internal.h"
 #include "glm/gtc/type_ptr.inl"
 
-InitPanel::InitPanel(Editor* editor, FluidSurfaceMesher* mesher)
-    : UIPanel("Init Settings"), editor(editor), mesher(mesher)
+InitPanel::InitPanel(Editor* editor, FluidSimulation* simulation, FluidRenderer* renderer, FluidSurfaceMesher* mesher)
+    : UIPanel("Init Settings"), simulation(simulation), renderer(renderer), mesher(mesher), editor(editor)
 {
-    simulation = FluidSimulation::getInstance();
-    renderer = FluidRenderer::getInstance();
-
     recalculateParticles();
 }
 

@@ -10,13 +10,14 @@
 
 class BoundariesPanel : public UIPanel {
 public:
-    explicit BoundariesPanel();
+    explicit BoundariesPanel(Scene& scene, FluidRenderer* renderer);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
     FluidRenderer* renderer;
+    Scene* scene;
 
     int selected = -1;
     Model* selectedModel = nullptr;

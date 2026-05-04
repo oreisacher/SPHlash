@@ -6,9 +6,7 @@
 #include "imgui.h"
 #include "../rendering/FluidRenderer.h"
 
-SimulationPanel::SimulationPanel() : UIPanel("Simulation") {
-    texture = FluidRenderer::getInstance()->getTextureId();
-}
+SimulationPanel::SimulationPanel(GLuint textureId) : UIPanel("Simulation"), texture(textureId) { }
 
 void SimulationPanel::update(double deltaTime) {
     events.clear();

@@ -9,9 +9,8 @@
 #include "imgui.h"
 #include "glm/gtc/type_ptr.hpp"
 
-RenderingSettingsPanel::RenderingSettingsPanel(FluidSurfaceMesher* surfaceMesher)
-    : UIPanel("Rendering Settings"), surfaceMesher(surfaceMesher) {
-    renderer = FluidRenderer::getInstance();
+RenderingSettingsPanel::RenderingSettingsPanel(FluidRenderer* renderer, FluidSurfaceMesher* surfaceMesher)
+    : UIPanel("Rendering Settings"), renderer(renderer), surfaceMesher(surfaceMesher) {
 }
 
 void RenderingSettingsPanel::update(double deltaTime) { }

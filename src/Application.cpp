@@ -44,31 +44,32 @@ Application::Application() {
     }
 
     // Simulation
-    simulation = FluidSimulation::getInstance();
+    simulation = new FluidSimulation();
 
     // Rendering
-    renderer = FluidRenderer::getInstance();
+    renderer = new FluidRenderer(scene, simulation);
 
-    surfaceMesher = new FluidSurfaceMesher(scene);
+    surfaceMesher = new FluidSurfaceMesher(scene, simulation, renderer);
 
     editor = new Editor(scene, simulation);
 
     // Setup UI
     ui = new UIManager(window->getNativeWindow());
-    ui->addPanel(new SimulationPanel);
-    ui->addPanel(new ControlPanel(surfaceMesher));
-    ui->addPanel(new StatisticsPanel);
-    ui->addPanel(new InitPanel(editor, surfaceMesher));
-    ui->addPanel(new SimulationSettingsPanel(editor));
-    ui->addPanel(new RenderingSettingsPanel(surfaceMesher));
-    ui->addPanel(new ParticlesPanel);
-    ui->addPanel(new BoundariesPanel);
+    ui->addPanel(new SimulationPanel            (renderer->getTextureId()));
+    ui->addPanel(new ControlPanel               (simulation, surfaceMesher));
+    ui->addPanel(new StatisticsPanel            (simulation));
+    ui->addPanel(new InitPanel                  (editor, simulation, renderer, surfaceMesher));
+    ui->addPanel(new SimulationSettingsPanel    (editor, simulation, renderer));
+    ui->addPanel(new RenderingSettingsPanel     (renderer, surfaceMesher));
+    ui->addPanel(new ParticlesPanel             (simulation, renderer));
+    ui->addPanel(new BoundariesPanel            (scene, renderer));
 
     // Setup scene
     scene.setCamera(std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 1.0f)));
 }
 
 Application::~Application() {
+    delete simulation;
     delete surfaceMesher;
     delete ui;
     delete window;

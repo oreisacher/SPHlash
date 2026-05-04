@@ -13,11 +13,6 @@
 #include "utils/AABB.h"
 #include "utils/VoxelField.h"
 
-enum ParticleType {
-    GHOST   = 0,
-    NORMAL  = 1
-};
-
 enum SimulationState {
     UNINITIALIZED,
     PAUSED,
@@ -25,11 +20,11 @@ enum SimulationState {
 };
 
 struct ParticleGPU {
-    float4 position                 = { 0.0f, 0.0f, 0.0f, 0.0f };   // vec4 to avoid padding issues
+    float4 position                 = { 0.0f, 0.0f, 0.0f, 0.0f };       // vec4 to avoid padding issues
     float4 startPosition            = { 0.0f, 0.0f, 0.0f, 0.0f };
     float4 velocity                 = { 0.0f, 0.0f, 0.0f, 0.0f };
     float4 properties               = { -1.0f, -1.0f, -1.0f, -1.0f };   // x: mass, y: density, z: pressure, w: id
-    float4 flags                    = { 0.0f, 0.0f, 0.0f, 0.0f };   // x: type, y: undefined, z: undefined, w: undefined
+    float4 flags                    = { 0.0f, 0.0f, 0.0f, 0.0f };       // x: surface, y: undefined, z: undefined, w: undefined
 
     // SPH Forces
     float4 pressureForce            = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -77,7 +72,8 @@ struct SimulationSettings {
 
 class FluidSimulation {
 public:
-    static FluidSimulation* getInstance();
+    FluidSimulation();
+    ~FluidSimulation();
 
     /*
      * Calculates density, pressure, etc. values for the current particles.
@@ -116,9 +112,6 @@ public:
     // --- Simulation State ---
     SimulationState state = UNINITIALIZED;
 private:
-    FluidSimulation();
-    ~FluidSimulation();
-
     // --- Particles ---
     ParticleGPU* d_particles            = nullptr;
     ParticleGPU* d_sortedParticles      = nullptr;
@@ -138,7 +131,7 @@ private:
 
     // --- Rendering ---
     cudaGraphicsResource* rendererResource = nullptr;
-    RendererParticle* d_rendererParticles = nullptr;
+    RendererParticle* d_rendererParticles  = nullptr;
 
     void calculateDensityMap();
 };

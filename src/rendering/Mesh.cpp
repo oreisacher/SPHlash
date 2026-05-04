@@ -7,6 +7,7 @@
 #include <vector_functions.h>
 #include "tiny_obj_loader.h"
 #include "utils/Primitives.h"
+#include "utils/SphereCreator.h"
 
 Mesh::Mesh(
     const std::string& name,
@@ -71,6 +72,11 @@ Mesh::~Mesh() {
 void Mesh::draw() const {
     glBindVertexArray(vao);
     glDrawElements(primitiveMode, indexCount, GL_UNSIGNED_INT, nullptr);
+}
+
+void Mesh::drawInstanced(int count) const {
+    glBindVertexArray(vao);
+    glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0, count);
 }
 
 std::string Mesh::getName() const {
@@ -145,12 +151,29 @@ int Mesh::getMaxIndexCount() const {
     return maxIndices;
 }
 
+GLuint Mesh::getVAO() const {
+    return vao;
+}
+
 std::unique_ptr<Mesh> Mesh::createBox(const std::string& name) {
     return std::make_unique<Mesh>(
         name,
         Primitives::BoxGeometry::GetVertices(),
         Primitives::BoxGeometry::GetWireframeIndices(),
         GL_LINES
+    );
+}
+
+std::unique_ptr<Mesh> Mesh::createSphere(const std::string& name, int sectorCount, int stackCount) {
+    // Generate mesh data for sphere
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+    createSphereData(vertices, indices, 4, 2);
+
+    return std::make_unique<Mesh>(
+        name,
+        vertices,
+        indices
     );
 }
 

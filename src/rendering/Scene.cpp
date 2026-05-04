@@ -26,6 +26,14 @@ void Scene::removeModel(const Model* model) {
     });
 }
 
+void Scene::removeModel(const int index) {
+    if (index < 0 || index >= models.size()) {
+        return; // or throw an exception
+    }
+
+    models.erase(models.begin() + index);
+}
+
 void Scene::removeModel(const std::string& name) {
     std::erase_if(
         models,

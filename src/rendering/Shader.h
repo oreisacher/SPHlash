@@ -47,6 +47,7 @@ public:
     // --- Factory ---
     static std::shared_ptr<Shader> createDefault();
     static std::shared_ptr<Shader> createBox();
+    static std::shared_ptr<Shader> createParticle();
 
 private:
     std::unordered_map<Type, std::string> sources;

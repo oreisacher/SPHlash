@@ -5,7 +5,7 @@
 in vec3 Velocity;
 in vec4 Properties;
 //in vec2 TexCoord;
-//in vec4 Flags;
+in vec4 Flags;
 //in vec4 Debugging;
 flat in int ID;
 
@@ -98,6 +98,7 @@ void main() {
         float t = (speed - minVel) / (maxVel - minVel + 1e-6f);
         vec3 color = mix(minVelColor, maxVelColor, t);
         FragColor = vec4(color, 1.0);
+        return;
     }
 
     // PRESSURE PARTICLES
@@ -111,17 +112,16 @@ void main() {
             color = mix(vec3(1.0, 0.5, 0.5), maxPresColor, t); // light red to dark red
         }
         FragColor = vec4(color, 1.0);
-    }
-
-    // SOLID COLOR
-    if (mode == 3) {
-        FragColor = vec4(solidColor, 1.0);
         return;
     }
 
-//        FragColor = vec4(1.0, 0.0, 0.0, 1.0f);
-    //    FragColor = vec4(1.0f, 0.0f, Debugging.x, 1.0f);
-//        FragColor = vec4(indexToColor(Debugging.y), 1.0f);
-    //    FragColor = vec4(hsv2rgb(velocityToHSV(Velocity, 10.0)), 1.0f);
-    //    FragColor = vec4(indexToColor(Properties.w), 1.0f);
+    // SURFACE PARTICLES
+    if (mode == 3) {
+        if (Flags.x > 0.5) {
+            FragColor = vec4(1.0);
+        } else {
+            FragColor = vec4(particleColor, 1.0);
+        }
+        return;
+    }
 }

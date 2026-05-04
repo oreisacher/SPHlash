@@ -7,10 +7,9 @@
 #include <cuda_gl_interop.h>
 #include <iostream>
 
-FluidSurfaceMesher::FluidSurfaceMesher(Scene& scene) {
-    renderer = FluidRenderer::getInstance();
-    simulation = FluidSimulation::getInstance();
-
+FluidSurfaceMesher::FluidSurfaceMesher(Scene& scene, FluidSimulation* simulation, FluidRenderer* renderer)
+    : renderer(renderer), simulation(simulation)
+{
     // Init voxel field
     updateVoxelFieldSize();
 
@@ -129,7 +128,7 @@ void FluidSurfaceMesher::updateVoxelFieldSize() {
     generateMesh(true);
 }
 
-void FluidSurfaceMesher::updateSettings() {
+void FluidSurfaceMesher::updateSettings() const {
     if (renderer->settings.mode != MARCHING_CUBES) {
         surfaceModel->setVisible(false);
     } else {
