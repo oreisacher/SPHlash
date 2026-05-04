@@ -9,14 +9,15 @@
 #include <filesystem>
 #include <format>
 #include <iostream>
+#include <list>
+
 #include "FluidRenderer.h"
 #include "tiny_obj_loader.h"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtx/transform.hpp"
 #include <glm/gtx/matrix_decompose.hpp>
-#include <thrust/system/cuda/error.h>
 
-Model::Model(const std::string& path) {
+Model::Model(const std::string& path, bool shaded) {
     name = std::filesystem::path(path).stem().string();
 
     // Load model from disk
@@ -97,8 +98,9 @@ Model::Model(const std::string& path) {
             auto mat = materials[shape.mesh.material_ids[0]];
 
             // Create default material
-            Material material(mat.name, Shader::createDefault());
-            material.setVec3("albedo", {mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]});
+            auto shader = shaded ? Shader::createDefaultShaded() : Shader::createDefaultUnshaded();
+            Material material(mat.name, shader);
+            material.setVec4("albedo", {mat.diffuse[0], mat.diffuse[1], mat.diffuse[2], mat.dissolve });
 
             mesh->setMaterialIndex(this->materials.size());
             this->materials.push_back(material);
@@ -108,13 +110,14 @@ Model::Model(const std::string& path) {
     }
 
     // Add default model material if no other material was loaded
-    Material material("Default", Shader::createDefault());
+    Material material("Default", Shader::createDefaultShaded());
     material.setVec3("albedo", { 1.0f, 1.0f, 1.0f });
     this->materials.push_back(material);
 }
 
 Model::Model(const std::string& name, std::unique_ptr<Mesh> mesh) : name(name) {
-    meshes.push_back(std::move(mesh));
+    if (mesh)
+        meshes.push_back(std::move(mesh));
 }
 
 Model::Model(const std::string& name, std::vector<std::unique_ptr<Mesh>> meshes) : name(name), meshes(std::move(meshes)) {}
@@ -125,12 +128,17 @@ void Model::draw(const glm::mat4& view, const glm::mat4& projection) const {
         return;
     }
 
+    // --- PASS 1: Opaque ---
     for (const auto& mesh : meshes) {
         // Set material
         int matIndex = mesh->getMaterialIndex();
         if (matIndex != -1) {
             // Bind material
             auto material = materials[matIndex];
+
+            if (material.isTransparent())
+                continue;
+
             material.bind();
 
             // Update model matrix in materials shader
@@ -148,19 +156,50 @@ void Model::draw(const glm::mat4& view, const glm::mat4& projection) const {
             std::cerr << "Mesh " << mesh->getName() << " does not have a material" << std::endl;
         }
     }
+
+    // --- PASS 2: TRANSPARENT ---
+    glDepthMask(GL_FALSE);
+
+    for (const auto& mesh : meshes) {
+        // Set material
+        int matIndex = mesh->getMaterialIndex();
+        if (matIndex != -1) {
+            // Bind material
+            auto material = materials[matIndex];
+
+            if (!material.isTransparent())
+                continue;
+
+            material.bind();
+
+            // Update model matrix in materials shader
+            material.getShader()->setMat4("view", view);
+            material.getShader()->setMat4("projection", projection);
+            material.getShader()->setMat4("model", modelMatrix);
+
+            // Draw mesh
+            if (instanceCount > 0) {
+                mesh->drawInstanced(instanceCount);
+            } else {
+                mesh->draw();
+            }
+        } else {
+            std::cerr << "Mesh " << mesh->getName() << " does not have a material" << std::endl;
+        }
+    }
+
+    glDepthMask(GL_TRUE);
 }
 
 Transform Model::getTransform() const {
     return transform;
 }
 
-Transform* Model::getTransformReference() {
-    return &transform;
-}
-
 void Model::setTransform(Transform transform) {
     this->transform = transform;
     updateTransform();
+
+    notifyOnTransformChangedListeners();
 }
 
 void Model::setTransform(glm::mat4 transform) {
@@ -177,6 +216,8 @@ void Model::setTransform(glm::mat4 transform) {
     );
 
     modelMatrix = transform;
+
+    notifyOnTransformChangedListeners();
 }
 
 void Model::updateTransform() {
@@ -185,6 +226,10 @@ void Model::updateTransform() {
     glm::mat4 S = glm::scale(glm::mat4(1.0f), transform.scale);
 
     modelMatrix = T * R * S;
+}
+
+void Model::setName(const std::string& name) {
+    this->name = name;
 }
 
 std::string Model::getName() const {
@@ -200,6 +245,10 @@ std::vector<Triangle> Model::getTriangles() const {
     }
 
     return triangles;
+}
+
+void Model::addMesh(std::unique_ptr<Mesh> mesh) {
+    meshes.push_back(std::move(mesh));
 }
 
 std::vector<Mesh*> Model::getMeshes() const {
@@ -234,10 +283,28 @@ bool Model::isVisible() const {
     return visible;
 }
 
+void Model::setSceneGraphVisible(bool visible) {
+    sceneGraphVisible = visible;
+}
+
+bool Model::isSceneGraphVisible() const {
+    return sceneGraphVisible;
+}
+
 void Model::setInstanceCount(int c) {
     instanceCount = c;
 }
 
+void Model::addOnTransformChangedListener(const std::function<void(Model*)>& listener) {
+    onTransformChangedListeners.push_back(listener);
+}
+
 std::unique_ptr<Model> Model::createCubeModel(const std::string& name) {
-    return std::make_unique<Model>(name, Mesh::createBox(name + " Mesh"));
+    return std::make_unique<Model>(name, Mesh::createWireframeBox(name + " Mesh"));
+}
+
+void Model::notifyOnTransformChangedListeners() {
+    for (auto& listener : onTransformChangedListeners) {
+        listener(this);
+    }
 }

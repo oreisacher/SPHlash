@@ -10,11 +10,11 @@
 #include "Framebuffer.h"
 #include "Mesh.h"
 #include "Model.h"
-#include "Scene.h"
 #include "Shader.h"
 #include "glad/gl.h"
 #include "utils/Camera.h"
 
+class Scene;
 class FluidSimulation;
 
 enum RenderMode {
@@ -31,17 +31,17 @@ struct RenderingSettings {
     RenderMode mode = SOLID_COLOR_PARTICLES;
 
     // SOLID_COLOR_PARTICLES
-    glm::vec3 solidColorParticles = glm::vec3(1.0, 0.0, 0.0);
+    glm::vec4 solidColorParticles = glm::vec4(1.0, 0.0, 0.0, 1.0);
 
     // VELOCITY_PARTICLES
-    glm::vec3 minVelColor = glm::vec3(0.0f, 0.0f, 1.0f);
-    glm::vec3 maxVelColor = glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec4 minVelColor = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+    glm::vec4 maxVelColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
     float velocityMin = 0.0f;
     float velocityMax = 1.0f;
 
     // PRESSURE_PARTICLES
-    glm::vec3 minPresColor = glm::vec3(0.0f, 0.0f, 1.0f);
-    glm::vec3 maxPresColor = glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec4 minPresColor = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+    glm::vec4 maxPresColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
     float pressureMin = 0.0f;
     float pressureMax = 1.0f;
 };

@@ -4,6 +4,7 @@
 
 #ifndef SPHLASH_EDITOR_H
 #define SPHLASH_EDITOR_H
+#include "ForceModel.h"
 #include "Scene.h"
 #include "simulation/FluidSimulation.h"
 
@@ -13,6 +14,9 @@ public:
 
     void updateSpawnAreaTransform();
     void updateDomainAreaTransform();
+
+    void addForceField() const;
+    void removeForceField(ForceModel* model) const;
 
 private:
     Scene* scene;

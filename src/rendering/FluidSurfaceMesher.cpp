@@ -6,6 +6,7 @@
 #include "cuda/MarchingCubes.h"
 #include <cuda_gl_interop.h>
 #include <iostream>
+#include "Scene.h"
 
 FluidSurfaceMesher::FluidSurfaceMesher(Scene& scene, FluidSimulation* simulation, FluidRenderer* renderer)
     : renderer(renderer), simulation(simulation)
@@ -37,12 +38,13 @@ FluidSurfaceMesher::FluidSurfaceMesher(Scene& scene, FluidSimulation* simulation
     );
     this->surfaceModel = surfaceModel.get();
 
-    Material surfaceMaterial("Surface", Shader::createDefault());
+    Material surfaceMaterial("Surface", Shader::createDefaultShaded());
     surfaceMaterial.setVec3("albedo", glm::vec3(0.2f, 0.6f, 1.0f));
     surfaceModel->addMaterial(surfaceMaterial);
 
     // Default state invisible
     surfaceModel->setVisible(false);
+    surfaceModel->setSceneGraphVisible(false);
 
     scene.addModel(std::move(surfaceModel));
 }
@@ -133,7 +135,7 @@ void FluidSurfaceMesher::updateSettings() const {
         surfaceModel->setVisible(false);
     } else {
         surfaceModel->setVisible(true);
-        surfaceModel->getMaterial(0).setVec3("albedo", settings.color);
+        surfaceModel->getMaterial(0).setVec4("albedo", settings.color);
 
         // Force generate new surface mesh after switching mode to avoid mesh based on old particle data
         generateMesh(true);

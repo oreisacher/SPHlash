@@ -32,61 +32,18 @@ configure_file(
     @ONLY
 )
 
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
+    "src/*.cpp"
+    "src/*.cu"
+)
+
 # --- Build Application ---
 add_executable(SPHlash
-    src/main.cpp
-    src/simulation/FluidSimulation.cpp
-    src/rendering/FluidRenderer.cpp
-    src/ui/UIPanel.cpp
-    src/ui/UIManager.cpp
-    src/ui/SimulationPanel.cpp
-    src/rendering/Framebuffer.cpp
-    src/rendering/Window.cpp
-    src/rendering/Shader.cpp
-    src/ui/StatisticsPanel.cpp
-    src/utils/Time.cpp
-    src/utils/Logger.cpp
-    src/ui/SimulationSettingsPanel.cpp
-        src/simulation/FluidSimulation.cpp
-    src/cuda/FluidSimulation.cu
-    src/cuda/Kernels.cuh
-    src/ui/ParticlesPanel.cpp
-    src/utils/InputManager.cpp
-    src/utils/Camera.cpp
-        src/Application.cpp
-    src/ui/InitPanel.cpp
-    src/ui/InitPanel.h
-    src/ui/ControlPanel.cpp
-    src/ui/ControlPanel.h
-    src/ui/RenderingSettingsPanel.cpp
-    src/ui/RenderingSettingsPanel.h
-    src/rendering/Mesh.cpp
-    src/rendering/Mesh.h
-    src/rendering/Model.cpp
-    src/rendering/Model.h
-    src/ui/BoundariesPanel.cpp
-    src/ui/BoundariesPanel.h
-    src/cuda/Boundaries.h
-    src/cuda/Boundaries.cu
-    src/cuda/MarchingCubesLookup.h
-    src/cuda/MarchingCubes.h
-    src/cuda/MarchingCubes.cu
+    ${SOURCES}
 
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
-    src/rendering/FluidSurfaceMesher.cpp
-    src/rendering/FluidSurfaceMesher.h
-    src/utils/Primitives.h
-    src/rendering/Material.cpp
-    src/rendering/Material.h
-    src/rendering/Scene.cpp
-    src/rendering/Scene.h
-    src/rendering/Editor.cpp
-    src/rendering/Editor.h
-    src/utils/AABB.cpp
-    src/utils/AABB.h
-    src/utils/VoxelField.h
 )
 
 add_library(imgui
@@ -96,11 +53,13 @@ add_library(imgui
     external/imgui/imgui_widgets.cpp
     external/imgui/backends/imgui_impl_glfw.cpp
     external/imgui/backends/imgui_impl_opengl3.cpp
+    external/imgui/misc/cpp/imgui_stdlib.cpp
 )
 
 target_include_directories(imgui PUBLIC
     external/imgui
     external/imgui/backends
+    external/imgui/misc
 )
 
 find_package(CUDAToolkit REQUIRED)

@@ -8,7 +8,6 @@
 #include "glm/glm.hpp"
 #include "rendering/Shader.h"
 #include <cuda_runtime.h>
-
 #include "rendering/FluidRenderer.h"
 #include "utils/AABB.h"
 #include "utils/VoxelField.h"
@@ -33,6 +32,17 @@ struct ParticleGPU {
 
     // Debugging
     float4 debugging                = { 0.0f, 0.0f, 0.0f, 0.0f };
+};
+
+struct ForceField {
+    float3 position     = { 0.0f, 0.0f, 0.0f };
+    float3 halfExtents  = { 0.2f, 0.2f, 0.2f };
+
+    float3 right        = { 1.0f, 0.0f, 0.0f };
+    float3 up           = { 0.0f, 1.0f, 0.0f };
+    float3 forward      = { 0.0f, 0.0f, 1.0f };
+
+    float strength      = 5.0f;
 };
 
 struct InitSettings {
@@ -72,7 +82,7 @@ struct SimulationSettings {
 
 class FluidSimulation {
 public:
-    FluidSimulation();
+    FluidSimulation(Scene& scene);
     ~FluidSimulation();
 
     /*
@@ -98,6 +108,9 @@ public:
 
     void setRendererVBO(GLuint vbo);
 
+    void rebuildForceFieldBuffer();
+    void updateForceFieldBuffer() const;
+
     // --- VoxelField ---
     bool computeVoxelField(const VoxelField& field) const;
 
@@ -112,6 +125,8 @@ public:
     // --- Simulation State ---
     SimulationState state = UNINITIALIZED;
 private:
+    Scene* scene;
+
     // --- Particles ---
     ParticleGPU* d_particles            = nullptr;
     ParticleGPU* d_sortedParticles      = nullptr;
@@ -128,6 +143,9 @@ private:
     // --- Sorting Storage ---
     void* d_sortTempStorage             = nullptr;
     size_t sortTempStorageBytes         = 0;
+
+    // --- Force Fields ---
+    ForceField* d_forceFields           = nullptr;
 
     // --- Rendering ---
     cudaGraphicsResource* rendererResource = nullptr;

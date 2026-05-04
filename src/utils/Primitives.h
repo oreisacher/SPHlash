@@ -39,6 +39,17 @@ namespace Primitives {
                 0, 4, 1, 5, 2, 6, 3, 7
             };
         }
+
+        static std::vector<unsigned int> GetIndices() {
+            return {
+                0, 2, 1, 0, 3, 2,
+                4, 5, 6, 4, 6, 7,
+                1, 6, 5, 1, 2, 6,
+                4, 3, 0, 4, 7, 3,
+                3, 6, 2, 3, 7, 6,
+                4, 1, 5, 4, 0, 1
+            };
+        }
     };
 }
 

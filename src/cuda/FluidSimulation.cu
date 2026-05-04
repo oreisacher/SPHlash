@@ -408,9 +408,46 @@ float getMaxVelocity(
     return sqrtf(maxVal);
 }
 
+__device__ float3 toLocal(float3 p, const ForceField& f) {
+    // float3 d = p - f.position;
+    //
+    // return make_float3(
+    //     dot(d, make_float3(f.right.x,   f.up.x,   f.forward.x)),
+    //     dot(d, make_float3(f.right.y,   f.up.y,   f.forward.y)),
+    //     dot(d, make_float3(f.right.z,   f.up.z,   f.forward.z))
+    // );
+
+    float3 d = p - f.position;
+
+    return make_float3(
+        dot(d, f.right),
+        dot(d, f.up),
+        dot(d, f.forward)
+    );
+}
+
+__device__ bool isInsideField(float3 worldPos, const ForceField& f) {
+    float3 p = toLocal(worldPos, f);
+
+    return (fabsf(p.x) <= f.halfExtents.x &&
+            fabsf(p.y) <= f.halfExtents.y &&
+            fabsf(p.z) <= f.halfExtents.z);
+}
+
+__device__ float4 toWorldForce(float4 fLocal, const ForceField& f) {
+    return make_float4(
+        fLocal.x * f.right.x   + fLocal.y * f.up.x   + fLocal.z * f.forward.x,
+        fLocal.x * f.right.y   + fLocal.y * f.up.y   + fLocal.z * f.forward.y,
+        fLocal.x * f.right.z   + fLocal.y * f.up.z   + fLocal.z * f.forward.z,
+        0.0
+    );
+}
+
 __global__ void updateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
+    const ForceField* forceFields,
+    const int numForceFields,
     const float deltaTime,
     const CudaAABB domain,
     const float gravity
@@ -424,7 +461,14 @@ __global__ void updateParticlesKernel(
 
     // Update position
     const float4 force = particle->pressureForce + particle->viscosityForce + particle->surfaceTensionForce;
-    const float4 acceleration = force / particle->properties.y + make_float4(0.0f, gravity, 0.0f, 0.0f);
+    float4 acceleration = force / particle->properties.y + make_float4(0.0f, gravity, 0.0f, 0.0f);
+
+    // Check force fields
+    for (int f = 0 ; f < numForceFields; f++) {
+        if (isInsideField(make_float3(particle->position.x, particle->position.y, particle->position.z), forceFields[f])) {
+            acceleration += toWorldForce({ forceFields[f].strength, 0.0, 0.0, 0.0 }, forceFields[f]);
+        }
+    }
 
     // TODO - Implement correctly
     // particle->velocity += (0.5f * deltaTime) * acceleration;
@@ -469,15 +513,17 @@ __global__ void updateParticlesKernel(
 void launchUpdateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
+    const ForceField* forceFields,
+    const int numForceFields,
     const float deltaTime,
-    const CudaAABB domain,
+    const CudaAABB& domain,
     const float gravity
 ) {
     int threadsPerBlock = 256;
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     updateParticlesKernel<<<blocks, threadsPerBlock>>>(
-        particles, numParticles, deltaTime, domain, gravity
+        particles, numParticles, forceFields, numForceFields, deltaTime, domain, gravity
     );
 }
 

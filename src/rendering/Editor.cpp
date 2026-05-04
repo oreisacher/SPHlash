@@ -6,6 +6,8 @@
 #include "utils/Primitives.h"
 #include <memory>
 
+#include "ForceModel.h"
+
 Editor::Editor(Scene& scene, FluidSimulation* sim)
     : scene(&scene), simulation(sim)
 {
@@ -32,6 +34,27 @@ void Editor::updateDomainAreaTransform() {
     ));
 }
 
+void Editor::addForceField() const {
+    auto forceField = std::make_unique<ForceField>();
+    auto forceFieldModel = std::make_unique<ForceModel>(forceField.get());
+
+    forceFieldModel->addOnTransformChangedListener([this](Model *) {
+        simulation->updateForceFieldBuffer();
+    });
+
+    scene->addModel(std::move(forceFieldModel));
+    scene->addForceField(std::move(forceField));
+
+    simulation->rebuildForceFieldBuffer();
+}
+
+void Editor::removeForceField(ForceModel* model) const {
+    scene->removeForceField(model->getForceField());
+
+    simulation->rebuildForceFieldBuffer();
+    simulation->updateForceFieldBuffer();
+}
+
 void Editor::createSpawnAreaModel() {
     auto spawnAreaModel = Model::createCubeModel("Particle Spawn Area");
     this->spawnAreaModel = spawnAreaModel.get();
@@ -39,6 +62,8 @@ void Editor::createSpawnAreaModel() {
     Material boxMaterial("Wireframe", Shader::createBox());
     boxMaterial.setVec3("color", glm::vec3(1.0f, 0.3f, 0.3f));
     spawnAreaModel->addMaterial(boxMaterial);
+
+    spawnAreaModel->setSceneGraphVisible(false);
 
     scene->addModel(std::move(spawnAreaModel));
 
@@ -52,6 +77,8 @@ void Editor::createSimulationDomainModel() {
     Material boxMaterial("Wireframe", Shader::createBox());
     boxMaterial.setVec3("color", glm::vec3(0.2f, 0.6f, 1.0f));
     domainAreaModel->addMaterial(boxMaterial);
+
+    domainAreaModel->setSceneGraphVisible(false);
 
     scene->addModel(std::move(domainAreaModel));
 

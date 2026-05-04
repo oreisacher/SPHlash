@@ -38,7 +38,7 @@ void RenderingSettingsPanel::draw() {
             renderer->updateParticleSize();
         }
         ImGui::Text("Color:");
-        if (ImGui::ColorEdit3("##scpCE", glm::value_ptr(renderer->settings.solidColorParticles)))
+        if (ImGui::ColorEdit4("##scpCE", glm::value_ptr(renderer->settings.solidColorParticles)))
             renderer->updateRenderingSettings();
         ImGui::PopID();
         break;
@@ -54,7 +54,7 @@ void RenderingSettingsPanel::draw() {
             renderer->updateRenderingSettings();
 
         ImGui::Text("Minimum Velocity Color:");
-        if (ImGui::ColorEdit3("##vpMinVC", glm::value_ptr(renderer->settings.minVelColor)))
+        if (ImGui::ColorEdit4("##vpMinVC", glm::value_ptr(renderer->settings.minVelColor)))
             renderer->updateRenderingSettings();
 
         ImGui::Text("Maximum Velocity:");
@@ -62,7 +62,7 @@ void RenderingSettingsPanel::draw() {
             renderer->updateRenderingSettings();
 
         ImGui::Text("Maximum Velocity Color:");
-        if (ImGui::ColorEdit3("##vpMaxVC", glm::value_ptr(renderer->settings.maxVelColor)))
+        if (ImGui::ColorEdit4("##vpMaxVC", glm::value_ptr(renderer->settings.maxVelColor)))
             renderer->updateRenderingSettings();
         break;
 
@@ -77,7 +77,7 @@ void RenderingSettingsPanel::draw() {
             renderer->updateRenderingSettings();
 
         ImGui::Text("Minimum Pressure Color:");
-        if (ImGui::ColorEdit3("##vpMinPC", glm::value_ptr(renderer->settings.minPresColor)))
+        if (ImGui::ColorEdit4("##vpMinPC", glm::value_ptr(renderer->settings.minPresColor)))
             renderer->updateRenderingSettings();
 
         ImGui::Text("Maximum Pressure:");
@@ -85,14 +85,14 @@ void RenderingSettingsPanel::draw() {
             renderer->updateRenderingSettings();
 
         ImGui::Text("Maximum Pressure Color:");
-        if (ImGui::ColorEdit3("##vpMaxPC", glm::value_ptr(renderer->settings.maxPresColor)))
+        if (ImGui::ColorEdit4("##vpMaxPC", glm::value_ptr(renderer->settings.maxPresColor)))
             renderer->updateRenderingSettings();
         break;
 
     case MARCHING_CUBES:
         ImGui::PushID(MARCHING_CUBES);
         ImGui::Text("Color:");
-        if (ImGui::ColorEdit3("##mcColor", glm::value_ptr(surfaceMesher->settings.color))) {
+        if (ImGui::ColorEdit4("##mcColor", glm::value_ptr(surfaceMesher->settings.color))) {
             surfaceMesher->updateSettings();
         }
 

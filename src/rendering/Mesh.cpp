@@ -159,6 +159,15 @@ std::unique_ptr<Mesh> Mesh::createBox(const std::string& name) {
     return std::make_unique<Mesh>(
         name,
         Primitives::BoxGeometry::GetVertices(),
+        Primitives::BoxGeometry::GetIndices(),
+        GL_TRIANGLES
+    );
+}
+
+std::unique_ptr<Mesh> Mesh::createWireframeBox(const std::string& name) {
+    return std::make_unique<Mesh>(
+        name,
+        Primitives::BoxGeometry::GetVertices(),
         Primitives::BoxGeometry::GetWireframeIndices(),
         GL_LINES
     );

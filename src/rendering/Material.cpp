@@ -18,6 +18,8 @@ void Material::bind() const {
         shader->setFloat(param, value);
     for (auto& [param, value] : vec3Params)
         shader->setVec3(param, value);
+    for (auto& [param, value] : vec4Params)
+        shader->setVec4(param, value);
 }
 
 std::string Material::getName() {
@@ -34,4 +36,16 @@ void Material::setFloat(const std::string& name, float value) {
 
 void Material::setVec3(const std::string& name, glm::vec3 value) {
     vec3Params[name] = value;
+}
+
+void Material::setVec4(const std::string& name, glm::vec4 value) {
+    vec4Params[name] = value;
+}
+
+bool Material::isTransparent() {
+    if (vec4Params.contains("albedo")) {
+        return vec4Params["albedo"].a < 1.0f;
+    }
+
+    return false;
 }

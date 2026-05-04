@@ -16,16 +16,16 @@ uniform int selectedParticleID = -1;
 // --- Rendering modes ---
 uniform int mode = 0;
 
-uniform vec3 particleColor;
+uniform vec4 particleColor;
 
-uniform vec3 minVelColor;
+uniform vec4 minVelColor;
 uniform float minVel;
-uniform vec3 maxVelColor;
+uniform vec4 maxVelColor;
 uniform float maxVel;
 
-uniform vec3 minPresColor;
+uniform vec4 minPresColor;
 uniform float minPres;
-uniform vec3 maxPresColor;
+uniform vec4 maxPresColor;
 uniform float maxPres;
 
 uniform vec3 solidColor;
@@ -88,7 +88,7 @@ void main() {
 
     // SOLID COLOR PARTICLES
     if (mode == 0) {
-        FragColor = vec4(particleColor, 1.0);
+        FragColor = particleColor;
         return;
     }
 
@@ -96,22 +96,14 @@ void main() {
     if (mode == 1) {
         float speed = length(Velocity);
         float t = (speed - minVel) / (maxVel - minVel + 1e-6f);
-        vec3 color = mix(minVelColor, maxVelColor, t);
-        FragColor = vec4(color, 1.0);
+        FragColor = mix(minVelColor, maxVelColor, t);
         return;
     }
 
     // PRESSURE PARTICLES
     if (mode == 2) {
-        vec3 color;
-        if (Properties.z < 0) {
-            float t = clamp(abs(Properties.z) / abs(minPres), 0.0f, 1.0f);
-            color = mix(vec3(0.5, 0.5, 1.0), minPresColor, t); // light blue to dark blue
-        } else {
-            float t = clamp(Properties.z / maxPres, 0.0f, 1.0f);
-            color = mix(vec3(1.0, 0.5, 0.5), maxPresColor, t); // light red to dark red
-        }
-        FragColor = vec4(color, 1.0);
+        float t = (Properties.z - minPres) / (maxPres - minPres);
+        FragColor = mix(minPresColor, maxPresColor, t);
         return;
     }
 
@@ -120,7 +112,7 @@ void main() {
         if (Flags.x > 0.5) {
             FragColor = vec4(1.0);
         } else {
-            FragColor = vec4(particleColor, 1.0);
+            FragColor = particleColor;
         }
         return;
     }

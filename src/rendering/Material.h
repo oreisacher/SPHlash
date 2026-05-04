@@ -20,6 +20,9 @@ public:
 
     void setFloat(const std::string& name, float value);
     void setVec3(const std::string& name, glm::vec3 value);
+    void setVec4(const std::string& name, glm::vec4 value);
+
+    bool isTransparent();
 
 private:
     std::string name;
@@ -27,6 +30,7 @@ private:
     std::shared_ptr<Shader> shader;
     std::unordered_map<std::string, float> floatParams;
     std::unordered_map<std::string, glm::vec3> vec3Params;
+    std::unordered_map<std::string, glm::vec4> vec4Params;
 };
 
 #endif //SPHLASH_MATERIAL_H

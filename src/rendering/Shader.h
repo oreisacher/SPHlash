@@ -5,11 +5,10 @@
 #ifndef FLUIDSIMSPH_SHADER_H
 #define FLUIDSIMSPH_SHADER_H
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include "../../../../../../usr/lib/gcc/x86_64-pc-linux-gnu/14.3.1/include/c++/memory"
 #include "glm/fwd.hpp"
 #include "glad/gl.h"
 
@@ -41,11 +40,13 @@ public:
     void setMat4(const std::string& name, const glm::mat4& value) const;
     void setVec2(const std::string& name, const glm::vec2& value) const;
     void setVec3(const std::string& name, const glm::vec3& value) const;
+    void setVec4(const std::string& name, const glm::vec4& value) const;
 
     GLuint getId() const;
 
     // --- Factory ---
-    static std::shared_ptr<Shader> createDefault();
+    static std::shared_ptr<Shader> createDefaultShaded();
+    static std::shared_ptr<Shader> createDefaultUnshaded();
     static std::shared_ptr<Shader> createBox();
     static std::shared_ptr<Shader> createParticle();
 

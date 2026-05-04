@@ -15,8 +15,9 @@
 #include "cuda/FluidSimulation.h"
 #include "glad/gl.h"
 #include "../cuda/MarchingCubesLookup.h"
+#include "rendering/Scene.h"
 
-FluidSimulation::FluidSimulation() {
+FluidSimulation::FluidSimulation(Scene& scene) : scene(&scene){
     cudaSetDevice(0);
 }
 
@@ -29,6 +30,7 @@ FluidSimulation::~FluidSimulation() {
     cudaFree(d_particleIndices);
     cudaFree(d_sortedParticleIndices);
     cudaFree(d_sortTempStorage);
+    cudaFree(d_forceFields);
 
     cudaGraphicsUnmapResources(1, &rendererResource, nullptr);
 }
@@ -108,6 +110,8 @@ void FluidSimulation::update(const float deltaTime) {
     launchUpdateParticlesKernel(
         d_particles,
         particleCount,
+        d_forceFields,
+        scene->getForceFields().size(),
         settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
         settings.domainArea.toCudaAABB(),
         settings.enableGravity ? settings.gravity : 0.0f
@@ -181,6 +185,19 @@ void FluidSimulation::setRendererVBO(const GLuint vbo) {
     );
 
     cudaGraphicsUnmapResources(1, &rendererResource);
+}
+
+void FluidSimulation::rebuildForceFieldBuffer() {
+    if (d_forceFields) cudaFree(d_forceFields);
+
+    if (scene->getForceFields().size() == 0)
+        return;
+
+    cudaMalloc(&d_forceFields, scene->getForceFields().size() * sizeof(ForceField));
+}
+
+void FluidSimulation::updateForceFieldBuffer() const {
+    cudaMemcpy(d_forceFields, scene->getForceFields().data(), scene->getForceFields().size() * sizeof(ForceField), cudaMemcpyHostToDevice);
 }
 
 bool FluidSimulation::computeVoxelField(const VoxelField& field) const {

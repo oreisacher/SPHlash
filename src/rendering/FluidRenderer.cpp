@@ -11,6 +11,7 @@
 #include "utils/Logger.h"
 #include "utils/SphereCreator.h"
 #include <vector>
+#include "Scene.h"
 
 FluidRenderer::FluidRenderer(Scene& scene, FluidSimulation* simulation)
     : simulation(simulation)
@@ -18,6 +19,9 @@ FluidRenderer::FluidRenderer(Scene& scene, FluidSimulation* simulation)
     // Setup OpenGL State
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // Setup framebuffer
     framebuffer = new Framebuffer(1, 1);
@@ -83,9 +87,10 @@ void FluidRenderer::setupParticles(Scene& scene) {
 
     Material particleMaterial("Particle", Shader::createParticle());
     this->particleShader = particleMaterial.getShader();
-
     particleModel->addMaterial(particleMaterial);
+
     particleModel->setVisible(false);
+    particleModel->setSceneGraphVisible(false);
 
     scene.addModel(std::move(particleModel));
 
@@ -119,7 +124,7 @@ void FluidRenderer::updateParticleData() const {
     glBufferData(GL_ARRAY_BUFFER, sizeof(RendererParticle) * simulation->particleCount, nullptr, GL_DYNAMIC_DRAW);
     simulation->setRendererVBO(particleVBO);
     particleModel->setInstanceCount(simulation->particleCount);
-    particleModel->setVisible(true);
+    particleModel->setVisible(settings.mode != MARCHING_CUBES);
 }
 
 void FluidRenderer::updateRenderingSettings() const {
@@ -129,15 +134,15 @@ void FluidRenderer::updateRenderingSettings() const {
     particleShader->setInt("mode", settings.mode);
     particleShader->setFloat("size", settings.particleSize);
 
-    particleShader->setVec3("particleColor", settings.solidColorParticles);
+    particleShader->setVec4("particleColor", settings.solidColorParticles);
 
-    particleShader->setVec3("minVelColor", settings.minVelColor);
-    particleShader->setVec3("maxVelColor", settings.maxVelColor);
+    particleShader->setVec4("minVelColor", settings.minVelColor);
+    particleShader->setVec4("maxVelColor", settings.maxVelColor);
     particleShader->setFloat("minVel", settings.velocityMin);
     particleShader->setFloat("maxVel", settings.velocityMax);
 
-    particleShader->setVec3("minPresColor", settings.minPresColor);
-    particleShader->setVec3("maxPresColor", settings.maxPresColor);
+    particleShader->setVec4("minPresColor", settings.minPresColor);
+    particleShader->setVec4("maxPresColor", settings.maxPresColor);
     particleShader->setFloat("minPres", settings.pressureMin);
     particleShader->setFloat("maxPres", settings.pressureMax);
 

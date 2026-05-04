@@ -5,6 +5,8 @@
 #include "Scene.h"
 
 #include <algorithm>
+#include <iostream>
+#include "simulation/FluidSimulation.h"
 
 void Scene::setCamera(std::unique_ptr<Camera> camera) {
     this->camera = std::move(camera);
@@ -49,5 +51,21 @@ std::vector<Model*> Scene::getModels() const {
     for (auto& m : models)
         result.push_back(m.get());
 
+    return result;
+}
+
+void Scene::addForceField(std::unique_ptr<ForceField> forceField) {
+    forceFields.push_back(std::move(forceField));
+}
+
+void Scene::removeForceField(const ForceField* forceField) {
+    std::erase_if(forceFields, [forceField] (const auto& m){ return m.get() == forceField; });
+}
+
+std::vector<ForceField> Scene::getForceFields() const {
+    std::vector<ForceField> result;
+    result.reserve(forceFields.size());
+    for (auto& m : forceFields)
+        result.push_back(*m);
     return result;
 }

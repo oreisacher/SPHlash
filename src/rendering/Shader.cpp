@@ -172,17 +172,34 @@ void Shader::setVec3(const std::string& name, const glm::vec3& value) const {
     glUniform3fv(glGetUniformLocation(shader, name.c_str()), 1, glm::value_ptr(value));
 }
 
+void Shader::setVec4(const std::string& name, const glm::vec4& value) const {
+    glUniform4fv(glGetUniformLocation(shader, name.c_str()), 1, glm::value_ptr(value));
+}
+
 GLuint Shader::getId() const {
     return shader;
 }
 
-std::shared_ptr<Shader> Shader::createDefault() {
+std::shared_ptr<Shader> Shader::createDefaultShaded() {
     auto shader = std::make_shared<Shader>(
         std::initializer_list<std::pair<std::string, Type>>({
-            { "assets/shaders/model.vert", VERTEX },
-            { "assets/shaders/model.frag", FRAGMENT }
+            { "assets/shaders/default.vert", VERTEX },
+            { "assets/shaders/shaded.frag", FRAGMENT }
         })
     );
+
+    shader->compile();
+
+    return shader;
+}
+
+std::shared_ptr<Shader> Shader::createDefaultUnshaded() {
+    auto shader = std::make_shared<Shader>(
+    std::initializer_list<std::pair<std::string, Type>>({
+        { "assets/shaders/default.vert", VERTEX },
+        { "assets/shaders/unshaded.frag", FRAGMENT }
+    })
+);
 
     shader->compile();
 

@@ -25,10 +25,11 @@
 #define SIM_UNITS_PER_PIXEL (1.0 / 600)
 
 #include "tiny_obj_loader.h"
+#include "rendering/ForceModel.h"
 #include "rendering/Mesh.h"
 #include "ui/ControlPanel.h"
 #include "ui/InitPanel.h"
-#include "ui/BoundariesPanel.h"
+#include "ui/ScenePanel.h"
 #include "ui/RenderingSettingsPanel.h"
 
 Application::Application() {
@@ -44,7 +45,7 @@ Application::Application() {
     }
 
     // Simulation
-    simulation = new FluidSimulation();
+    simulation = new FluidSimulation(scene);
 
     // Rendering
     renderer = new FluidRenderer(scene, simulation);
@@ -62,7 +63,7 @@ Application::Application() {
     ui->addPanel(new SimulationSettingsPanel    (editor, simulation, renderer));
     ui->addPanel(new RenderingSettingsPanel     (renderer, surfaceMesher));
     ui->addPanel(new ParticlesPanel             (simulation, renderer));
-    ui->addPanel(new BoundariesPanel            (scene, renderer));
+    ui->addPanel(new ScenePanel                 (scene, editor, renderer));
 
     // Setup scene
     scene.setCamera(std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 1.0f)));

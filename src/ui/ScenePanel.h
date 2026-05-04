@@ -6,22 +6,24 @@
 #define SPHLASH_MODELSPANEL_H
 
 #include "UIPanel.h"
+#include "rendering/Editor.h"
 #include "rendering/FluidRenderer.h"
 
-class BoundariesPanel : public UIPanel {
+class ScenePanel : public UIPanel {
 public:
-    explicit BoundariesPanel(Scene& scene, FluidRenderer* renderer);
+    explicit ScenePanel(Scene& scene, Editor* editor, FluidRenderer* renderer);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
+    Editor* editor;
     FluidRenderer* renderer;
     Scene* scene;
 
     int selected = -1;
     Model* selectedModel = nullptr;
-    Transform* selectedTransform = nullptr;
+    // Transform* selectedTransform = nullptr;
 };
 
 #endif //SPHLASH_MODELSPANEL_H

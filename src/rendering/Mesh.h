@@ -66,6 +66,7 @@ public:
 
     // --- Factory ---
     static std::unique_ptr<Mesh> createBox(const std::string& name);
+    static std::unique_ptr<Mesh> createWireframeBox(const std::string& name);
     static std::unique_ptr<Mesh> createSphere(const std::string& name, int sectorCount, int stackCount);
 private:
     void uploadToGPU();

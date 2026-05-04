@@ -20,23 +20,25 @@ struct Transform {
 
 class Model {
 public:
-    Model(const std::string& path);
+    Model(const std::string& path, bool shaded = true);
     Model(const std::string& name, std::unique_ptr<Mesh> mesh);
     Model(const std::string& name, std::vector<std::unique_ptr<Mesh>> meshes);
+    virtual ~Model() = default;
 
     void draw(const glm::mat4& view, const glm::mat4& projection) const;
 
     Transform getTransform() const;
-    Transform* getTransformReference();
     void setTransform(Transform transform);
     void setTransform(glm::mat4 transform);
 
     void updateTransform();
 
+    void setName(const std::string& name);
     std::string getName() const;
 
     std::vector<Triangle> getTriangles() const;
 
+    void addMesh(std::unique_ptr<Mesh> mesh);
     std::vector<Mesh*> getMeshes() const;
 
     int addMaterial(const Material& material);
@@ -45,14 +47,21 @@ public:
     void setVisible(bool on);
     bool isVisible() const;
 
+    void setSceneGraphVisible(bool visible);
+    bool isSceneGraphVisible() const;
+
     void setInstanceCount(int c);
+
+    void addOnTransformChangedListener(const std::function<void(Model*)>& listener);
+    void notifyOnTransformChangedListeners();
 
     // --- Factory ---
     static std::unique_ptr<Model> createCubeModel(const std::string& name);
-private:
+protected:
     std::string name = "Undefined";
 
     bool visible = true;
+    bool sceneGraphVisible = true;
 
     Transform transform;
     glm::mat4 modelMatrix = glm::mat4(1.0f);
@@ -61,6 +70,8 @@ private:
     std::vector<Material> materials             = {};
 
     int instanceCount = 0;
+
+    std::vector<std::function<void(Model*)>> onTransformChangedListeners;
 };
 
 #endif //SPHLASH_MODEL_H
