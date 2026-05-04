@@ -6,6 +6,7 @@
 #include <format>
 #include "imgui.h"
 #include "ImGuiFileDialog.h"
+#include "ImGuizmo.h"
 #include "misc/cpp/imgui_stdlib.h"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtc/type_ptr.inl"
@@ -125,6 +126,37 @@ void ScenePanel::draw() {
 
     // --- Properties ---
     if (selectedModel) {
+        static ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
+        static ImGuizmo::MODE mode = ImGuizmo::MODE::WORLD;
+
+        if (ImGui::IsKeyPressed(ImGuiKey_F))
+            operation = ImGuizmo::TRANSLATE;
+
+        if (ImGui::IsKeyPressed(ImGuiKey_G))
+            operation = ImGuizmo::ROTATE;
+
+        if (ImGui::IsKeyPressed(ImGuiKey_H))
+            operation = ImGuizmo::SCALE;
+
+        if (ImGui::IsKeyPressed(ImGuiKey_J))
+            mode = ImGuizmo::MODE::WORLD;
+
+        if (ImGui::IsKeyPressed(ImGuiKey_K))
+            mode = ImGuizmo::MODE::LOCAL;
+
+        auto matrix = selectedModel->getTransform().modelMatrix;
+
+        if (ImGuizmo::Manipulate(
+            glm::value_ptr(scene->getCamera()->getViewMatrix()),
+            glm::value_ptr(scene->getCamera()->getProjectionMatrix()),
+            operation,
+            mode,
+            glm::value_ptr(matrix)
+        )) {
+            selectedModel->setTransform(matrix);
+        }
+
+
         ImGui::SeparatorText("Properties");
         ImGui::BeginChild("Properties");
         ImGui::PushItemWidth(-FLT_MIN);

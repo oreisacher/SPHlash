@@ -16,6 +16,8 @@ struct Transform {
     glm::vec3 position  = { 0.0f, 0.0f, 0.0f };
     glm::quat rotation  = { 1.0f, 0.0f, 0.0f, 0.0f };
     glm::vec3 scale     = { 1.0f, 1.0f, 1.0f };
+
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
 };
 
 class Model {
@@ -64,7 +66,6 @@ protected:
     bool sceneGraphVisible = true;
 
     Transform transform;
-    glm::mat4 modelMatrix = glm::mat4(1.0f);
 
     std::vector<std::unique_ptr<Mesh>> meshes   = {};
     std::vector<Material> materials             = {};

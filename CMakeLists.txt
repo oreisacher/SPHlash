@@ -68,6 +68,8 @@ add_subdirectory("external/glfw")
 add_subdirectory("external/glm")
 add_subdirectory("external/json")
 add_subdirectory("external/tinyobjloader")
+add_subdirectory("external/ImGuizmo")
+target_link_libraries(imguizmo PUBLIC imgui)
 
 target_compile_definitions(SPHlash PRIVATE USE_STD_FILESYSTEM)
 
@@ -77,6 +79,7 @@ target_include_directories(SPHlash PUBLIC
     external/glad/include
     external/ImGuiFileDialog
     external/tinyobjloader
+    external/ImGuizmo/src
 )
 
 target_link_libraries(SPHlash
@@ -86,6 +89,7 @@ target_link_libraries(SPHlash
     PRIVATE nlohmann_json::nlohmann_json
     PRIVATE CUDA::cudart
     PRIVATE tinyobjloader
+    PRIVATE imguizmo
 )
 
 set_target_properties(SPHlash PROPERTIES

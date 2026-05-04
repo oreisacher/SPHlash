@@ -144,7 +144,7 @@ void Model::draw(const glm::mat4& view, const glm::mat4& projection) const {
             // Update model matrix in materials shader
             material.getShader()->setMat4("view", view);
             material.getShader()->setMat4("projection", projection);
-            material.getShader()->setMat4("model", modelMatrix);
+            material.getShader()->setMat4("model", transform.modelMatrix);
 
             // Draw mesh
             if (instanceCount > 0) {
@@ -175,7 +175,7 @@ void Model::draw(const glm::mat4& view, const glm::mat4& projection) const {
             // Update model matrix in materials shader
             material.getShader()->setMat4("view", view);
             material.getShader()->setMat4("projection", projection);
-            material.getShader()->setMat4("model", modelMatrix);
+            material.getShader()->setMat4("model", transform.modelMatrix);
 
             // Draw mesh
             if (instanceCount > 0) {
@@ -215,7 +215,7 @@ void Model::setTransform(glm::mat4 transform) {
         perspective
     );
 
-    modelMatrix = transform;
+    this->transform.modelMatrix = transform;
 
     notifyOnTransformChangedListeners();
 }
@@ -225,7 +225,7 @@ void Model::updateTransform() {
     glm::mat4 R = glm::mat4_cast(transform.rotation);
     glm::mat4 S = glm::scale(glm::mat4(1.0f), transform.scale);
 
-    modelMatrix = T * R * S;
+    transform.modelMatrix = T * R * S;
 }
 
 void Model::setName(const std::string& name) {
@@ -240,7 +240,7 @@ std::vector<Triangle> Model::getTriangles() const {
     std::vector<Triangle> triangles;
 
     for (const auto& mesh : meshes) {
-        auto meshTriangles = mesh->getTriangles(modelMatrix);
+        auto meshTriangles = mesh->getTriangles(transform.modelMatrix);
         triangles.insert(triangles.end(), meshTriangles.begin(), meshTriangles.end());
     }
 

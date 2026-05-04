@@ -4,6 +4,7 @@
 
 #include "ui/SimulationPanel.h"
 #include "imgui.h"
+#include "ImGuizmo.h"
 #include "../rendering/FluidRenderer.h"
 
 SimulationPanel::SimulationPanel(GLuint textureId) : UIPanel("Simulation"), texture(textureId) { }
@@ -35,6 +36,12 @@ void SimulationPanel::draw() {
         ImVec2(0, 1),
         ImVec2(1, 0)
     );
+
+    ImVec2 viewportPos = ImGui::GetItemRectMin();
+    ImVec2 viewportSize = ImGui::GetItemRectSize();
+
+    ImGuizmo::SetDrawlist();
+    ImGuizmo::SetRect(viewportPos.x, viewportPos.y, viewportSize.x, viewportSize.y);
 
     if (ImGui::IsItemHovered()) {
         // Mouse movement

@@ -5,6 +5,7 @@
 #include "../rendering/Framebuffer.h"
 #include "ui/UIManager.h"
 #include "imgui.h"
+#include "ImGuizmo.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_internal.h"
@@ -138,6 +139,7 @@ void UIManager::draw() const {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    ImGuizmo::BeginFrame();
 
     ImGuiID dockspace_id = ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID);
 
