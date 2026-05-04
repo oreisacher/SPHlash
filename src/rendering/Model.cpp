@@ -283,6 +283,14 @@ bool Model::isVisible() const {
     return visible;
 }
 
+void Model::setSceneGraphDeletable(bool deletable) {
+    sceneGraphDeletable = deletable;
+}
+
+bool Model::isSceneGraphDeletable() const {
+    return sceneGraphDeletable;
+}
+
 void Model::setSceneGraphVisible(bool visible) {
     sceneGraphVisible = visible;
 }

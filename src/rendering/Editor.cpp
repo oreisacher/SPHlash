@@ -6,14 +6,23 @@
 #include "utils/Primitives.h"
 #include <memory>
 
+#include "AreaModel.h"
 #include "ForceModel.h"
 
 Editor::Editor(Scene& scene, FluidSimulation* sim)
     : scene(&scene), simulation(sim)
 {
     // Setup basic editor objects
-    createSpawnAreaModel();
-    createSimulationDomainModel();
+    // createSpawnAreaModel();
+    // createSimulationDomainModel();
+
+    auto spawnArea = std::make_unique<AreaModel>("Spawn Area", glm::vec3(1.0f, 0.3f, 0.3f), sim->initSettings.spawnArea);
+    spawnAreaModel = spawnArea.get();
+    scene.addModel(std::move(spawnArea));
+
+    auto domainArea = std::make_unique<AreaModel>("Simulation Domain", glm::vec3(0.2f, 0.6f, 1.0f), sim->settings.domainArea);
+    domainAreaModel = domainArea.get();
+    scene.addModel(std::move(domainArea));
 }
 
 void Editor::updateSpawnAreaTransform() {
@@ -53,36 +62,6 @@ void Editor::removeForceField(ForceModel* model) const {
 
     simulation->rebuildForceFieldBuffer();
     simulation->updateForceFieldBuffer();
-}
-
-void Editor::createSpawnAreaModel() {
-    auto spawnAreaModel = Model::createCubeModel("Particle Spawn Area");
-    this->spawnAreaModel = spawnAreaModel.get();
-
-    Material boxMaterial("Wireframe", Shader::createBox());
-    boxMaterial.setVec3("color", glm::vec3(1.0f, 0.3f, 0.3f));
-    spawnAreaModel->addMaterial(boxMaterial);
-
-    spawnAreaModel->setSceneGraphVisible(false);
-
-    scene->addModel(std::move(spawnAreaModel));
-
-    updateSpawnAreaTransform();
-}
-
-void Editor::createSimulationDomainModel() {
-    auto domainAreaModel = Model::createCubeModel("Domain Area");
-    this->domainAreaModel = domainAreaModel.get();
-
-    Material boxMaterial("Wireframe", Shader::createBox());
-    boxMaterial.setVec3("color", glm::vec3(0.2f, 0.6f, 1.0f));
-    domainAreaModel->addMaterial(boxMaterial);
-
-    domainAreaModel->setSceneGraphVisible(false);
-
-    scene->addModel(std::move(domainAreaModel));
-
-    updateDomainAreaTransform();
 }
 
 glm::mat4 Editor::calculateModelMatrix(glm::vec3 center, glm::vec3 scale) {

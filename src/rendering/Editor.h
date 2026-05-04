@@ -26,9 +26,6 @@ private:
     Model* spawnAreaModel       = nullptr;
     Model* domainAreaModel      = nullptr;
 
-    void createSpawnAreaModel();
-    void createSimulationDomainModel();
-
     glm::mat4 calculateModelMatrix(glm::vec3 center, glm::vec3 scale);
 };
 

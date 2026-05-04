@@ -49,6 +49,9 @@ public:
     void setVisible(bool on);
     bool isVisible() const;
 
+    void setSceneGraphDeletable(bool deletable);
+    bool isSceneGraphDeletable() const;
+
     void setSceneGraphVisible(bool visible);
     bool isSceneGraphVisible() const;
 
@@ -63,7 +66,9 @@ protected:
     std::string name = "Undefined";
 
     bool visible = true;
+
     bool sceneGraphVisible = true;
+    bool sceneGraphDeletable = true;
 
     Transform transform;
 

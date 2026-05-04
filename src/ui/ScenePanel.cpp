@@ -84,18 +84,20 @@ void ScenePanel::draw() {
             }
 
             ImGui::TableNextColumn();
-            if (ImGui::Button(" - ", ImVec2(0, 19))) {
-                if (isSelected) {
-                    selected = -1;
-                    selectedModel = nullptr;
-                }
+            if (models[i]->isSceneGraphDeletable()) {
+                if (ImGui::Button(" - ", ImVec2(0, 19))) {
+                    if (isSelected) {
+                        selected = -1;
+                        selectedModel = nullptr;
+                    }
 
-                // Remove force field
-                if (auto forceField = dynamic_cast<ForceModel*>(models[i])) {
-                    editor->removeForceField(forceField);
-                }
+                    // Remove force field
+                    if (auto forceField = dynamic_cast<ForceModel*>(models[i])) {
+                        editor->removeForceField(forceField);
+                    }
 
-                scene->removeModel(i);
+                    scene->removeModel(i);
+                }
             }
             ImGui::PopID();
         }

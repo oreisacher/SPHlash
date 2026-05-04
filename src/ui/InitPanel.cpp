@@ -28,28 +28,24 @@ void InitPanel::draw() {
     ImGui::SeparatorText("Particles");
 
     ImGui::Text("Total Mass:");
-    if (ImGui::DragFloat("##tm", &simulation->initSettings.totalMass, 10)) {
-        recalculateParticles();
-    }
+    ImGui::DragFloat("##tm", &simulation->initSettings.totalMass, 10);
 
     ImGui::Text("Particle Spacing:");
-    if (ImGui::DragFloat("##ps", &simulation->initSettings.particleSpacing, 0.001)) {
-        recalculateParticles();
-    }
+    ImGui::DragFloat("##ps", &simulation->initSettings.particleSpacing, 0.001);
 
     ImGui::SeparatorText("Area");
 
     ImGui::Text("Center: ");
     if (ImGui::DragFloat3("##saCenter", glm::value_ptr(simulation->initSettings.spawnArea.center), 0.01f)) {
-        recalculateParticles();
         editor->updateSpawnAreaTransform();
     }
 
     ImGui::Text("Size: ");
     if (ImGui::DragFloat3("##saSize", glm::value_ptr(simulation->initSettings.spawnArea.size), 0.01f)) {
-        recalculateParticles();
         editor->updateSpawnAreaTransform();
     }
+
+    recalculateParticles();
 
     ImGui::Spacing();
     ImGui::Separator();
