@@ -8,6 +8,7 @@
 #include "tiny_obj_loader.h"
 #include "utils/Primitives.h"
 #include "utils/SphereCreator.h"
+#include "glm/glm.hpp"
 
 Mesh::Mesh(
     const std::string& name,
@@ -101,22 +102,39 @@ int Mesh::getMaterialIndex() const {
     return materialIndex;
 }
 
-std::vector<Triangle> Mesh::getTriangles(glm::mat4 model) const {
-    // std::vector<Triangle> triangles;
-    //
-    // for (int i = 0; i < indices.size(); i += 3) {
-    //     const glm::vec3 v0 = model * glm::vec4(vertices[indices[i    ]].position, 1.0f);
-    //     const glm::vec3 v1 = model * glm::vec4(vertices[indices[i + 1]].position, 1.0f);
-    //     const glm::vec3 v2 = model * glm::vec4(vertices[indices[i + 2]].position, 1.0f);
-    //
-    //     triangles.push_back({
-    //         make_float3(v0.x, v0.y, v0.z),
-    //         make_float3(v1.x, v1.y, v1.z),
-    //         make_float3(v2.x, v2.y, v2.z)
-    //     });
-    // }
-    //
-    // return triangles;
+std::vector<Triangle> Mesh::getWorldSpaceTriangles(const glm::mat4& model) const {
+    std::vector<Triangle> triangles;
+
+    for (int i = 0; i < indices.size(); i += 3) {
+        const glm::vec3 v0 = model * glm::vec4(
+            vertices[indices[i    ]].position.x,
+            vertices[indices[i    ]].position.y,
+            vertices[indices[i    ]].position.z,
+            1.0f
+        );
+
+        const glm::vec3 v1 = model * glm::vec4(
+            vertices[indices[i + 1]].position.x,
+            vertices[indices[i + 1]].position.y,
+            vertices[indices[i + 1]].position.z,
+            1.0f
+        );
+
+        const glm::vec3 v2 = model * glm::vec4(
+            vertices[indices[i + 2]].position.x,
+            vertices[indices[i + 2]].position.y,
+            vertices[indices[i + 2]].position.z,
+            1.0f
+        );
+
+        triangles.push_back({
+            make_float3(v0.x, v0.y, v0.z),
+            make_float3(v1.x, v1.y, v1.z),
+            make_float3(v2.x, v2.y, v2.z)
+        });
+    }
+
+    return triangles;
 }
 
 cudaGraphicsResource* Mesh::getVerticesResource() const {

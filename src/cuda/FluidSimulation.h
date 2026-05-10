@@ -59,6 +59,8 @@ void launchDensityPressureKernel(
     ParticleGPU* particles,
     const int* hashes,
     const int* offsets,
+    const Hex32Field boundaryField,
+    const CudaAABB domain,
     const float h,
     const float k,
     const float p_0

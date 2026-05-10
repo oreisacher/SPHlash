@@ -186,11 +186,110 @@ void launchReorderParticlesKernel(
     );
 }
 
+__device__ float3 TT(float3 min, float3 max, float3 position) {
+    float3 s = max - min;
+    float3 t = 2.0f * position - (max + min);
+
+    return make_float3(
+        t.x / s.x,
+        t.y / s.y,
+        t.z / s.z
+    );
+}
+
+__device__ float sshapeFunction(
+    float xi,   float eta,   float zeta,        // Query positon
+    float xi_i, float eta_i, float zeta_i,      // Node coords [-1, 1]
+    bool isCorner
+) {
+    if (isCorner) {
+        // Equation 9
+        return (1.0f / 64.0f)
+            * (1.0f + xi_i   * xi)
+            * (1.0f + eta_i  * eta)
+            * (1.0f + zeta_i * zeta)
+            * (9.0f * (xi*xi + eta*eta + zeta*zeta) - 19.0f);
+    } else {
+        // Equation 10
+        return (9.0f / 64.0f)
+            * (1.0f - xi*xi)
+            * (1.0f + 9.0f * xi_i * xi)
+            * (1.0f + eta_i  * eta)
+            * (1.0f + zeta_i * zeta);
+    }
+}
+
+struct HexNode {
+    float xi, eta, zeta;
+    bool isCorner;
+};
+
+__constant__ HexNode hex32Nodes[32] = {
+    // Corner nodes
+    { -1.0f, -1.0f, -1.0f, true },
+    {  1.0f, -1.0f, -1.0f, true },
+    {  1.0f,  1.0f, -1.0f, true },
+    { -1.0f,  1.0f, -1.0f, true },
+    { -1.0f, -1.0f,  1.0f, true },
+    {  1.0f, -1.0f,  1.0f, true },
+    {  1.0f,  1.0f,  1.0f, true },
+    { -1.0f,  1.0f,  1.0f, true },
+
+    // Edge nodes along xi
+    { -1.0f/3.0f, -1.0f, -1.0f, false },
+    {  1.0f/3.0f, -1.0f, -1.0f, false },
+    { -1.0f/3.0f,  1.0f, -1.0f, false },
+    {  1.0f/3.0f,  1.0f, -1.0f, false },
+    { -1.0f/3.0f, -1.0f,  1.0f, false },
+    {  1.0f/3.0f, -1.0f,  1.0f, false },
+    { -1.0f/3.0f,  1.0f,  1.0f, false },
+    {  1.0f/3.0f,  1.0f,  1.0f, false },
+
+    // Edge nodes along eta
+    { -1.0f, -1.0/3.0f, -1.0f, false },
+    {  1.0f, -1.0/3.0f, -1.0f, false },
+    { -1.0f,  1.0/3.0f, -1.0f, false },
+    {  1.0f,  1.0/3.0f, -1.0f, false },
+    { -1.0f, -1.0/3.0f,  1.0f, false },
+    {  1.0f, -1.0/3.0f,  1.0f, false },
+    { -1.0f,  1.0/3.0f,  1.0f, false },
+    {  1.0f,  1.0/3.0f,  1.0f, false },
+
+    // Edge nodes along zeta
+    { -1.0f, -1.0f, -1.0/3.0f, false },
+    {  1.0f, -1.0f, -1.0/3.0f, false },
+    { -1.0f,  1.0f, -1.0/3.0f, false },
+    {  1.0f,  1.0f, -1.0/3.0f, false },
+    { -1.0f, -1.0f,  1.0/3.0f, false },
+    {  1.0f, -1.0f,  1.0/3.0f, false },
+    { -1.0f,  1.0f,  1.0/3.0f, false },
+    {  1.0f,  1.0f,  1.0/3.0f, false },
+};
+
+__device__ float iinterpolate(
+    float xi, float eta, float zeta,
+    float* nodeValues
+) {
+    float result = 0;
+
+    for (int i = 0 ; i < 32 ; i++) {
+        result += sshapeFunction(
+            xi, eta, zeta,
+            hex32Nodes[i].xi, hex32Nodes[i].eta, hex32Nodes[i].zeta,
+            hex32Nodes[i].isCorner
+        ) * nodeValues[i];
+    }
+
+    return result;
+}
+
 __global__ void densityPressureKernel(
     const int numParticles,
     ParticleGPU* particles,
     const int* hashes,
     const int* offsets,
+    const Hex32Field boundaryField,
+    const CudaAABB domain,
     const float h,
     const float k,
     const float p_0
@@ -241,6 +340,50 @@ __global__ void densityPressureKernel(
         }
     }
 
+    // Boundary density
+    float3 bCellSize = make_float3(
+        (domain.max.x - domain.min.x) / boundaryField.resolution.x,
+        (domain.max.y - domain.min.y) / boundaryField.resolution.y,
+        (domain.max.z - domain.min.z) / boundaryField.resolution.z
+    );
+
+    int bCellX = min((int)((pos.x - domain.min.x) / bCellSize.x), boundaryField.resolution.x - 1);
+    int bCellY = min((int)((pos.y - domain.min.y) / bCellSize.y), boundaryField.resolution.y - 1);
+    int bCellZ = min((int)((pos.z - domain.min.z) / bCellSize.z), boundaryField.resolution.z - 1);
+
+    // Clamp to valid range
+    bCellX = max(0, bCellX);
+    bCellY = max(0, bCellY);
+    bCellZ = max(0, bCellZ);
+
+    int bCellId = bCellX
+            + bCellY * boundaryField.resolution.x
+            + bCellZ * boundaryField.resolution.x * boundaryField.resolution.y;
+
+    // Cell bounds in world space
+    float3 bCellBase = make_float3(
+        domain.min.x + bCellX * bCellSize.x,
+        domain.min.y + bCellY * bCellSize.y,
+        domain.min.z + bCellZ * bCellSize.z
+    );
+
+    float3 bCellMax = make_float3(
+        bCellBase.x + bCellSize.x,
+        bCellBase.y + bCellSize.y,
+        bCellBase.z + bCellSize.z
+    );
+
+    // Map particle to natural coords [-1,1] within its boundary cell
+    float3 naturalPos = TT(bCellBase, bCellMax, make_float3(pos.x, pos.y, pos.z));
+
+    Hex32Cell* bCell = &boundaryField.d_cells[bCellId];
+    float boundaryDensity = iinterpolate(naturalPos.x, naturalPos.y, naturalPos.z, bCell->nodes);
+
+    // Add to total density
+    density += boundaryDensity;
+
+
+
     particles[id].properties.y = density;
     particles[id].properties.z = k * (density - p_0);
 
@@ -254,6 +397,8 @@ void launchDensityPressureKernel(
     ParticleGPU* particles,
     const int* hashes,
     const int* offsets,
+    const Hex32Field boundaryField,
+    const CudaAABB domain,
     const float h,
     const float k,
     const float p_0
@@ -262,7 +407,7 @@ void launchDensityPressureKernel(
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     densityPressureKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, hashes, offsets, h, k, p_0
+        numParticles, particles, hashes, offsets, boundaryField, domain, h, k, p_0
     );
 }
 
@@ -655,7 +800,6 @@ __global__ void voxelFieldKernel(
     int x = id % field.resolution.x;
     int y = (id / field.resolution.x) % field.resolution.y;
     int z = id / (field.resolution.x * field.resolution.y);
-
 
     float3 cellSizes = make_float3(
         (domain.max.x - domain.min.x) / (field.resolution.x - 1),

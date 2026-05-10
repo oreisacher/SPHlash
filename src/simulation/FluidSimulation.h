@@ -10,6 +10,7 @@
 #include <cuda_runtime.h>
 #include "rendering/FluidRenderer.h"
 #include "utils/AABB.h"
+#include "utils/Hex32Field.h"
 #include "utils/VoxelField.h"
 
 enum SimulationState {
@@ -111,6 +112,8 @@ public:
     void rebuildForceFieldBuffer();
     void updateForceFieldBuffer() const;
 
+    void setBoundaryField(const Hex32Field &field);
+
     // --- VoxelField ---
     bool computeVoxelField(const VoxelField& field) const;
 
@@ -146,6 +149,9 @@ private:
 
     // --- Force Fields ---
     ForceField* d_forceFields           = nullptr;
+
+    // --- Boundary Density Map ---
+    Hex32Field boundaryField;
 
     // --- Rendering ---
     cudaGraphicsResource* rendererResource = nullptr;

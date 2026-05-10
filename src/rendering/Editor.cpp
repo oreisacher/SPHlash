@@ -8,6 +8,7 @@
 
 #include "AreaModel.h"
 #include "ForceModel.h"
+#include "simulation/BoundaryBuilder.h"
 
 Editor::Editor(Scene& scene, FluidSimulation* sim)
     : scene(&scene), simulation(sim)
@@ -62,6 +63,20 @@ void Editor::removeForceField(ForceModel* model) const {
 
     simulation->rebuildForceFieldBuffer();
     simulation->updateForceFieldBuffer();
+}
+
+void Editor::addBoundaryModel(std::unique_ptr<Model> model) const {
+    model->setType(Type::BOUNDARY);
+    scene->addModel(std::move(model));
+}
+
+BoundaryBuilder* Editor::getBoundaryBuilder() {
+    return &boundryBuilder;
+}
+
+void Editor::buildBoundaryDensityMap() {
+    auto densityMap = boundryBuilder.constructDensityMap(*scene, simulation->settings.domainArea);
+    simulation->setBoundaryField(densityMap);
 }
 
 glm::mat4 Editor::calculateModelMatrix(glm::vec3 center, glm::vec3 scale) {

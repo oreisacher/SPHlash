@@ -6,15 +6,22 @@
 #define SPHLASH_BOUNDARIES_H
 
 #include "rendering/Mesh.h"
+#include "utils/AABB.h"
+#include "utils/Hex32Field.h"
 
 void launchSdfKernel(
     const int triangleCount,
     const Triangle* triangles,
-    float* sdf,
-    const int cellCount,
-    const int resolution,
-    const float3 gridMin,
-    const float3 gridMax
+    const Hex32Field& hexField,
+    const CudaAABB& domain
+);
+
+void launchCalcDensityMapKernel(
+    const Hex32Field sdfField,
+    const Hex32Field densityField,
+    const CudaAABB domain,
+    float restDensity,
+    float h
 );
 
 #endif //SPHLASH_BOUNDARIES_H

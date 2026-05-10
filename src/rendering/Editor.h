@@ -6,6 +6,7 @@
 #define SPHLASH_EDITOR_H
 #include "ForceModel.h"
 #include "Scene.h"
+#include "simulation/BoundaryBuilder.h"
 #include "simulation/FluidSimulation.h"
 
 class Editor {
@@ -18,9 +19,15 @@ public:
     void addForceField() const;
     void removeForceField(ForceModel* model) const;
 
+    void addBoundaryModel(std::unique_ptr<Model> model) const;
+
+    BoundaryBuilder* getBoundaryBuilder();
+    void buildBoundaryDensityMap();
+
 private:
     Scene* scene;
     FluidSimulation* simulation;
+    BoundaryBuilder boundryBuilder;
 
     // --- Editor Objects ---
     Model* spawnAreaModel       = nullptr;

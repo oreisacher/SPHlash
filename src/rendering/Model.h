@@ -20,6 +20,11 @@ struct Transform {
     glm::mat4 modelMatrix = glm::mat4(1.0f);
 };
 
+enum class Type {
+    NONE,
+    BOUNDARY
+};
+
 class Model {
 public:
     Model(const std::string& path, bool shaded = true);
@@ -38,7 +43,7 @@ public:
     void setName(const std::string& name);
     std::string getName() const;
 
-    std::vector<Triangle> getTriangles() const;
+    std::vector<Triangle> getWorldSpaceTriangles() const;
 
     void addMesh(std::unique_ptr<Mesh> mesh);
     std::vector<Mesh*> getMeshes() const;
@@ -48,6 +53,9 @@ public:
 
     void setVisible(bool on);
     bool isVisible() const;
+
+    void setType(Type type);
+    Type getType() const;
 
     void setSceneGraphDeletable(bool deletable);
     bool isSceneGraphDeletable() const;
@@ -66,6 +74,7 @@ protected:
     std::string name = "Undefined";
 
     bool visible = true;
+    Type type = Type::NONE;
 
     bool sceneGraphVisible = true;
     bool sceneGraphDeletable = true;

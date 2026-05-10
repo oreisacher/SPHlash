@@ -231,3 +231,16 @@ std::shared_ptr<Shader> Shader::createParticle() {
 
     return shader;
 }
+
+std::shared_ptr<Shader> Shader::createTexture3DSlice() {
+    auto shader = std::make_shared<Shader>(
+    std::initializer_list<std::pair<std::string, Type>>({
+        { "assets/shaders/fullscreen.vert", VERTEX },
+        { "assets/shaders/texture3DSlice.frag", FRAGMENT }
+    })
+);
+
+    shader->compile();
+
+    return shader;
+}

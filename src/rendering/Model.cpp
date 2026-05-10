@@ -236,11 +236,11 @@ std::string Model::getName() const {
     return name;
 }
 
-std::vector<Triangle> Model::getTriangles() const {
+std::vector<Triangle> Model::getWorldSpaceTriangles() const {
     std::vector<Triangle> triangles;
 
     for (const auto& mesh : meshes) {
-        auto meshTriangles = mesh->getTriangles(transform.modelMatrix);
+        auto meshTriangles = mesh->getWorldSpaceTriangles(transform.modelMatrix);
         triangles.insert(triangles.end(), meshTriangles.begin(), meshTriangles.end());
     }
 
@@ -281,6 +281,14 @@ void Model::setVisible(const bool on) {
 
 bool Model::isVisible() const {
     return visible;
+}
+
+void Model::setType(Type type) {
+    this->type = type;
+}
+
+Type Model::getType() const {
+    return type;
 }
 
 void Model::setSceneGraphDeletable(bool deletable) {

@@ -49,6 +49,7 @@ public:
     static std::shared_ptr<Shader> createDefaultUnshaded();
     static std::shared_ptr<Shader> createBox();
     static std::shared_ptr<Shader> createParticle();
+    static std::shared_ptr<Shader> createTexture3DSlice();
 
 private:
     std::unordered_map<Type, std::string> sources;

@@ -1,6 +1,22 @@
 #include <vector_functions.h>
 #include <vector_types.h>
 
+__device__ inline float3 operator+(const float3& a, const float3& b) {
+    return make_float3(
+        a.x + b.x,
+        a.y + b.y,
+        a.z + b.z
+    );
+}
+
+__device__ inline float3 operator*(const float s, const float3& b) {
+    return make_float3(
+        s * b.x,
+        s * b.y,
+        s * b.z
+    );
+}
+
 __device__ inline float4 operator+(const float4& a, const float4& b) {
     return make_float4(
         a.x + b.x,

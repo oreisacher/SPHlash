@@ -111,13 +111,13 @@ void ScenePanel::draw() {
     if (ImGuiFileDialog::Instance()->Display("LoadModel")) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-            scene->addModel(std::make_unique<Model>(filePathName.c_str()));
+            editor->addBoundaryModel(std::make_unique<Model>(filePathName.c_str()));
         }
 
         ImGuiFileDialog::Instance()->Close();
     }
 
-    if (ImGui::Button("Add Model", ImVec2(totalWidth, 0))) {
+    if (ImGui::Button("Add Boundary Model", ImVec2(totalWidth, 0))) {
         IGFD::FileDialogConfig config;
         config.path = ".";
         ImGuiFileDialog::Instance()->OpenDialog("LoadModel", "Choose Model", ".obj", config);
@@ -199,6 +199,10 @@ void ScenePanel::draw() {
             }
         }
         ImGui::EndChild();
+    }
+
+    if (ImGui::Button("Build Boundary Density Map", ImVec2(totalWidth, 0))) {
+        editor->buildBoundaryDensityMap();
     }
 
     ImGui::End();

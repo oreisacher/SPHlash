@@ -78,6 +78,8 @@ void FluidSimulation::updateParticles() {
         d_sortedParticles,
         d_sortedParticleHashes,
         d_offsets,
+        boundaryField,
+        settings.domainArea.toCudaAABB(),
         settings.h,
         settings.k,
         settings.p_0
@@ -198,6 +200,10 @@ void FluidSimulation::rebuildForceFieldBuffer() {
 
 void FluidSimulation::updateForceFieldBuffer() const {
     cudaMemcpy(d_forceFields, scene->getForceFields().data(), scene->getForceFields().size() * sizeof(ForceField), cudaMemcpyHostToDevice);
+}
+
+void FluidSimulation::setBoundaryField(const Hex32Field& field) {
+    boundaryField = field;
 }
 
 bool FluidSimulation::computeVoxelField(const VoxelField& field) const {

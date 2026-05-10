@@ -49,7 +49,7 @@ public:
     void setMaterialIndex(int index);
     int getMaterialIndex() const;
 
-    std::vector<Triangle> getTriangles(glm::mat4 model) const;
+    std::vector<Triangle> getWorldSpaceTriangles(const glm::mat4& model) const;
 
     cudaGraphicsResource* getVerticesResource() const;
     cudaGraphicsResource* getIndicesResource() const;
