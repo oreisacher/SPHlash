@@ -23,8 +23,11 @@ struct ParticleGPU {
     float4 position                 = { 0.0f, 0.0f, 0.0f, 0.0f };       // vec4 to avoid padding issues
     float4 startPosition            = { 0.0f, 0.0f, 0.0f, 0.0f };
     float4 velocity                 = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float4 xsphVelocity             = { 0.0f, 0.0f, 0.0f, 0.0f };
     float4 properties               = { -1.0f, -1.0f, -1.0f, -1.0f };   // x: mass, y: density, z: pressure, w: id
     float4 flags                    = { 0.0f, 0.0f, 0.0f, 0.0f };       // x: surface, y: undefined, z: undefined, w: undefined
+
+    float4 boundary                 = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     // SPH Forces
     float4 pressureForce            = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -67,18 +70,19 @@ struct SimulationSettings {
     // Particles
     float h = 0.05f;
     float p_0 = 1000.0f;
-    float k = 0.7f;
-    float mu = 0.1f;
-    float tensionThreshold = 8.0f;
-    float tension = 0.001f;
+    float k = 2000.0f;
+    float alpha = 0.3f;
+    float speedSound = 10.0f;
+    float tensionThreshold = 5.55f;
+    float tension = 0.01f;
 
     // Gravity
-    bool enableGravity = false;
+    bool enableGravity = true;
     float gravity = -9.878;
 
     // CFL
     bool useCFL = true;
-    float safetyFactor = 0.4f;
+    float safetyFactor = 0.25f;
 };
 
 class FluidSimulation {

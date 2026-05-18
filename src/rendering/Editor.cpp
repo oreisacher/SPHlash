@@ -9,6 +9,7 @@
 #include "AreaModel.h"
 #include "ForceModel.h"
 #include "simulation/BoundaryBuilder.h"
+#include "ui/SimulationPanel.h"
 
 Editor::Editor(Scene& scene, FluidSimulation* sim)
     : scene(&scene), simulation(sim)
@@ -24,6 +25,9 @@ Editor::Editor(Scene& scene, FluidSimulation* sim)
     auto domainArea = std::make_unique<AreaModel>("Simulation Domain", glm::vec3(0.2f, 0.6f, 1.0f), sim->settings.domainArea);
     domainAreaModel = domainArea.get();
     scene.addModel(std::move(domainArea));
+
+    // DEBUG Suzanne model
+    addBoundaryModel(std::make_unique<Model>("assets/models/suzanne.obj"));
 }
 
 void Editor::updateSpawnAreaTransform() {
@@ -77,6 +81,7 @@ BoundaryBuilder* Editor::getBoundaryBuilder() {
 void Editor::buildBoundaryDensityMap() {
     auto densityMap = boundryBuilder.constructDensityMap(*scene, simulation->settings.domainArea);
     simulation->setBoundaryField(densityMap);
+    SimulationPanel::bField = densityMap;
 }
 
 glm::mat4 Editor::calculateModelMatrix(glm::vec3 center, glm::vec3 scale) {

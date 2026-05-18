@@ -3,9 +3,14 @@
 //
 
 #include "ui/SimulationPanel.h"
+
+#include <iostream>
+
 #include "imgui.h"
 #include "ImGuizmo.h"
+#include "../../../../../../usr/lib/gcc/x86_64-pc-linux-gnu/14.3.1/include/c++/ostream"
 #include "../rendering/FluidRenderer.h"
+#include "utils/Hex32Field.h"
 
 SimulationPanel::SimulationPanel(GLuint textureId) : UIPanel("Simulation"), texture(textureId) { }
 
@@ -42,6 +47,56 @@ void SimulationPanel::draw() {
 
     ImGuizmo::SetDrawlist();
     ImGuizmo::SetRect(viewportPos.x, viewportPos.y, viewportSize.x, viewportSize.y);
+
+    // // Debug print gradient lines
+    // if (bField.resolution.x != 0) {
+    //     std::vector<Hex32Cell> hex32cells(bField.resolution.x * bField.resolution.y * bField.resolution.z);
+    //     cudaMemcpy(hex32cells.data(), bField.d_cells, bField.resolution.x * bField.resolution.y * bField.resolution.z * sizeof(Hex32Cell), cudaMemcpyDeviceToHost);
+    //
+    //     glm::mat4 mvp = camera->getProjectionMatrix() * camera->getViewMatrix();
+    //
+    //     ImDrawList* drawList = ImGui::GetForegroundDrawList();
+    //
+    //     int n = 0;
+    //     for (auto cell : hex32cells) {
+    //         if (cell.nodes[n] == 0) {
+    //             continue;
+    //         }
+    //
+    //         glm::vec4 position = { cell.worldPositions[n].x, cell.worldPositions[n].y, cell.worldPositions[n].z, 1.0f };
+    //         glm::vec4 clip = mvp * position;
+    //
+    //         if (clip.w <= 0.0f) {
+    //             continue;
+    //         }
+    //
+    //         glm::vec3 ndc = glm::vec3(clip.x, clip.y, clip.z) / clip.w;
+    //         ImVec2 screenPos = {
+    //             viewportPos.x + (ndc.x * 0.5f + 0.5f) * viewportSize.x,
+    //             viewportPos.y + (1.0f - (ndc.y * 0.5f + 0.5f)) * viewportSize.y
+    //         };
+    //
+    //         glm::vec4 dirPos = { position.x + cell.nodeGradients[n].x * 0.1, position.y + cell.nodeGradients[n].y * 0.1, position.z + cell.nodeGradients[n].z * 0.1, 1.0f };
+    //         clip = mvp * dirPos;
+    //
+    //         if (clip.w <= 0.0f) {
+    //             continue;
+    //         }
+    //
+    //         ndc = glm::vec3(clip.x, clip.y, clip.z) / clip.w;
+    //         ImVec2 screenEndPos = {
+    //             viewportPos.x + (ndc.x * 0.5f + 0.5f) * viewportSize.x,
+    //             viewportPos.y + (1.0f - (ndc.y * 0.5f + 0.5f)) * viewportSize.y
+    //         };
+    //
+    //         drawList->AddLine(
+    //             screenPos,
+    //             screenEndPos,
+    //             IM_COL32(255, 0, 0, 255),
+    //             2.0f
+    //         );
+    //     }
+    // }
 
     if (ImGui::IsItemHovered()) {
         // Mouse movement

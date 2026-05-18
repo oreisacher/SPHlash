@@ -10,51 +10,53 @@
 
 #define IDX(x,y,z) ((x) + (y) * resolution + (z) * resolution * resolution)
 
+enum NodeType { CORNER, EDGE_XI, EDGE_ETA, EDGE_ZETA };
+
 struct HexNode {
     float xi, eta, zeta;
-    bool isCorner;
+    NodeType type;
 };
 
 __constant__ HexNode hex32Nodes[32] = {
     // Corner nodes
-    { -1.0f, -1.0f, -1.0f, true },
-    {  1.0f, -1.0f, -1.0f, true },
-    {  1.0f,  1.0f, -1.0f, true },
-    { -1.0f,  1.0f, -1.0f, true },
-    { -1.0f, -1.0f,  1.0f, true },
-    {  1.0f, -1.0f,  1.0f, true },
-    {  1.0f,  1.0f,  1.0f, true },
-    { -1.0f,  1.0f,  1.0f, true },
+    { -1.0f, -1.0f, -1.0f, CORNER },
+    {  1.0f, -1.0f, -1.0f, CORNER },
+    {  1.0f,  1.0f, -1.0f, CORNER },
+    { -1.0f,  1.0f, -1.0f, CORNER },
+    { -1.0f, -1.0f,  1.0f, CORNER },
+    {  1.0f, -1.0f,  1.0f, CORNER },
+    {  1.0f,  1.0f,  1.0f, CORNER },
+    { -1.0f,  1.0f,  1.0f, CORNER },
 
     // Edge nodes along xi
-    { -1.0f/3.0f, -1.0f, -1.0f, false },
-    {  1.0f/3.0f, -1.0f, -1.0f, false },
-    { -1.0f/3.0f,  1.0f, -1.0f, false },
-    {  1.0f/3.0f,  1.0f, -1.0f, false },
-    { -1.0f/3.0f, -1.0f,  1.0f, false },
-    {  1.0f/3.0f, -1.0f,  1.0f, false },
-    { -1.0f/3.0f,  1.0f,  1.0f, false },
-    {  1.0f/3.0f,  1.0f,  1.0f, false },
+    { -1.0f/3.0f, -1.0f, -1.0f, EDGE_XI },
+    {  1.0f/3.0f, -1.0f, -1.0f, EDGE_XI },
+    { -1.0f/3.0f,  1.0f, -1.0f, EDGE_XI },
+    {  1.0f/3.0f,  1.0f, -1.0f, EDGE_XI },
+    { -1.0f/3.0f, -1.0f,  1.0f, EDGE_XI },
+    {  1.0f/3.0f, -1.0f,  1.0f, EDGE_XI },
+    { -1.0f/3.0f,  1.0f,  1.0f, EDGE_XI },
+    {  1.0f/3.0f,  1.0f,  1.0f, EDGE_XI },
 
     // Edge nodes along eta
-    { -1.0f, -1.0/3.0f, -1.0f, false },
-    {  1.0f, -1.0/3.0f, -1.0f, false },
-    { -1.0f,  1.0/3.0f, -1.0f, false },
-    {  1.0f,  1.0/3.0f, -1.0f, false },
-    { -1.0f, -1.0/3.0f,  1.0f, false },
-    {  1.0f, -1.0/3.0f,  1.0f, false },
-    { -1.0f,  1.0/3.0f,  1.0f, false },
-    {  1.0f,  1.0/3.0f,  1.0f, false },
+    { -1.0f, -1.0/3.0f, -1.0f, EDGE_ETA },
+    {  1.0f, -1.0/3.0f, -1.0f, EDGE_ETA },
+    { -1.0f,  1.0/3.0f, -1.0f, EDGE_ETA },
+    {  1.0f,  1.0/3.0f, -1.0f, EDGE_ETA },
+    { -1.0f, -1.0/3.0f,  1.0f, EDGE_ETA },
+    {  1.0f, -1.0/3.0f,  1.0f, EDGE_ETA },
+    { -1.0f,  1.0/3.0f,  1.0f, EDGE_ETA },
+    {  1.0f,  1.0/3.0f,  1.0f, EDGE_ETA },
 
     // Edge nodes along zeta
-    { -1.0f, -1.0f, -1.0/3.0f, false },
-    {  1.0f, -1.0f, -1.0/3.0f, false },
-    { -1.0f,  1.0f, -1.0/3.0f, false },
-    {  1.0f,  1.0f, -1.0/3.0f, false },
-    { -1.0f, -1.0f,  1.0/3.0f, false },
-    {  1.0f, -1.0f,  1.0/3.0f, false },
-    { -1.0f,  1.0f,  1.0/3.0f, false },
-    {  1.0f,  1.0f,  1.0/3.0f, false },
+    { -1.0f, -1.0f, -1.0/3.0f, EDGE_ZETA },
+    {  1.0f, -1.0f, -1.0/3.0f, EDGE_ZETA },
+    { -1.0f,  1.0f, -1.0/3.0f, EDGE_ZETA },
+    {  1.0f,  1.0f, -1.0/3.0f, EDGE_ZETA },
+    { -1.0f, -1.0f,  1.0/3.0f, EDGE_ZETA },
+    {  1.0f, -1.0f,  1.0/3.0f, EDGE_ZETA },
+    { -1.0f,  1.0f,  1.0/3.0f, EDGE_ZETA },
+    {  1.0f,  1.0f,  1.0/3.0f, EDGE_ZETA },
 };
 
 __device__ float distanceTriangle(float3 p, float3 v1, float3 v2, float3 v3) {
@@ -152,6 +154,41 @@ __device__ float calculateSDF(float3 position, int triangleCount, const Triangle
     return fabsf(winding) > 3.1415926f ? -best : best;
 }
 
+__device__ float3 calcGradient(
+    const float3 p,
+    const int triangleCount,
+    const Triangle* triangles,
+    const float eps
+) {
+    const float3 ex = make_float3(eps, 0.0f, 0.0f);
+    const float3 ey = make_float3(0.0f, eps, 0.0f);
+    const float3 ez = make_float3(0.0f, 0.0f, eps);
+
+    float dx =
+        calculateSDF(p + ex, triangleCount, triangles) -
+        calculateSDF(p - ex, triangleCount, triangles);
+
+    float dy =
+        calculateSDF(p + ey, triangleCount, triangles) -
+        calculateSDF(p - ey, triangleCount, triangles);
+
+    float dz =
+        calculateSDF(p + ez, triangleCount, triangles) -
+        calculateSDF(p - ez, triangleCount, triangles);
+
+    float3 g = make_float3(dx, dy, dz);
+
+    float len = sqrtf(g.x*g.x + g.y*g.y + g.z*g.z);
+
+    if (len > 1e-8f) {
+        g.x /= len;
+        g.y /= len;
+        g.z /= len;
+    }
+
+    return g;
+}
+
 __global__ void sdfKernel(
     const int triangleCount,
     const Triangle* triangles,
@@ -175,12 +212,6 @@ __global__ void sdfKernel(
         (domain.max.y - domain.min.y) / hexField.resolution.y,
         (domain.max.z - domain.min.z) / hexField.resolution.z
     );
-
-    // float3 cellThirds = make_float3(
-    //     cellSize.x * (1.0 / 3.0f),
-    //     cellSize.y * (1.0 / 3.0f),
-    //     cellSize.z * (1.0 / 3.0f)
-    // );
 
     float3 cellBasePos = make_float3(
         domain.min.x + cellX * cellSize.x,
@@ -207,6 +238,32 @@ __global__ void sdfKernel(
         );
 
         cell->nodes[n] = calculateSDF(worldPos, triangleCount, triangles);
+        // cell->nodeGradients[n] = calcGradient(worldPos, triangleCount, triangles, 0.01f);
+        // cell->worldPositions[n] = worldPos;
+    }
+
+    // Determine if this cell is unnecessary
+    float phiMin = INFINITY;
+    float phiMax = -INFINITY;
+
+    for (float value : cell->nodes) {
+        if (value < phiMin) {
+            phiMin = value;
+        }
+
+        if (value > phiMax) {
+            phiMax = value;
+        }
+    }
+
+    const float r = 0.05f;
+    // if (phiMin >= 2.0 * r || phiMax <= -r) {
+    if (phiMin >= 2.0 * r) {
+        // for (float& value : cell->nodes)
+        //     value = 0;
+        cell->used = false;
+    } else {
+        cell->used = true;
     }
 
     // int i = 0;
@@ -297,22 +354,40 @@ __device__ float3 T(float3 min, float3 max, float3 position) {
 __device__ float shapeFunction(
     float xi,   float eta,   float zeta,        // Query positon
     float xi_i, float eta_i, float zeta_i,      // Node coords [-1, 1]
-    bool isCorner
+    NodeType type
 ) {
-    if (isCorner) {
-        // Equation 9
-        return (1.0f / 64.0f)
-            * (1.0f + xi_i   * xi)
-            * (1.0f + eta_i  * eta)
-            * (1.0f + zeta_i * zeta)
-            * (9.0f * (xi*xi + eta*eta + zeta*zeta) - 19.0f);
-    } else {
-        // Equation 10
-        return (9.0f / 64.0f)
-            * (1.0f - xi*xi)
-            * (1.0f + 9.0f * xi_i * xi)
-            * (1.0f + eta_i  * eta)
-            * (1.0f + zeta_i * zeta);
+    switch (type) {
+        case CORNER:
+            // Equation 9
+            return (1.0f / 64.0f)
+                * (1.0f + xi_i   * xi)
+                * (1.0f + eta_i  * eta)
+                * (1.0f + zeta_i * zeta)
+                * (9.0f * (xi*xi + eta*eta + zeta*zeta) - 19.0f);
+
+        case EDGE_XI:
+            // Equation 10
+            return (9.0f / 64.0f)
+                * (1.0f - xi*xi)
+                * (1.0f + 9.0f * xi_i * xi)
+                * (1.0f + eta_i  * eta)
+                * (1.0f + zeta_i * zeta);
+
+        case EDGE_ETA:
+            // Equation 10
+            return (9.0f / 64.0f)
+                * (1.0f - eta*eta)
+                * (1.0f + 9.0f * eta_i * eta)
+                * (1.0f + xi_i  * xi)
+                * (1.0f + zeta_i * zeta);
+
+        case EDGE_ZETA:
+            // Equation 10
+            return (9.0f / 64.0f)
+                * (1.0f - zeta*zeta)
+                * (1.0f + 9.0f * zeta_i * zeta)
+                * (1.0f + xi_i  * xi)
+                * (1.0f + eta_i * eta);
     }
 }
 
@@ -326,7 +401,7 @@ __device__ float interpolate(
         result += shapeFunction(
             xi, eta, zeta,
             hex32Nodes[i].xi, hex32Nodes[i].eta, hex32Nodes[i].zeta,
-            hex32Nodes[i].isCorner
+            hex32Nodes[i].type
         ) * nodeValues[i];
     }
 
@@ -359,12 +434,6 @@ __global__ void calcDensityMapKernel(
         (domain.max.z - domain.min.z) / sdfField.resolution.z
     );
 
-    // float3 cellThirds = make_float3(
-    //     cellSize.x * (1.0 / 3.0f),
-    //     cellSize.y * (1.0 / 3.0f),
-    //     cellSize.z * (1.0 / 3.0f)
-    // );
-
     float3 cellBasePos = make_float3(
         domain.min.x + cellX * cellSize.x,
         domain.min.y + cellY * cellSize.y,
@@ -372,6 +441,21 @@ __global__ void calcDensityMapKernel(
     );
 
     Hex32Cell* cell = &sdfField.d_cells[id];
+    densityField.d_cells[id].used = cell->used;
+
+    if (!cell->used)
+        return;
+
+    // for (int i = 0 ; i < 32 ; i++) {
+        // densityField.d_cells[id].nodeGradients[i] = cell->nodeGradients[i];
+        // densityField.d_cells[id].worldPositions[i] = cell->worldPositions[i];
+    // }
+
+    // if (!cell->used) {
+    //     for (auto& value : densityField.d_cells[id].nodes)
+    //         value = 0;
+    //     return;
+    // }
 
     for (int nodeIndex = 0 ; nodeIndex < 32 ; nodeIndex++) {
         HexNode node = hex32Nodes[nodeIndex];
@@ -389,14 +473,23 @@ __global__ void calcDensityMapKernel(
         );
 
         float density = 0;
+        // float n = 0;
 
-        for (int sample = 0 ; sample < 100 ; sample++) {
+        const float sCount = 1000.0;
+        for (int sample = 0 ; sample < sCount ; sample++) {
             float3 samplePosition = sampleSphere(&states[id], nodePos, h);
 
+            // Reject samples outside domain entirely
+            if (samplePosition.x < domain.min.x || samplePosition.x > domain.max.x ||
+                samplePosition.y < domain.min.y || samplePosition.y > domain.max.y ||
+                samplePosition.z < domain.min.z || samplePosition.z > domain.max.z) {
+                continue;
+            }
+
             // Clamp to domain
-            samplePosition.x = fmaxf(domain.min.x, fminf(domain.max.x, samplePosition.x));
-            samplePosition.y = fmaxf(domain.min.y, fminf(domain.max.y, samplePosition.y));
-            samplePosition.z = fmaxf(domain.min.z, fminf(domain.max.z, samplePosition.z));
+            // samplePosition.x = fmaxf(domain.min.x, fminf(domain.max.x, samplePosition.x));
+            // samplePosition.y = fmaxf(domain.min.y, fminf(domain.max.y, samplePosition.y));
+            // samplePosition.z = fmaxf(domain.min.z, fminf(domain.max.z, samplePosition.z));
 
             // Find cell
             int sampleCellX = (int)((samplePosition.x - domain.min.x) / cellSize.x);
@@ -404,15 +497,19 @@ __global__ void calcDensityMapKernel(
             int sampleCellZ = (int)((samplePosition.z - domain.min.z) / cellSize.z);
 
             // Clamp cell indices to valid range
-            sampleCellX = min(sampleCellX, sdfField.resolution.x - 1);
-            sampleCellY = min(sampleCellY, sdfField.resolution.y - 1);
-            sampleCellZ = min(sampleCellZ, sdfField.resolution.z - 1);
+            // sampleCellX = min(sampleCellX, sdfField.resolution.x - 1);
+            // sampleCellY = min(sampleCellY, sdfField.resolution.y - 1);
+            // sampleCellZ = min(sampleCellZ, sdfField.resolution.z - 1);
 
             // Get cell
             int cellId = sampleCellX
                      + sampleCellY * sdfField.resolution.x
                      + sampleCellZ * sdfField.resolution.x * sdfField.resolution.y;
             Hex32Cell* sampleCell = &sdfField.d_cells[cellId];
+
+            if (sampleCell->used == false) {
+                continue;
+            }
 
             // World pos of cell
             float3 sampleCellBase = make_float3(
@@ -430,20 +527,25 @@ __global__ void calcDensityMapKernel(
             float3 normalizedPos = T(sampleCellBase, sampleCellMax, samplePosition);
             float interpolateSampleSDF = interpolate(normalizedPos.x, normalizedPos.y, normalizedPos.z, sampleCell->nodes);
 
-            if (interpolateSampleSDF < 0.0f) {
-                // Gamma
-                float g = gamma(restDensity, h, fabsf(interpolateSampleSDF));
+            // if (interpolateSampleSDF <= 0.0) {
+            // float absSdf = fabsf(interpolateSampleSDF);
+            float g = gamma(restDensity, h, interpolateSampleSDF);
+            float3 diff = nodePos - samplePosition;
+            float w = poly6Kernel(make_float4(diff.x, diff.y, diff.z, 0.0f), h);
+            // n += w;
 
-                // Kernel
-                float3 diff = nodePos - samplePosition;
-                float w = poly6Kernel(make_float4(diff.x, diff.y, diff.z, 0.0), h);
-
-                density += g * w;
-            }
+            density += g * w;
+            // }
         }
 
         float V = (4.0 / 3.0f) * M_PI * h * h * h;
-        density = density * (V / 100);
+        density = density * (V / sCount);
+
+        // if (n >= 1e-8f)
+            // density /= n;
+
+        // if (density > 990)
+            // printf("%f\n", density);
 
         densityField.d_cells[id].nodes[nodeIndex] = density;
     }

@@ -11,6 +11,9 @@
 // Edge nodes       8 - 31
 struct Hex32Cell {
     float nodes[32];
+    // float3 nodeGradients[32];
+    // float3 worldPositions[32];
+    bool used;
 };
 
 struct Hex32Field {

@@ -65,7 +65,7 @@ Application::Application() {
     ui->addPanel(new RenderingSettingsPanel     (renderer, surfaceMesher));
     ui->addPanel(new ParticlesPanel             (simulation, renderer));
     ui->addPanel(new ScenePanel                 (scene, editor, renderer));
-    // ui->addPanel(new Texture3DPanel("SDF Preview", editor->getBoundaryBuilder()->tex3D));
+    ui->addPanel(new Texture3DPanel("SDF Preview", editor->getBoundaryBuilder()->tex3D));
 
     // Setup scene
     scene.setCamera(std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 1.0f)));

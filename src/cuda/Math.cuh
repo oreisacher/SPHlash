@@ -153,3 +153,12 @@ inline float clampf(float x, float a, float b)
 {
     return fminf(fmaxf(x, a), b);
 }
+
+__host__ __device__
+inline float dot(const float4& a, const float4& b)
+{
+    return a.x * b.x +
+           a.y * b.y +
+           a.z * b.z +
+           a.w * b.w;
+}

@@ -56,10 +56,15 @@ void SimulationSettingsPanel::draw() {
             ImGui::SetTooltip("Stiffness");
         ImGui::DragFloat("##k", &simulation->settings.k, 0.001f);
 
-        ImGui::Text("Mu:");
+        ImGui::Text("Alpha:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Viscosity Coefficient");
-        ImGui::DragFloat("##mu", &simulation->settings.mu, 0.001f);
+        ImGui::DragFloat("##alpha", &simulation->settings.alpha, 0.001f);
+
+        ImGui::Text("Speed of Sound:");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Speed of Sound");
+        ImGui::DragFloat("##sos", &simulation->settings.speedSound, 0.001f);
 
         ImGui::Text("Surface Tension Threshold:");
         if (ImGui::IsItemHovered())
@@ -127,7 +132,8 @@ void SimulationSettingsPanel::SaveSettings(const std::string& path) const {
     json["h"]                   = simulation->settings.h;
     json["p_0"]                 = simulation->settings.p_0;
     json["k"]                   = simulation->settings.k;
-    json["mu"]                  = simulation->settings.mu;
+    json["mu"]                  = simulation->settings.alpha;
+    json["sos"]                  = simulation->settings.speedSound;
     json["tensionThreshold"]    = simulation->settings.tensionThreshold;
     json["tension"]             = simulation->settings.tension;
     json["enableGravity"]       = simulation->settings.enableGravity;
@@ -149,7 +155,8 @@ void SimulationSettingsPanel::LoadSettings(const std::string& path) {
     simulation->settings.h                  = json.value("h", simulation->settings.h);
     simulation->settings.p_0                = json.value("p_0", simulation->settings.p_0);
     simulation->settings.k                  = json.value("k", simulation->settings.k);
-    simulation->settings.mu                 = json.value("mu", simulation->settings.mu);
+    simulation->settings.alpha              = json.value("alpha", simulation->settings.alpha);
+    simulation->settings.speedSound         = json.value("sos", simulation->settings.speedSound);
     simulation->settings.tensionThreshold   = json.value("tensionThreshold", simulation->settings.tensionThreshold);
     simulation->settings.tension            = json.value("tension", simulation->settings.tension);
     simulation->settings.enableGravity      = json.value("enableGravity", simulation->settings.enableGravity);

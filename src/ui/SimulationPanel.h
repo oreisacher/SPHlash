@@ -7,6 +7,7 @@
 
 #include "UIPanel.h"
 #include "../rendering/FluidRenderer.h"
+#include "utils/Hex32Field.h"
 
 struct PanelEvent {
     enum Type { RESIZE, MOUSEMOVE, MOUSEDOWN, MOUSEUP, MOUSEHOLD, SCROLL } type;
@@ -27,6 +28,9 @@ public:
     void draw() override;
 
     std::vector<PanelEvent> getEvents();
+
+    static inline Hex32Field bField;
+    static inline Camera* camera = nullptr;
 
 private:
     GLuint texture;

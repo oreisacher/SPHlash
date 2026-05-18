@@ -25,6 +25,17 @@ __device__ inline float3 interp(float3 p1, float3 p2, float v1, float v2, float 
     );
 }
 
+__constant__ int3 offsets[8] = {
+    {0,0,0},
+    {1,0,0},
+    {1,1,0},
+    {0,1,0},
+    {0,0,1},
+    {1,0,1},
+    {1,1,1},
+    {0,1,1}
+};
+
 __global__ void marchingCubesKernel(
     const VoxelField field,
     const CudaAABB domain,
@@ -71,16 +82,76 @@ __global__ void marchingCubesKernel(
     cube[6] = field.d_color[id + dx + dy + dz];
     cube[7] = field.d_color[id      + dy + dz];
 
+    // Border
+    for (int i = 0; i < 8; i++) {
+        int vx = x + offsets[i].x;
+        int vy = y + offsets[i].y;
+        int vz = z + offsets[i].z;
+
+        bool boundary =
+            vx == 0 ||
+            vy == 0 ||
+            vz == 0 ||
+            vx == field.resolution.x - 1 ||
+            vy == field.resolution.y - 1 ||
+            vz == field.resolution.z - 1;
+
+        if (boundary) {
+            cube[i] = isoLevel;
+        }
+    }
+    // if (x == 0) {
+    //     cube[0] = isoLevel;
+    //     cube[3] = isoLevel;
+    //     cube[4] = isoLevel;
+    //     cube[7] = isoLevel;
+    // }
+    //
+    // if (y == 0) {
+    //     cube[0] = isoLevel;
+    //     cube[1] = isoLevel;
+    //     cube[4] = isoLevel;
+    //     cube[5] = isoLevel;
+    // }
+    //
+    // if (z == 0) {
+    //     cube[0] = isoLevel;
+    //     cube[1] = isoLevel;
+    //     cube[2] = isoLevel;
+    //     cube[3] = isoLevel;
+    // }
+    //
+    // if (x == field.resolution.x - 2) {
+    //     cube[1] = isoLevel;
+    //     cube[2] = isoLevel;
+    //     cube[5] = isoLevel;
+    //     cube[6] = isoLevel;
+    // }
+    //
+    // if (y == field.resolution.y - 2) {
+    //     cube[2] = isoLevel;
+    //     cube[3] = isoLevel;
+    //     cube[6] = isoLevel;
+    //     cube[7] = isoLevel;
+    // }
+    //
+    // if (z == field.resolution.z - 2) {
+    //     cube[4] = isoLevel;
+    //     cube[5] = isoLevel;
+    //     cube[6] = isoLevel;
+    //     cube[7] = isoLevel;
+    // }
+
     // Build cube index
     int cubeIndex = 0;
-    if (cube[0] < isoLevel) cubeIndex |= 1;
-    if (cube[1] < isoLevel) cubeIndex |= 2;
-    if (cube[2] < isoLevel) cubeIndex |= 4;
-    if (cube[3] < isoLevel) cubeIndex |= 8;
-    if (cube[4] < isoLevel) cubeIndex |= 16;
-    if (cube[5] < isoLevel) cubeIndex |= 32;
-    if (cube[6] < isoLevel) cubeIndex |= 64;
-    if (cube[7] < isoLevel) cubeIndex |= 128;
+    if (cube[0] <= isoLevel) cubeIndex |= 1;
+    if (cube[1] <= isoLevel) cubeIndex |= 2;
+    if (cube[2] <= isoLevel) cubeIndex |= 4;
+    if (cube[3] <= isoLevel) cubeIndex |= 8;
+    if (cube[4] <= isoLevel) cubeIndex |= 16;
+    if (cube[5] <= isoLevel) cubeIndex |= 32;
+    if (cube[6] <= isoLevel) cubeIndex |= 64;
+    if (cube[7] <= isoLevel) cubeIndex |= 128;
 
     // Skip empty / full cells
     if (cubeIndex == 0 || cubeIndex == 255)

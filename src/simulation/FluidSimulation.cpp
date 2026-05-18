@@ -13,6 +13,8 @@
 
 #include "cuda/Boundaries.h"
 #include "cuda/FluidSimulation.h"
+
+#include "imgui.h"
 #include "glad/gl.h"
 #include "../cuda/MarchingCubesLookup.h"
 #include "rendering/Scene.h"
@@ -90,8 +92,11 @@ void FluidSimulation::updateParticles() {
         d_sortedParticles,
         d_sortedParticleHashes,
         d_offsets,
+        boundaryField,
+        settings.domainArea.toCudaAABB(),
         settings.h,
-        settings.mu,
+        settings.alpha,
+        settings.speedSound,
         settings.tensionThreshold,
         settings.tension
     );
@@ -107,7 +112,24 @@ void FluidSimulation::update(const float deltaTime) {
 
     // --- CFL ---
     float maxVelocity = getMaxVelocity(particleCount, d_particles);
-    cfl = settings.safetyFactor * settings.h / (maxVelocity + 1e-5f);
+    cfl = settings.safetyFactor * settings.h / (settings.speedSound + maxVelocity + 1e-5f);
+
+    launchCalculateVelocityKernel(
+        d_particles,
+        particleCount,
+        d_forceFields,
+        scene->getForceFields().size(),
+        settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
+        settings.enableGravity ? settings.gravity : 0.0f
+    );
+
+    launchXsphKernel(
+        particleCount,
+        d_particles,
+        d_sortedParticleHashes,
+        d_offsets,
+        settings.h
+    );
 
     launchUpdateParticlesKernel(
         d_particles,
@@ -444,6 +466,7 @@ void FluidSimulation::initParticles() {
 
     // TODO - Check if this is correct
     float mass = initSettings.totalMass * (initSettings.spawnArea.volume() / particleCount);
+    // float mass = initSettings.totalMass / particleCount;
     glm::vec3 spawnAreaMinimum = initSettings.spawnArea.min();
 
     // Set particle data

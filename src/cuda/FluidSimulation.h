@@ -71,10 +71,30 @@ void launchSphForcesKernel(
     ParticleGPU* particles,
     const int* hashes,
     const int* offsets,
+    const Hex32Field boundaryField,
+    const CudaAABB domain,
     const float h,
-    const float mu,
+    const float alpha,
+    const float speedSound,
     const float tensionThreshold,
     const float tension
+);
+
+void launchCalculateVelocityKernel(
+    ParticleGPU* particles,
+    const int numParticles,
+    const ForceField* forceFields,
+    const int numForceFields,
+    const float deltaTime,
+    const float gravity
+);
+
+void launchXsphKernel(
+    const int numParticles,
+    ParticleGPU* particles,
+    const int* hashes,
+    const int* offsets,
+    const float h
 );
 
 void launchUpdateParticlesKernel(

@@ -5,14 +5,16 @@
 #include "BoundaryBuilder.h"
 
 #include <iostream>
+
+#include "imgui_internal.h"
 #include "cuda/Boundaries.h"
 
 BoundaryBuilder::BoundaryBuilder() {
     // Fill 3d texture
     glGenTextures(1, &tex3D);
     glBindTexture(GL_TEXTURE_3D, tex3D);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -73,9 +75,9 @@ Hex32Field BoundaryBuilder::constructDensityMap(const Scene& scene, AABB domain)
     // Build Density Hex32Field
     Hex32Field densityField;
     densityField.resolution = make_int3(
-        settings.resolution.x,
-        settings.resolution.y,
-        settings.resolution.z
+    settings.resolution.x,
+    settings.resolution.y,
+    settings.resolution.z
     );
 
     cudaMalloc(&(densityField.d_cells), hexField.resolution.x * hexField.resolution.y * hexField.resolution.z * sizeof(Hex32Cell));
@@ -84,8 +86,34 @@ Hex32Field BoundaryBuilder::constructDensityMap(const Scene& scene, AABB domain)
         hexField,
         densityField,
         domain.toCudaAABB(),
-        100000,
+        1000,
         0.05
+    );
+
+    // Fill 3d texture
+    std::vector<Hex32Cell> hex32cells(densityField.resolution.x * densityField.resolution.y * densityField.resolution.z);
+    cudaMemcpy(hex32cells.data(), densityField.d_cells, densityField.resolution.x * densityField.resolution.y * densityField.resolution.z * sizeof(Hex32Cell), cudaMemcpyDeviceToHost);
+
+    std::vector<float> sdfData;
+    sdfData.reserve(densityField.resolution.x * densityField.resolution.y * densityField.resolution.z);
+
+    for (auto cell : hex32cells) {
+        // float value = cell.nodeGradients[2].x;
+        float value = cell.nodes[1];
+        sdfData.push_back(value);
+    }
+
+    glBindTexture(GL_TEXTURE_3D, tex3D);
+    glTexSubImage3D(
+        GL_TEXTURE_3D,
+        0,
+        0, 0, 0,
+        hexField.resolution.x,
+        hexField.resolution.y,
+        hexField.resolution.z,
+        GL_RED,
+        GL_FLOAT,
+        sdfData.data()
     );
 
     // Cleanup
