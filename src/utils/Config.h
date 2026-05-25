@@ -11,7 +11,7 @@
 class Config {
 public:
     bool load(const std::string& path);
-    bool save() const;
+    bool save(const std::string& path = "") const;
 
     template<typename T>
     T get(const std::string& key, const T& defaultValue, const std::string& section = "") {

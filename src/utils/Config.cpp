@@ -27,17 +27,25 @@ bool Config::load(const std::string& path) {
     }
 }
 
-bool Config::save() const {
+bool Config::save(const std::string& path) const {
     if (config.empty()) {
         return false;
     }
 
-    if (path.empty()) {
+    std::string configPath;
+
+    if (!path.empty()) {
+        configPath = path;
+    } else {
+        configPath = this->path;
+    }
+
+    if (configPath.empty()) {
         return false;
     }
 
     // Create directory if needed
-    std::filesystem::path filePath(path);
+    std::filesystem::path filePath(configPath);
 
     std::error_code ec;
     std::filesystem::create_directories(filePath.parent_path(), ec);
