@@ -14,7 +14,7 @@
 
 class Texture3DPanel : public UIPanel {
 public:
-    explicit Texture3DPanel(const std::string& name, GLuint texture);
+    explicit Texture3DPanel(const std::string& name, GLuint texture, int width, int height, int depth);
 
     void update(double deltaTime) override;
     void draw() override;
@@ -25,7 +25,12 @@ private:
     Framebuffer* framebuffer = nullptr;
     std::shared_ptr<Shader> shader;
 
-    float sliceZ = 0.0f;
+    bool keepOpen = true;
+
+    float totalDepth;
+    float depth = 0;
+
+    bool isDirty = true;
 };
 
 #endif //SPHLASH_TEXTURE3DPANEL_H

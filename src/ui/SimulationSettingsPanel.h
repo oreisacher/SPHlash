@@ -21,8 +21,8 @@ private:
     FluidSimulation* simulation;
     FluidRenderer* renderer;
 
-    void SaveSettings(const std::string& path) const;
-    void LoadSettings(const std::string& path);
+    void saveSettings(const std::string& path) const;
+    void loadSettings(const std::string& path) const;
 };
 
 #endif //FLUIDSIMSPH_SETTINGSPANEL_H

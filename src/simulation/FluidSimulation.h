@@ -73,8 +73,7 @@ struct SimulationSettings {
     float k = 2000.0f;
     float alpha = 0.3f;
     float speedSound = 10.0f;
-    float tensionThreshold = 5.55f;
-    float tension = 0.01f;
+    float surfaceTension = 0.01f;
 
     // Gravity
     bool enableGravity = true;
@@ -117,6 +116,8 @@ public:
     void updateForceFieldBuffer() const;
 
     void setBoundaryField(const Hex32Field &field);
+    void clearBoundaryField();
+    Hex32Field getBoundaryField() const;
 
     // --- VoxelField ---
     bool computeVoxelField(const VoxelField& field) const;

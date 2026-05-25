@@ -97,8 +97,7 @@ void FluidSimulation::updateParticles() {
         settings.h,
         settings.alpha,
         settings.speedSound,
-        settings.tensionThreshold,
-        settings.tension
+        settings.surfaceTension
     );
 
     std::swap(d_particles, d_sortedParticles);
@@ -113,6 +112,7 @@ void FluidSimulation::update(const float deltaTime) {
     // --- CFL ---
     float maxVelocity = getMaxVelocity(particleCount, d_particles);
     cfl = settings.safetyFactor * settings.h / (settings.speedSound + maxVelocity + 1e-5f);
+
 
     launchCalculateVelocityKernel(
         d_particles,
@@ -226,6 +226,18 @@ void FluidSimulation::updateForceFieldBuffer() const {
 
 void FluidSimulation::setBoundaryField(const Hex32Field& field) {
     boundaryField = field;
+}
+
+void FluidSimulation::clearBoundaryField() {
+    if (boundaryField.d_cells != nullptr) {
+        cudaFree(boundaryField.d_cells);
+        boundaryField.d_cells = nullptr;
+        boundaryField.resolution = { 0, 0, 0 };
+    }
+}
+
+Hex32Field FluidSimulation::getBoundaryField() const {
+    return boundaryField;
 }
 
 bool FluidSimulation::computeVoxelField(const VoxelField& field) const {

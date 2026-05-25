@@ -17,7 +17,7 @@ class BoundaryBuilder {
 public:
     BoundaryBuilder();
 
-    Hex32Field constructDensityMap(const Scene& scene, AABB domain);
+    Hex32Field constructDensityMap(const Scene& scene, AABB domain) const;
 
     BoundarySettings settings;
 

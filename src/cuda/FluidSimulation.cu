@@ -587,7 +587,6 @@ __global__ void sphForcesKernel(
     const float h,
     const float alpha,
     const float speedSound,
-    const float tensionThreshold,
     const float tension
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -855,14 +854,13 @@ void launchSphForcesKernel(
     const float h,
     const float alpha,
     const float speedSound,
-    const float tensionThreshold,
     const float tension
 ) {
     int threadsPerBlock = 256;
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     sphForcesKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, hashes, offsets, boundaryField, domain, h, alpha, speedSound, tensionThreshold, tension
+        numParticles, particles, hashes, offsets, boundaryField, domain, h, alpha, speedSound, tension
     );
 }
 

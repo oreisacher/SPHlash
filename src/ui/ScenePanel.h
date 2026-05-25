@@ -23,7 +23,6 @@ private:
 
     int selected = -1;
     Model* selectedModel = nullptr;
-    // Transform* selectedTransform = nullptr;
 };
 
 #endif //SPHLASH_MODELSPANEL_H

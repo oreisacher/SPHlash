@@ -22,7 +22,10 @@ public:
     void addBoundaryModel(std::unique_ptr<Model> model) const;
 
     BoundaryBuilder* getBoundaryBuilder();
-    void buildBoundaryDensityMap();
+
+    void buildBoundaryDensityMap() const;
+    void clearBoundaryDensityMap() const;
+    Hex32Field getBoundaryDensityMap() const;
 
 private:
     Scene* scene;

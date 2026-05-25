@@ -7,7 +7,6 @@
 #include <fstream>
 
 #include "imgui.h"
-#include "nlohmann/json.hpp"
 #include "ImGuiFileDialog.h"
 #include "glm/gtc/type_ptr.inl"
 #include "simulation/FluidSimulation.h"
@@ -66,15 +65,10 @@ void SimulationSettingsPanel::draw() {
             ImGui::SetTooltip("Speed of Sound");
         ImGui::DragFloat("##sos", &simulation->settings.speedSound, 0.001f);
 
-        ImGui::Text("Surface Tension Threshold:");
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Surface Tension Threshold");
-        ImGui::DragFloat("##TT", &simulation->settings.tensionThreshold, 0.001f);
-
         ImGui::Text("Surface Tension:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Surface Tension Strength");
-        ImGui::DragFloat("##T", &simulation->settings.tension, 0.001f);
+        ImGui::DragFloat("##T", &simulation->settings.surfaceTension, 0.001f);
     }
 
     if (ImGui::CollapsingHeader("Gravity Settings")) {
@@ -91,7 +85,9 @@ void SimulationSettingsPanel::draw() {
         ImGui::DragFloat("##cflSF", &simulation->settings.safetyFactor, 0.01);
     }
 
+    ImGui::Spacing();
     ImGui::Separator();
+    ImGui::Spacing();
 
     if (ImGui::Button("Save Settings", ImVec2(totalWidth, 0))) {
         IGFD::FileDialogConfig config;
@@ -102,7 +98,7 @@ void SimulationSettingsPanel::draw() {
     if (ImGuiFileDialog::Instance()->Display("SaveLocation")) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-            SaveSettings(filePathName);
+            saveSettings(filePathName);
         }
 
         ImGuiFileDialog::Instance()->Close();
@@ -117,7 +113,7 @@ void SimulationSettingsPanel::draw() {
     if (ImGuiFileDialog::Instance()->Display("LoadLocation")) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-            LoadSettings(filePathName);
+            loadSettings(filePathName);
         }
 
         ImGuiFileDialog::Instance()->Close();
@@ -126,39 +122,44 @@ void SimulationSettingsPanel::draw() {
     ImGui::End();
 }
 
-void SimulationSettingsPanel::SaveSettings(const std::string& path) const {
-    nlohmann::json json;
+void SimulationSettingsPanel::saveSettings(const std::string& path) const {
+    Config config;
 
-    json["h"]                   = simulation->settings.h;
-    json["p_0"]                 = simulation->settings.p_0;
-    json["k"]                   = simulation->settings.k;
-    json["mu"]                  = simulation->settings.alpha;
-    json["sos"]                  = simulation->settings.speedSound;
-    json["tensionThreshold"]    = simulation->settings.tensionThreshold;
-    json["tension"]             = simulation->settings.tension;
-    json["enableGravity"]       = simulation->settings.enableGravity;
-    json["gravity"]             = simulation->settings.gravity;
+    // Particles
+    config.set("h",                 simulation->settings.h,             "particles");
+    config.set("p_0",               simulation->settings.p_0,           "particles");
+    config.set("k",                 simulation->settings.k,             "particles");
+    config.set("alpha",             simulation->settings.alpha,         "particles");
+    config.set("speedOfSound",      simulation->settings.speedSound,    "particles");
+    config.set("surfaceTension",    simulation->settings.surfaceTension,"particles");
 
-    // Write safe file to disk
-    std::ofstream file(path);
-    file << json.dump(4);
+    // Gravity
+    config.set("enabled",           simulation->settings.enableGravity,  "gravity");
+    config.set("force",             simulation->settings.gravity,        "gravity");
+
+    // CFL
+    config.set("enabled",           simulation->settings.useCFL,        "CFL");
+    config.set("factor",            simulation->settings.safetyFactor,  "CFL");
+
+    config.save(path);
 }
 
-void SimulationSettingsPanel::LoadSettings(const std::string& path) {
-    std::ifstream file(path);
-    if (!file.is_open())
-        return;
+void SimulationSettingsPanel::loadSettings(const std::string& path) const {
+    Config config;
 
-    nlohmann::json json;
-    file >> json;
+    if (config.load(path)) {
+        // Particles
+        simulation->settings.h              = config.get<float>("h",                simulation->settings.h,                 "particles");
+        simulation->settings.p_0            = config.get<float>("p_0",              simulation->settings.p_0,               "particles");
+        simulation->settings.k              = config.get<float>("k",                simulation->settings.k,                 "particles");
+        simulation->settings.alpha          = config.get<float>("alpha",            simulation->settings.alpha,             "particles");
+        simulation->settings.speedSound     = config.get<float>("speedOfSound",     simulation->settings.speedSound,        "particles");
+        simulation->settings.surfaceTension = config.get<float>("surfaceTension",   simulation->settings.surfaceTension,    "particles");
 
-    simulation->settings.h                  = json.value("h", simulation->settings.h);
-    simulation->settings.p_0                = json.value("p_0", simulation->settings.p_0);
-    simulation->settings.k                  = json.value("k", simulation->settings.k);
-    simulation->settings.alpha              = json.value("alpha", simulation->settings.alpha);
-    simulation->settings.speedSound         = json.value("sos", simulation->settings.speedSound);
-    simulation->settings.tensionThreshold   = json.value("tensionThreshold", simulation->settings.tensionThreshold);
-    simulation->settings.tension            = json.value("tension", simulation->settings.tension);
-    simulation->settings.enableGravity      = json.value("enableGravity", simulation->settings.enableGravity);
-    simulation->settings.gravity            = json.value("gravity", simulation->settings.gravity);
+        simulation->settings.enableGravity  = config.get<bool> ("enabled",          simulation->settings.enableGravity,     "gravity");
+        simulation->settings.gravity        = config.get<float>("force",            simulation->settings.gravity,           "gravity");
+
+        simulation->settings.useCFL         = config.get<bool> ("enabled",          simulation->settings.useCFL,            "CFL");
+        simulation->settings.safetyFactor   = config.get<float>("factor",           simulation->settings.safetyFactor,      "CFL");
+    }
 }

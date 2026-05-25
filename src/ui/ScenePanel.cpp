@@ -201,9 +201,5 @@ void ScenePanel::draw() {
         ImGui::EndChild();
     }
 
-    if (ImGui::Button("Build Boundary Density Map", ImVec2(totalWidth, 0))) {
-        editor->buildBoundaryDensityMap();
-    }
-
     ImGui::End();
 }

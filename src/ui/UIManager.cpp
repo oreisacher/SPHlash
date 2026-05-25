@@ -4,6 +4,9 @@
 
 #include "../rendering/Framebuffer.h"
 #include "ui/UIManager.h"
+
+#include <algorithm>
+
 #include "imgui.h"
 #include "ImGuizmo.h"
 #include "imgui_impl_glfw.h"
@@ -117,6 +120,7 @@ UIManager::~UIManager() {
 }
 
 void UIManager::addPanel(UIPanel* panel) {
+    panel->manager = this;
     panels.push_back(panel);
 }
 
@@ -128,7 +132,29 @@ void UIManager::removePanel(const std::string& name) {
     std::erase_if(panels, [name](const UIPanel* panel) { return panel->getName() == name; });
 }
 
-void UIManager::update(double deltaTime) const {
+void UIManager::closePanel(UIPanel* panel) {
+    panel->shouldClose = true;
+}
+
+void UIManager::closePanel(const std::string& name) {\
+    for (auto p : panels) {
+        if (p->name == name) {
+            p->shouldClose = true;
+        }
+    }
+}
+
+void UIManager::update(double deltaTime) {
+    // Check if any windows are marked as to delete
+    std::erase_if(panels,
+        [] (UIPanel* p) {
+            if (p->shouldClose) {
+                delete p;
+                return true;
+            }
+            return false;
+        });
+
     for (auto& panel : panels)
         panel->update(deltaTime);
 }
@@ -174,6 +200,7 @@ void UIManager::draw() const {
         ImGui::DockBuilderDockWindow("Controls", dock_left_1);
         ImGui::DockBuilderDockWindow("Init Settings", dock_left_2);
         ImGui::DockBuilderDockWindow("Scene", dock_left_2);
+        ImGui::DockBuilderDockWindow("Boundaries", dock_left_2);
         ImGui::DockBuilderDockWindow("Statistics", dock_left_3);
 
         ImGui::DockBuilderFinish(dockspace_id);

@@ -1,0 +1,18 @@
+{
+    "CFL": {
+        "enabled": true,
+        "factor": 0.25
+    },
+    "gravity": {
+        "enabled": true,
+        "force": -9.878000259399414
+    },
+    "particles": {
+        "alpha": 0.30000001192092896,
+        "h": 0.05000000074505806,
+        "k": 2000.0,
+        "p_0": 1000.0,
+        "speedOfSound": 10.0,
+        "surfaceTension": 0.009999999776482582
+    }
+}

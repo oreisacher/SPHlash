@@ -17,8 +17,11 @@ public:
     void addPanel(UIPanel *panel);
     void removePanel(UIPanel *panel);
     void removePanel(const std::string& name);
+    void closePanel(UIPanel *panel);
+    void closePanel(const std::string& name);
 
-    void update(double deltaTime) const;
+
+    void update(double deltaTime);
     void draw() const;
 
     template<typename T>

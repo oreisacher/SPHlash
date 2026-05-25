@@ -29,7 +29,6 @@ public:
 
     std::vector<PanelEvent> getEvents();
 
-    static inline Hex32Field bField;
     static inline Camera* camera = nullptr;
 
 private:

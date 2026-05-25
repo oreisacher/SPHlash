@@ -5,6 +5,7 @@
 #include "BoundaryBuilder.h"
 
 #include <iostream>
+#include <thread>
 
 #include "imgui_internal.h"
 #include "cuda/Boundaries.h"
@@ -33,9 +34,7 @@ BoundaryBuilder::BoundaryBuilder() {
     );
 }
 
-Hex32Field BoundaryBuilder::constructDensityMap(const Scene& scene, AABB domain) {
-    std::cout << "Building density map" << std::endl;
-
+Hex32Field BoundaryBuilder::constructDensityMap(const Scene& scene, AABB domain) const {
     // Extract list of all triangles from boundary objects of scene
     std::vector<Triangle> triangles;
 
@@ -75,9 +74,9 @@ Hex32Field BoundaryBuilder::constructDensityMap(const Scene& scene, AABB domain)
     // Build Density Hex32Field
     Hex32Field densityField;
     densityField.resolution = make_int3(
-    settings.resolution.x,
-    settings.resolution.y,
-    settings.resolution.z
+        settings.resolution.x,
+        settings.resolution.y,
+        settings.resolution.z
     );
 
     cudaMalloc(&(densityField.d_cells), hexField.resolution.x * hexField.resolution.y * hexField.resolution.z * sizeof(Hex32Cell));
@@ -103,18 +102,40 @@ Hex32Field BoundaryBuilder::constructDensityMap(const Scene& scene, AABB domain)
         sdfData.push_back(value);
     }
 
-    glBindTexture(GL_TEXTURE_3D, tex3D);
-    glTexSubImage3D(
-        GL_TEXTURE_3D,
-        0,
-        0, 0, 0,
-        hexField.resolution.x,
-        hexField.resolution.y,
-        hexField.resolution.z,
-        GL_RED,
-        GL_FLOAT,
-        sdfData.data()
+    // Fill 3d texture
+    glGenTextures(1, &densityField.texture);
+    glBindTexture(GL_TEXTURE_3D, densityField.texture);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    glTexImage3D(
+       GL_TEXTURE_3D,
+       0,
+       GL_R32F,
+       settings.resolution.x,
+       settings.resolution.y,
+       settings.resolution.z,
+       0,
+       GL_RED,
+       GL_FLOAT,
+       sdfData.data()
     );
+
+    // glTexSubImage3D(
+    //     GL_TEXTURE_3D,
+    //     0,
+    //     0, 0, 0,
+    //     hexField.resolution.x,
+    //     hexField.resolution.y,
+    //     hexField.resolution.z,
+    //     GL_RED,
+    //     GL_FLOAT,
+    //     sdfData.data()
+    // );
 
     // Cleanup
     cudaFree(d_triangles);

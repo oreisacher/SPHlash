@@ -76,7 +76,6 @@ void launchSphForcesKernel(
     const float h,
     const float alpha,
     const float speedSound,
-    const float tensionThreshold,
     const float tension
 );
 

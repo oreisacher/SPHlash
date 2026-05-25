@@ -78,10 +78,19 @@ BoundaryBuilder* Editor::getBoundaryBuilder() {
     return &boundryBuilder;
 }
 
-void Editor::buildBoundaryDensityMap() {
+void Editor::buildBoundaryDensityMap() const {
     auto densityMap = boundryBuilder.constructDensityMap(*scene, simulation->settings.domainArea);
+
+    simulation->clearBoundaryField();
     simulation->setBoundaryField(densityMap);
-    SimulationPanel::bField = densityMap;
+}
+
+void Editor::clearBoundaryDensityMap() const {
+    simulation->clearBoundaryField();
+}
+
+Hex32Field Editor::getBoundaryDensityMap() const {
+    return simulation->getBoundaryField();
 }
 
 glm::mat4 Editor::calculateModelMatrix(glm::vec3 center, glm::vec3 scale) {
