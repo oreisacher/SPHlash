@@ -33,6 +33,7 @@ private:
     Window* window;
 
     Scene scene;
+    Camera* camera;
 };
 
 #endif //FLUIDSIMSPH_APPLICATION_H

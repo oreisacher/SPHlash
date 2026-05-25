@@ -67,6 +67,7 @@ Application::Application() {
 
     // Setup scene
     scene.setCamera(std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 1.0f)));
+    camera = scene.getCamera();
 }
 
 Application::~Application() {
@@ -78,9 +79,15 @@ Application::~Application() {
 }
 
 void Application::run() const {
+    float deltaTime = 0.0f;
     while (!window->shouldClose()) {
+        deltaTime = Time.getDeltaTime();
+
+        // Camera
+        camera->update(deltaTime);
+
         // Simulation
-        simulation->update(Time.getDeltaTime());
+        simulation->update(deltaTime);
 
         // Build fluid surface if necessary
         surfaceMesher->generateMesh();
@@ -89,7 +96,7 @@ void Application::run() const {
         renderer->render(scene);
 
         // Update & Draw UI
-        ui->update(Time.getDeltaTime());
+        ui->update(deltaTime);
         ui->draw();
 
         processEvents();
@@ -120,12 +127,6 @@ void Application::processEvents() const {
 
                 // Reset camera to ignore first delta to avoid jump
                 scene.getCamera()->reset();
-            }
-            break;
-        case PanelEvent::MOUSEHOLD:
-            if (e.mouse.button == 2) {
-                // Update camera if holding
-                scene.getCamera()->update(Time.getDeltaTime());
             }
             break;
         default: break;
