@@ -5,6 +5,7 @@
 #ifndef FLUIDSIMSPH_CAMERA_H
 #define FLUIDSIMSPH_CAMERA_H
 
+#include "Config.h"
 #include "glm/glm.hpp"
 
 class Camera {
@@ -16,20 +17,24 @@ public:
 
     void setAspectRatio(float aspect);
 
-    float MovementSpeed = 2.5f;
-    float MouseSensitivity = 0.1f;
-
-    glm::vec3 Position = glm::vec3(0.0f, 0.0f, 0.0f);
-
     glm::mat4 getViewMatrix() const;
     glm::mat4 getProjectionMatrix() const;
 
 private:
+    Config config;
+    float movementSpeed = 2.5f;
+    float mouseSensitivity = 0.1f;
+    float keyboardSensitivity = 100.0f;
+    float fov = 90.0f;
+
     void updateVectors();
 
     float yaw = -90.0f;
     float pitch = 0.0f;
     float aspect = 1.0f;
+
+    const glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f);
 
     glm::vec2 prevMousePosition = glm::vec2(-1.0f, -1.0f);
     glm::vec3 front, up, right;

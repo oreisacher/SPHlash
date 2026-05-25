@@ -44,8 +44,6 @@ add_executable(SPHlash
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
-        src/rendering/AreaModel.cpp
-        src/rendering/AreaModel.h
 )
 
 add_library(imgui

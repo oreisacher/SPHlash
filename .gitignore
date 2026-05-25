@@ -26,7 +26,6 @@ Makefile
 
 # Object files
 *.o
-*.obj
 *.lo
 *.la
 
