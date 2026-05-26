@@ -1,6 +1,5 @@
 #include "FluidSimulation.h"
 #include "simulation/FluidSimulation.h"
-#include "simulation/FluidSimulation.h"
 #include "cuda/Kernels.cuh"
 #include "cuda/Math.cuh"
 
@@ -342,6 +341,7 @@ __global__ void densityPressureKernel(
     ParticleGPU* particles,
     const int* hashes,
     const int* offsets,
+    const bool hasBoundary,
     const Hex32Field boundaryField,
     const CudaAABB domain,
     const float h,
@@ -394,78 +394,77 @@ __global__ void densityPressureKernel(
         }
     }
 
-    // Boundary density
-    float3 bCellSize = make_float3(
-        (domain.max.x - domain.min.x) / boundaryField.resolution.x,
-        (domain.max.y - domain.min.y) / boundaryField.resolution.y,
-        (domain.max.z - domain.min.z) / boundaryField.resolution.z
-    );
-
-    int bCellX = min((int)((pos.x - domain.min.x) / bCellSize.x), boundaryField.resolution.x - 1);
-    int bCellY = min((int)((pos.y - domain.min.y) / bCellSize.y), boundaryField.resolution.y - 1);
-    int bCellZ = min((int)((pos.z - domain.min.z) / bCellSize.z), boundaryField.resolution.z - 1);
-
-    // Clamp to valid range
-    bCellX = max(0, bCellX);
-    bCellY = max(0, bCellY);
-    bCellZ = max(0, bCellZ);
-
-    int bCellId = bCellX
-            + bCellY * boundaryField.resolution.x
-            + bCellZ * boundaryField.resolution.x * boundaryField.resolution.y;
-
-    Hex32Cell* bCell = &boundaryField.d_cells[bCellId];
-
-    particles[id].boundary.x = 0.0f;
-
-    if (bCell->used) {
-        // Cell bounds in world space
-        float3 bCellBase = make_float3(
-            domain.min.x + bCellX * bCellSize.x,
-            domain.min.y + bCellY * bCellSize.y,
-            domain.min.z + bCellZ * bCellSize.z
+    if (hasBoundary) {
+        // Boundary density
+        float3 bCellSize = make_float3(
+            (domain.max.x - domain.min.x) / boundaryField.resolution.x,
+            (domain.max.y - domain.min.y) / boundaryField.resolution.y,
+            (domain.max.z - domain.min.z) / boundaryField.resolution.z
         );
 
-        float3 bCellMax = make_float3(
-            bCellBase.x + bCellSize.x,
-            bCellBase.y + bCellSize.y,
-            bCellBase.z + bCellSize.z
-        );
+        int bCellX = min((int)((pos.x - domain.min.x) / bCellSize.x), boundaryField.resolution.x - 1);
+        int bCellY = min((int)((pos.y - domain.min.y) / bCellSize.y), boundaryField.resolution.y - 1);
+        int bCellZ = min((int)((pos.z - domain.min.z) / bCellSize.z), boundaryField.resolution.z - 1);
 
-        float3 clampedPos = make_float3(
-            fmaxf(domain.min.x, fminf(domain.max.x, pos.x)),
-            fmaxf(domain.min.y, fminf(domain.max.y, pos.y)),
-            fmaxf(domain.min.z, fminf(domain.max.z, pos.z))
-        );
+        // Clamp to valid range
+        bCellX = max(0, bCellX);
+        bCellY = max(0, bCellY);
+        bCellZ = max(0, bCellZ);
 
-        // Map particle to natural coords [-1,1] within its boundary cell
-        float3 naturalPos = TT(bCellBase, bCellMax, clampedPos);
-        naturalPos.x = fmaxf(-1.0f, fminf(1.0f, naturalPos.x));
-        naturalPos.y = fmaxf(-1.0f, fminf(1.0f, naturalPos.y));
-        naturalPos.z = fmaxf(-1.0f, fminf(1.0f, naturalPos.z));
+        int bCellId = bCellX
+                + bCellY * boundaryField.resolution.x
+                + bCellZ * boundaryField.resolution.x * boundaryField.resolution.y;
 
-        float boundaryDensity = iinterpolate(naturalPos.x, naturalPos.y, naturalPos.z, bCell->nodes);
+        Hex32Cell* bCell = &boundaryField.d_cells[bCellId];
 
-        // if (boundaryDensity < 0.0f) {
-        // printf("%f\n", boundaryDensity);
-        // }
+        if (bCell->used) {
+            // Cell bounds in world space
+            float3 bCellBase = make_float3(
+                domain.min.x + bCellX * bCellSize.x,
+                domain.min.y + bCellY * bCellSize.y,
+                domain.min.z + bCellZ * bCellSize.z
+            );
 
-        // Add to total density
-        // if (boundaryDensity > 0.0) {
+            float3 bCellMax = make_float3(
+                bCellBase.x + bCellSize.x,
+                bCellBase.y + bCellSize.y,
+                bCellBase.z + bCellSize.z
+            );
+
+            float3 clampedPos = make_float3(
+                fmaxf(domain.min.x, fminf(domain.max.x, pos.x)),
+                fmaxf(domain.min.y, fminf(domain.max.y, pos.y)),
+                fmaxf(domain.min.z, fminf(domain.max.z, pos.z))
+            );
+
+            // Map particle to natural coords [-1,1] within its boundary cell
+            float3 naturalPos = TT(bCellBase, bCellMax, clampedPos);
+            naturalPos.x = fmaxf(-1.0f, fminf(1.0f, naturalPos.x));
+            naturalPos.y = fmaxf(-1.0f, fminf(1.0f, naturalPos.y));
+            naturalPos.z = fmaxf(-1.0f, fminf(1.0f, naturalPos.z));
+
+            float boundaryDensity = iinterpolate(naturalPos.x, naturalPos.y, naturalPos.z, bCell->nodes);
+
+            // if (boundaryDensity < 0.0f) {
             // printf("%f\n", boundaryDensity);
-            density += boundaryDensity;
-        // }
-        // particles[id].boundary.x = boundaryDensity;
+            // }
+
+            // Add to total density
+            // if (boundaryDensity > 0.0) {
+                // printf("%f\n", boundaryDensity);
+                density += boundaryDensity;
+            // }
+            // particles[id].boundary.x = boundaryDensity;
+        }
+
+        // density += domainBoundaryDensity(make_float3(pos.x, pos.y, pos.z), domain, 1000, h);
+        // particles[id].properties.z = k * (density - p_0);
     }
 
-    // density += domainBoundaryDensity(make_float3(pos.x, pos.y, pos.z), domain, 1000, h);
-    particles[id].properties.y = density;// + particles[id].boundary.x;
-    // particles[id].properties.z = k * (density - p_0);
+    particles[id].properties.y = density;
 
     const float B = (k * p_0) / 7;
     particles[id].properties.z = fmaxf(0.0f, B * (pow((density / p_0), 7) - 1));
-
-    particles[id].boundary.y = B * (pow((particles[id].boundary.x / p_0), 7) - 1);
 }
 
 void launchDensityPressureKernel(
@@ -473,6 +472,7 @@ void launchDensityPressureKernel(
     ParticleGPU* particles,
     const int* hashes,
     const int* offsets,
+    const bool hasBoundary,
     const Hex32Field boundaryField,
     const CudaAABB domain,
     const float h,
@@ -483,7 +483,7 @@ void launchDensityPressureKernel(
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     densityPressureKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, hashes, offsets, boundaryField, domain, h, k, p_0
+        numParticles, particles, hashes, offsets, hasBoundary, boundaryField, domain, h, k, p_0
     );
 }
 
@@ -582,6 +582,7 @@ __global__ void sphForcesKernel(
     ParticleGPU* particles,
     const int* hashes,
     const int* offsets,
+    const bool hasBoundary,
     const Hex32Field boundaryField,
     const CudaAABB domain,
     const float h,
@@ -712,98 +713,100 @@ __global__ void sphForcesKernel(
 
     particle->surfaceTensionForce = -1.0f * (tension / particle->properties.x) * particle->surfaceTensionForce;
 
-    float3 bCellSize = make_float3(
-        (domain.max.x - domain.min.x) / boundaryField.resolution.x,
-        (domain.max.y - domain.min.y) / boundaryField.resolution.y,
-        (domain.max.z - domain.min.z) / boundaryField.resolution.z
-    );
-
-    int bCellX = min((int)((pos.x - domain.min.x) / bCellSize.x), boundaryField.resolution.x - 1);
-    int bCellY = min((int)((pos.y - domain.min.y) / bCellSize.y), boundaryField.resolution.y - 1);
-    int bCellZ = min((int)((pos.z - domain.min.z) / bCellSize.z), boundaryField.resolution.z - 1);
-
-    // Clamp to valid range
-    bCellX = max(0, bCellX);
-    bCellY = max(0, bCellY);
-    bCellZ = max(0, bCellZ);
-
-    int bCellId = bCellX
-        + bCellY * boundaryField.resolution.x
-        + bCellZ * boundaryField.resolution.x * boundaryField.resolution.y;
-
-    Hex32Cell* bCell = &boundaryField.d_cells[bCellId];
-
-    if (bCell->used) {
-        float3 bCellBase = make_float3(
-            domain.min.x + bCellX * bCellSize.x,
-            domain.min.y + bCellY * bCellSize.y,
-            domain.min.z + bCellZ * bCellSize.z
+    if (hasBoundary) {
+        float3 bCellSize = make_float3(
+            (domain.max.x - domain.min.x) / boundaryField.resolution.x,
+            (domain.max.y - domain.min.y) / boundaryField.resolution.y,
+            (domain.max.z - domain.min.z) / boundaryField.resolution.z
         );
 
-        float3 bCellMax = make_float3(
-            bCellBase.x + bCellSize.x,
-            bCellBase.y + bCellSize.y,
-            bCellBase.z + bCellSize.z
-        );
+        int bCellX = min((int)((pos.x - domain.min.x) / bCellSize.x), boundaryField.resolution.x - 1);
+        int bCellY = min((int)((pos.y - domain.min.y) / bCellSize.y), boundaryField.resolution.y - 1);
+        int bCellZ = min((int)((pos.z - domain.min.z) / bCellSize.z), boundaryField.resolution.z - 1);
 
-        float3 naturalPos = TT(bCellBase, bCellMax, make_float3(pos.x, pos.y, pos.z));
-        naturalPos.x = fmaxf(-1.0f, fminf(1.0f, naturalPos.x));
-        naturalPos.y = fmaxf(-1.0f, fminf(1.0f, naturalPos.y));
-        naturalPos.z = fmaxf(-1.0f, fminf(1.0f, naturalPos.z));
+        // Clamp to valid range
+        bCellX = max(0, bCellX);
+        bCellY = max(0, bCellY);
+        bCellZ = max(0, bCellZ);
 
-        float3 gradient = interpolateGradient(
-            naturalPos.x, naturalPos.y, naturalPos.z,
-            bCellBase, bCellMax,
-            bCell->nodes
-        );
+        int bCellId = bCellX
+            + bCellY * boundaryField.resolution.x
+            + bCellZ * boundaryField.resolution.x * boundaryField.resolution.y;
+
+        Hex32Cell* bCell = &boundaryField.d_cells[bCellId];
+
+        if (bCell->used) {
+            float3 bCellBase = make_float3(
+                domain.min.x + bCellX * bCellSize.x,
+                domain.min.y + bCellY * bCellSize.y,
+                domain.min.z + bCellZ * bCellSize.z
+            );
+
+            float3 bCellMax = make_float3(
+                bCellBase.x + bCellSize.x,
+                bCellBase.y + bCellSize.y,
+                bCellBase.z + bCellSize.z
+            );
+
+            float3 naturalPos = TT(bCellBase, bCellMax, make_float3(pos.x, pos.y, pos.z));
+            naturalPos.x = fmaxf(-1.0f, fminf(1.0f, naturalPos.x));
+            naturalPos.y = fmaxf(-1.0f, fminf(1.0f, naturalPos.y));
+            naturalPos.z = fmaxf(-1.0f, fminf(1.0f, naturalPos.z));
+
+            float3 gradient = interpolateGradient(
+                naturalPos.x, naturalPos.y, naturalPos.z,
+                bCellBase, bCellMax,
+                bCell->nodes
+            );
 
 
 
-        float clampedPressure = fmaxf(0.0f, particle->properties.z);
+            float clampedPressure = fmaxf(0.0f, particle->properties.z);
 
-        float fluidTerm = clampedPressure / (particle->properties.y * particle->properties.y + 1e-6f);
-        // float boundaryTerm = particle->boundary.y / (1000 * 1000);
+            float fluidTerm = clampedPressure / (particle->properties.y * particle->properties.y + 1e-6f);
+            // float boundaryTerm = particle->boundary.y / (1000 * 1000);
 
-        // // 5. Compute the final force scaled correctly by fluid mass
-        float3 fBoundary = -fluidTerm * gradient;
-        //
-        // // Apply directly—no arbitrary '1000.0f' scalar needed!
-        particle->pressureForce.x += fBoundary.x;
-        particle->pressureForce.y += fBoundary.y;
-        particle->pressureForce.z += fBoundary.z;
+            // // 5. Compute the final force scaled correctly by fluid mass
+            float3 fBoundary = -fluidTerm * gradient;
+            //
+            // // Apply directly—no arbitrary '1000.0f' scalar needed!
+            particle->pressureForce.x += fBoundary.x;
+            particle->pressureForce.y += fBoundary.y;
+            particle->pressureForce.z += fBoundary.z;
 
-        // float3 fBoundary =
-        //     -particle->properties.x * (clampedPressure / (particle->properties.y * particle->properties.y)) * gradient;
-        //
-        // particle->pressureForce += make_float4(
-        //     fBoundary.x * 1000.0f,
-        //     fBoundary.y * 1000.0f,
-        //     fBoundary.z * 1000.0f,
-        //     0.0f
-        // );
+            // float3 fBoundary =
+            //     -particle->properties.x * (clampedPressure / (particle->properties.y * particle->properties.y)) * gradient;
+            //
+            // particle->pressureForce += make_float4(
+            //     fBoundary.x * 1000.0f,
+            //     fBoundary.y * 1000.0f,
+            //     fBoundary.z * 1000.0f,
+            //     0.0f
+            // );
 
-        // float gradMag = sqrtf(gradient.x*gradient.x +
-                      // gradient.y*gradient.y +
-                      // gradient.z*gradient.z);
-        // printf("boundaryDensity=%.2f gradMag=%.6f\n", particle->properties.y, gradMag);
+            // float gradMag = sqrtf(gradient.x*gradient.x +
+                          // gradient.y*gradient.y +
+                          // gradient.z*gradient.z);
+            // printf("boundaryDensity=%.2f gradMag=%.6f\n", particle->properties.y, gradMag);
 
-        // float scale = particle->properties.x * particle->properties.z / (particle->properties.y * particle->properties.y + 1e-6f);
-        // printf("%f\n", scale);
-        // scale = 1.0f;
-        // particle->pressureForce.x -= scale * gradient.x;
-        // particle->pressureForce.y -= scale * gradient.y;
-        // particle->pressureForce.z -= scale * gradient.z;
+            // float scale = particle->properties.x * particle->properties.z / (particle->properties.y * particle->properties.y + 1e-6f);
+            // printf("%f\n", scale);
+            // scale = 1.0f;
+            // particle->pressureForce.x -= scale * gradient.x;
+            // particle->pressureForce.y -= scale * gradient.y;
+            // particle->pressureForce.z -= scale * gradient.z;
 
-        // Mirror the SPlisHSPlasH formulation
-        // float dpi = particle->properties.z /
-        //            (particle->properties.y * particle->properties.y);
-        // float dpj = 0.0f;
-        //
-        // float scale = 1000 * (dpi + dpj);
-        //
-        // particle->pressureForce.x -= scale * gradient.x;
-        // particle->pressureForce.y -= scale * gradient.y;
-        // particle->pressureForce.z -= scale * gradient.z;
+            // Mirror the SPlisHSPlasH formulation
+            // float dpi = particle->properties.z /
+            //            (particle->properties.y * particle->properties.y);
+            // float dpj = 0.0f;
+            //
+            // float scale = 1000 * (dpi + dpj);
+            //
+            // particle->pressureForce.x -= scale * gradient.x;
+            // particle->pressureForce.y -= scale * gradient.y;
+            // particle->pressureForce.z -= scale * gradient.z;
+        }
     }
 
 
@@ -849,6 +852,7 @@ void launchSphForcesKernel(
     ParticleGPU* particles,
     const int* hashes,
     const int* offsets,
+    const bool hasBoundary,
     const Hex32Field boundaryField,
     const CudaAABB domain,
     const float h,
@@ -860,7 +864,7 @@ void launchSphForcesKernel(
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     sphForcesKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, hashes, offsets, boundaryField, domain, h, alpha, speedSound, tension
+        numParticles, particles, hashes, offsets, hasBoundary, boundaryField, domain, h, alpha, speedSound, tension
     );
 }
 

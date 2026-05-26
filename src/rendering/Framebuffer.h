@@ -19,7 +19,7 @@ public:
     void bind() const;
     static void unbind();
 
-    GLuint addColorAttachment();
+    GLuint addColorAttachment(GLuint filter);
     GLuint getColorAttachment(int index) const;
 
     void addDepthBuffer();

@@ -23,7 +23,7 @@ GLuint Framebuffer::getID() const { return fbo; }
 void Framebuffer::bind() const { glBindFramebuffer(GL_FRAMEBUFFER, fbo); }
 void Framebuffer::unbind() { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
 
-GLuint Framebuffer::addColorAttachment() {
+GLuint Framebuffer::addColorAttachment(GLuint filter) {
     // Create new texture add attach
     GLuint texture;
 
@@ -42,8 +42,8 @@ GLuint Framebuffer::addColorAttachment() {
         nullptr
     );
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
 
     glFramebufferTexture2D(
         GL_FRAMEBUFFER,

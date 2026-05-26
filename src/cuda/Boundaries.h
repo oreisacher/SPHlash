@@ -13,13 +13,15 @@ void launchSdfKernel(
     const int triangleCount,
     const Triangle* triangles,
     const Hex32Field& hexField,
-    const CudaAABB& domain
+    const CudaAABB& domain,
+    const float h
 );
 
-void launchCalcDensityMapKernel(
+void launchDensityMapKernel(
     const Hex32Field sdfField,
     const Hex32Field densityField,
     const CudaAABB domain,
+    float mcSamples,
     float restDensity,
     float h
 );

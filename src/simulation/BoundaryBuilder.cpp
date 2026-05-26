@@ -10,35 +10,11 @@
 #include "imgui_internal.h"
 #include "cuda/Boundaries.h"
 
-BoundaryBuilder::BoundaryBuilder() {
-    // Fill 3d texture
-    glGenTextures(1, &tex3D);
-    glBindTexture(GL_TEXTURE_3D, tex3D);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexImage3D(
-        GL_TEXTURE_3D,
-        0,
-        GL_R32F,
-        settings.resolution.x,
-        settings.resolution.y,
-        settings.resolution.z,
-        0,
-        GL_RED,
-        GL_FLOAT,
-        nullptr
-    );
-}
-
-Hex32Field BoundaryBuilder::constructDensityMap(const Scene& scene, AABB domain) const {
+Hex32Field BoundaryBuilder::constructDensityMap(const Scene* scene, AABB domain, float h, float restDensity) const {
     // Extract list of all triangles from boundary objects of scene
     std::vector<Triangle> triangles;
 
-    for (auto model : scene.getModels()) {
+    for (const auto& model : scene->getModels()) {
         if (model->getType() != Type::BOUNDARY)
             continue;
 
@@ -53,58 +29,46 @@ Hex32Field BoundaryBuilder::constructDensityMap(const Scene& scene, AABB domain)
     cudaMalloc(&d_triangles, triangles.size() * sizeof(Triangle));
     cudaMemcpy(d_triangles, triangles.data(), triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
 
-    // Build Hex32Field
-    Hex32Field hexField;
-    hexField.resolution = make_int3(
-        settings.resolution.x,
-        settings.resolution.y,
-        settings.resolution.z
-    );
+    // Calculate SDF field of scene
+    Hex32Field sdfHexField;
+    sdfHexField.resolution = make_int3(settings.resolution.x, settings.resolution.y, settings.resolution.z);
+    cudaMalloc(&(sdfHexField.d_cells), sdfHexField.resolution.x * sdfHexField.resolution.y * sdfHexField.resolution.z * sizeof(Hex32Cell));
 
-    cudaMalloc(&(hexField.d_cells), hexField.resolution.x * hexField.resolution.y * hexField.resolution.z * sizeof(Hex32Cell));
-
-    // Launch kernel
     launchSdfKernel(
         triangles.size(),
         d_triangles,
-        hexField,
-        domain.toCudaAABB()
-    );
-
-    // Build Density Hex32Field
-    Hex32Field densityField;
-    densityField.resolution = make_int3(
-        settings.resolution.x,
-        settings.resolution.y,
-        settings.resolution.z
-    );
-
-    cudaMalloc(&(densityField.d_cells), hexField.resolution.x * hexField.resolution.y * hexField.resolution.z * sizeof(Hex32Cell));
-
-    launchCalcDensityMapKernel(
-        hexField,
-        densityField,
+        sdfHexField,
         domain.toCudaAABB(),
-        1000,
-        0.05
+        h
     );
 
-    // Fill 3d texture
-    std::vector<Hex32Cell> hex32cells(densityField.resolution.x * densityField.resolution.y * densityField.resolution.z);
-    cudaMemcpy(hex32cells.data(), densityField.d_cells, densityField.resolution.x * densityField.resolution.y * densityField.resolution.z * sizeof(Hex32Cell), cudaMemcpyDeviceToHost);
+    // Estimate density map of SDF field
+    Hex32Field densityHexField;
+    densityHexField.resolution = sdfHexField.resolution;
+    cudaMalloc(&(densityHexField.d_cells), sdfHexField.resolution.x * sdfHexField.resolution.y * sdfHexField.resolution.z * sizeof(Hex32Cell));
 
-    std::vector<float> sdfData;
-    sdfData.reserve(densityField.resolution.x * densityField.resolution.y * densityField.resolution.z);
+    launchDensityMapKernel(
+        sdfHexField,
+        densityHexField,
+        domain.toCudaAABB(),
+        settings.samples,
+        restDensity,
+        h
+    );
 
-    for (auto cell : hex32cells) {
-        // float value = cell.nodeGradients[2].x;
-        float value = cell.nodes[1];
-        sdfData.push_back(value);
-    }
+    // Copy data of density map to 3d texture for debug viewing
+    std::vector<Hex32Cell> cells(densityHexField.resolution.x * densityHexField.resolution.y * densityHexField.resolution.z);
+    cudaMemcpy(cells.data(), densityHexField.d_cells, densityHexField.resolution.x * densityHexField.resolution.y * densityHexField.resolution.z * sizeof(Hex32Cell), cudaMemcpyDeviceToHost);
 
-    // Fill 3d texture
-    glGenTextures(1, &densityField.texture);
-    glBindTexture(GL_TEXTURE_3D, densityField.texture);
+    std::vector<float> cellData;
+    cellData.reserve(densityHexField.resolution.x * densityHexField.resolution.y * densityHexField.resolution.z);
+
+    for (auto& cell : cells)
+        cellData.push_back(cell.nodes[0] / restDensity);    // Normalize value between [0, 1] to ensure proper rendering
+
+    glGenTextures(1, &densityHexField.texture);
+    glBindTexture(GL_TEXTURE_3D, densityHexField.texture);
+
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -122,50 +86,11 @@ Hex32Field BoundaryBuilder::constructDensityMap(const Scene& scene, AABB domain)
        0,
        GL_RED,
        GL_FLOAT,
-       sdfData.data()
+       cellData.data()
     );
 
-    // glTexSubImage3D(
-    //     GL_TEXTURE_3D,
-    //     0,
-    //     0, 0, 0,
-    //     hexField.resolution.x,
-    //     hexField.resolution.y,
-    //     hexField.resolution.z,
-    //     GL_RED,
-    //     GL_FLOAT,
-    //     sdfData.data()
-    // );
-
-    // Cleanup
     cudaFree(d_triangles);
-    cudaFree(hexField.d_cells);
+    cudaFree(sdfHexField.d_cells);
 
-    return densityField;
-
-    // cudaDeviceSynchronize();
-
-    // Fill 3d texture
-    // std::vector<Hex32Cell> hex32cells(hexField.resolution.x * hexField.resolution.y * hexField.resolution.z);
-    // cudaMemcpy(hex32cells.data(), hexField.d_cells, hexField.resolution.x * hexField.resolution.y * hexField.resolution.z * sizeof(Hex32Cell), cudaMemcpyDeviceToHost);
-    //
-    // std::vector<float> sdfData;
-    // sdfData.reserve(hexField.resolution.x * hexField.resolution.y * hexField.resolution.z);
-    //
-    // for (auto cell : hex32cells) {
-    //     sdfData.push_back(cell.nodes[16]);
-    // }
-    //
-    // glBindTexture(GL_TEXTURE_3D, tex3D);
-    // glTexSubImage3D(
-    //     GL_TEXTURE_3D,
-    //     0,
-    //     0, 0, 0,
-    //     hexField.resolution.x,
-    //     hexField.resolution.y,
-    //     hexField.resolution.z,
-    //     GL_RED,
-    //     GL_FLOAT,
-    //     sdfData.data()
-    // );
+    return densityHexField;
 }

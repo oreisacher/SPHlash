@@ -11,17 +11,14 @@
 
 struct BoundarySettings {
     glm::ivec3 resolution = { 32, 32, 32 };
+    int samples = 200;
 };
 
 class BoundaryBuilder {
 public:
-    BoundaryBuilder();
-
-    Hex32Field constructDensityMap(const Scene& scene, AABB domain) const;
+    Hex32Field constructDensityMap(const Scene* scene, AABB domain, float h, float restDensity) const;
 
     BoundarySettings settings;
-
-    GLuint tex3D;
 };
 
 #endif //SPHLASH_BOUNDARYBUILDER_H

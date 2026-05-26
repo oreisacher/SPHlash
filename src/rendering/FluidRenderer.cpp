@@ -25,7 +25,7 @@ FluidRenderer::FluidRenderer(Scene& scene, FluidSimulation* simulation)
 
     // Setup framebuffer
     framebuffer = new Framebuffer(1, 1);
-    framebuffer->addColorAttachment();
+    framebuffer->addColorAttachment(GL_LINEAR);
     framebuffer->addDepthBuffer();
 
     // Setup particles

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <math_constants.h>
 
 __device__ inline float poly6Kernel(float4 dist, float h) {

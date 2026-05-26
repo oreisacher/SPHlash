@@ -1,63 +1,12 @@
+#pragma once
+
 #include "Boundaries.h"
-
-#include <sys/stat.h>
-
 #include "Math.cuh"
 #include "utils/AABB.h"
 #include "utils/Hex32Field.h"
 #include "Kernels.cuh"
 #include "curand_kernel.h"
-
-#define IDX(x,y,z) ((x) + (y) * resolution + (z) * resolution * resolution)
-
-enum NodeType { CORNER, EDGE_XI, EDGE_ETA, EDGE_ZETA };
-
-struct HexNode {
-    float xi, eta, zeta;
-    NodeType type;
-};
-
-__constant__ HexNode hex32Nodes[32] = {
-    // Corner nodes
-    { -1.0f, -1.0f, -1.0f, CORNER },
-    {  1.0f, -1.0f, -1.0f, CORNER },
-    {  1.0f,  1.0f, -1.0f, CORNER },
-    { -1.0f,  1.0f, -1.0f, CORNER },
-    { -1.0f, -1.0f,  1.0f, CORNER },
-    {  1.0f, -1.0f,  1.0f, CORNER },
-    {  1.0f,  1.0f,  1.0f, CORNER },
-    { -1.0f,  1.0f,  1.0f, CORNER },
-
-    // Edge nodes along xi
-    { -1.0f/3.0f, -1.0f, -1.0f, EDGE_XI },
-    {  1.0f/3.0f, -1.0f, -1.0f, EDGE_XI },
-    { -1.0f/3.0f,  1.0f, -1.0f, EDGE_XI },
-    {  1.0f/3.0f,  1.0f, -1.0f, EDGE_XI },
-    { -1.0f/3.0f, -1.0f,  1.0f, EDGE_XI },
-    {  1.0f/3.0f, -1.0f,  1.0f, EDGE_XI },
-    { -1.0f/3.0f,  1.0f,  1.0f, EDGE_XI },
-    {  1.0f/3.0f,  1.0f,  1.0f, EDGE_XI },
-
-    // Edge nodes along eta
-    { -1.0f, -1.0/3.0f, -1.0f, EDGE_ETA },
-    {  1.0f, -1.0/3.0f, -1.0f, EDGE_ETA },
-    { -1.0f,  1.0/3.0f, -1.0f, EDGE_ETA },
-    {  1.0f,  1.0/3.0f, -1.0f, EDGE_ETA },
-    { -1.0f, -1.0/3.0f,  1.0f, EDGE_ETA },
-    {  1.0f, -1.0/3.0f,  1.0f, EDGE_ETA },
-    { -1.0f,  1.0/3.0f,  1.0f, EDGE_ETA },
-    {  1.0f,  1.0/3.0f,  1.0f, EDGE_ETA },
-
-    // Edge nodes along zeta
-    { -1.0f, -1.0f, -1.0/3.0f, EDGE_ZETA },
-    {  1.0f, -1.0f, -1.0/3.0f, EDGE_ZETA },
-    { -1.0f,  1.0f, -1.0/3.0f, EDGE_ZETA },
-    {  1.0f,  1.0f, -1.0/3.0f, EDGE_ZETA },
-    { -1.0f, -1.0f,  1.0/3.0f, EDGE_ZETA },
-    {  1.0f, -1.0f,  1.0/3.0f, EDGE_ZETA },
-    { -1.0f,  1.0f,  1.0/3.0f, EDGE_ZETA },
-    {  1.0f,  1.0f,  1.0/3.0f, EDGE_ZETA },
-};
+#include "Hex32.cuh"
 
 __device__ float distanceTriangle(float3 p, float3 v1, float3 v2, float3 v3) {
     float3 v21 = v2 - v1;
@@ -82,32 +31,11 @@ __device__ float distanceTriangle(float3 p, float3 v1, float3 v2, float3 v3) {
     return sqrt(dot(normal, p1) * dot(normal, p1) / dot2(normal));
 }
 
-__device__ float3 normalize3(float3 v)
-{
-    float len = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+__device__ float solidAngle(float3 position, float3 v0, float3 v1, float3 v2) {
+    float3 a = normalize(v0 - position);
+    float3 b = normalize(v1 - position);
+    float3 c = normalize(v2 - position);
 
-    if (len > 1e-8f)
-    {
-        float invLen = 1.0f / len;
-        return make_float3(v.x * invLen, v.y * invLen, v.z * invLen);
-    }
-
-    return make_float3(0.0f, 0.0f, 0.0f);
-}
-
-__device__ float solidAngle(float3 p, float3 v0, float3 v1, float3 v2)
-{
-    // Vectors from point to triangle vertices
-    float3 a = v0 - p;
-    float3 b = v1 - p;
-    float3 c = v2 - p;
-
-    // Normalize
-    a = normalize3(a);
-    b = normalize3(b);
-    c = normalize3(c);
-
-    // Robust solid angle computation
     float numerator = dot(a, cross(b, c));
 
     float denom =
@@ -119,29 +47,19 @@ __device__ float solidAngle(float3 p, float3 v0, float3 v1, float3 v2)
     return 2.0f * atan2f(numerator, denom);
 }
 
-__device__ float computeWindingNumber(
-    float3 p,
-    int triangleCount,
-    const Triangle* triangles)
-{
+__device__ float computeWindingNumber(float3 position, int triangleCount, const Triangle* triangles) {
     float winding = 0.0f;
 
     for (int i = 0; i < triangleCount; i++)
-    {
-        winding += solidAngle(
-            p,
-            triangles[i].v0,
-            triangles[i].v1,
-            triangles[i].v2
-        );
-    }
+        winding += solidAngle(position, triangles[i].v0, triangles[i].v1, triangles[i].v2);
 
     return winding;
 }
 
 __device__ float calculateSDF(float3 position, int triangleCount, const Triangle* triangles) {
-    float best = 1e20;
+    float best = INFINITY;
 
+    // Calculate distance to nearest triangle
     for (int i = 0 ; i < triangleCount ; i++) {
         float dist = distanceTriangle(position, triangles[i].v0, triangles[i].v1, triangles[i].v2);
 
@@ -149,51 +67,17 @@ __device__ float calculateSDF(float3 position, int triangleCount, const Triangle
             best = dist;
     }
 
+    // Determine sign of distance = Check if position is inside or outside Mesh
     float winding = computeWindingNumber(position, triangleCount, triangles);
-
     return fabsf(winding) > 3.1415926f ? -best : best;
-}
-
-__device__ float3 calcGradient(
-    const float3 p,
-    const int triangleCount,
-    const Triangle* triangles,
-    const float eps
-) {
-    const float3 ex = make_float3(eps, 0.0f, 0.0f);
-    const float3 ey = make_float3(0.0f, eps, 0.0f);
-    const float3 ez = make_float3(0.0f, 0.0f, eps);
-
-    float dx =
-        calculateSDF(p + ex, triangleCount, triangles) -
-        calculateSDF(p - ex, triangleCount, triangles);
-
-    float dy =
-        calculateSDF(p + ey, triangleCount, triangles) -
-        calculateSDF(p - ey, triangleCount, triangles);
-
-    float dz =
-        calculateSDF(p + ez, triangleCount, triangles) -
-        calculateSDF(p - ez, triangleCount, triangles);
-
-    float3 g = make_float3(dx, dy, dz);
-
-    float len = sqrtf(g.x*g.x + g.y*g.y + g.z*g.z);
-
-    if (len > 1e-8f) {
-        g.x /= len;
-        g.y /= len;
-        g.z /= len;
-    }
-
-    return g;
 }
 
 __global__ void sdfKernel(
     const int triangleCount,
     const Triangle* triangles,
     const Hex32Field hexField,
-    const CudaAABB domain
+    const CudaAABB domain,
+    const float h
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
     const int cellCount = hexField.resolution.x * hexField.resolution.y * hexField.resolution.z;
@@ -201,101 +85,58 @@ __global__ void sdfKernel(
     if (id >= cellCount)
         return;
 
-    // Cell pos
     int cellX = id % hexField.resolution.x;
     int cellY = (id / hexField.resolution.x) % hexField.resolution.y;
     int cellZ = id / (hexField.resolution.x * hexField.resolution.y);
 
-    // Cell size
     float3 cellSize = make_float3(
         (domain.max.x - domain.min.x) / hexField.resolution.x,
         (domain.max.y - domain.min.y) / hexField.resolution.y,
         (domain.max.z - domain.min.z) / hexField.resolution.z
     );
 
-    float3 cellBasePos = make_float3(
+    float3 cellMinPos = make_float3(
         domain.min.x + cellX * cellSize.x,
         domain.min.y + cellY * cellSize.y,
         domain.min.z + cellZ * cellSize.z
     );
 
-    // Calculate sdf values for each node of cell
     Hex32Cell* cell = &hexField.d_cells[id];
 
+    // Calculate sdf value for each node of cell
     for (int n = 0 ; n < 32 ; n++) {
-        HexNode node = hex32Nodes[n];
-
-        float3 localPos = make_float3(
-            (node.xi   + 1.0f) * 0.5f,
-            (node.eta  + 1.0f) * 0.5f,
-            (node.zeta + 1.0f) * 0.5f
-        );
+        const Hex32Node& node = hex32Cube[n];
 
         float3 worldPos = make_float3(
-            cellBasePos.x + localPos.x * cellSize.x,
-            cellBasePos.y + localPos.y * cellSize.y,
-            cellBasePos.z + localPos.z * cellSize.z
+            cellMinPos.x + node.x * cellSize.x,
+            cellMinPos.y + node.y * cellSize.y,
+            cellMinPos.z + node.z * cellSize.z
         );
 
         cell->nodes[n] = calculateSDF(worldPos, triangleCount, triangles);
-        // cell->nodeGradients[n] = calcGradient(worldPos, triangleCount, triangles, 0.01f);
-        // cell->worldPositions[n] = worldPos;
     }
 
     // Determine if this cell is unnecessary
     float phiMin = INFINITY;
     float phiMax = -INFINITY;
 
-    for (float value : cell->nodes) {
-        if (value < phiMin) {
+    for (const float& value : cell->nodes) {
+        if (value < phiMin)
             phiMin = value;
-        }
 
-        if (value > phiMax) {
+        if (value > phiMax)
             phiMax = value;
-        }
     }
 
-    const float r = 0.05f;
-    // if (phiMin >= 2.0 * r || phiMax <= -r) {
-    if (phiMin >= 2.0 * r) {
-        // for (float& value : cell->nodes)
-        //     value = 0;
-        cell->used = false;
-    } else {
-        cell->used = true;
-    }
-
-    // int i = 0;
-    // for (int z = 0 ; z < 4 ; z++) {
-    //     for (int y = 0 ; y < 4 ; y++) {
-    //         for (int x = 0 ; x < 4 ; x++) {
-    //             int bx = (x == 0 || x == 3);
-    //             int by = (y == 0 || y == 3);
-    //             int bz = (z == 0 || z == 3);
-    //
-    //             // This node is a corner or edge node
-    //             if (bx + by + bz >= 2) {
-    //                 float3 nodePos = make_float3(
-    //                     cellBasePos.x + x * cellThirds.x,
-    //                     cellBasePos.y + y * cellThirds.y,
-    //                     cellBasePos.z + z * cellThirds.z
-    //                 );
-    //
-    //                 cell->nodes[i] = calculateSDF(nodePos, triangleCount, triangles);
-    //                 cell->positions[i] = nodePos;
-    //                 i++;
-    //             }
-    //         }
-    //     }
-    // }
+    cell->used = (phiMax < 2.0f * h);
 }
 
 void launchSdfKernel(
     const int triangleCount,
     const Triangle* triangles,
     const Hex32Field& hexField,
-    const CudaAABB& domain
+    const CudaAABB& domain,
+    const float h
 ) {
     int threadsPerBlock = 256;
     int cells = hexField.resolution.x * hexField.resolution.y * hexField.resolution.z;
@@ -305,19 +146,15 @@ void launchSdfKernel(
         triangleCount,
         triangles,
         hexField,
-        domain
+        domain,
+        h
     );
 }
 
-__global__ void initCuRand(curandState* states, unsigned long long seed, int n) {
-    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
-
-    if (id >= n)
-        return;
-
-    curand_init(seed, id, 0, &states[id]);
-}
-
+/*
+    Monotonically decreasing function which yields higher values for higher penetration depth.
+    See Equation (8) in corresponding Paper.
+*/
 __device__ float gamma(float restDensity, float h, float x) {
     if (x <= h)
         return restDensity * (1 - x / h);
@@ -329,7 +166,7 @@ __device__ float3 sampleSphere(curandState* state, float3 center, float radius) 
     float y = curand_normal(state);
     float z = curand_normal(state);
 
-    float3 dir = normalize3(make_float3(x, y, z));
+    float3 dir = normalize(make_float3(x, y, z));
 
     float r = cbrtf(curand_uniform(state)) * radius;
 
@@ -340,79 +177,12 @@ __device__ float3 sampleSphere(curandState* state, float3 center, float radius) 
     );
 }
 
-__device__ float3 T(float3 min, float3 max, float3 position) {
-    float3 s = max - min;
-    float3 t = 2.0f * position - (max + min);
-
-    return make_float3(
-        t.x / s.x,
-        t.y / s.y,
-        t.z / s.z
-    );
-}
-
-__device__ float shapeFunction(
-    float xi,   float eta,   float zeta,        // Query positon
-    float xi_i, float eta_i, float zeta_i,      // Node coords [-1, 1]
-    NodeType type
-) {
-    switch (type) {
-        case CORNER:
-            // Equation 9
-            return (1.0f / 64.0f)
-                * (1.0f + xi_i   * xi)
-                * (1.0f + eta_i  * eta)
-                * (1.0f + zeta_i * zeta)
-                * (9.0f * (xi*xi + eta*eta + zeta*zeta) - 19.0f);
-
-        case EDGE_XI:
-            // Equation 10
-            return (9.0f / 64.0f)
-                * (1.0f - xi*xi)
-                * (1.0f + 9.0f * xi_i * xi)
-                * (1.0f + eta_i  * eta)
-                * (1.0f + zeta_i * zeta);
-
-        case EDGE_ETA:
-            // Equation 10
-            return (9.0f / 64.0f)
-                * (1.0f - eta*eta)
-                * (1.0f + 9.0f * eta_i * eta)
-                * (1.0f + xi_i  * xi)
-                * (1.0f + zeta_i * zeta);
-
-        case EDGE_ZETA:
-            // Equation 10
-            return (9.0f / 64.0f)
-                * (1.0f - zeta*zeta)
-                * (1.0f + 9.0f * zeta_i * zeta)
-                * (1.0f + xi_i  * xi)
-                * (1.0f + eta_i * eta);
-    }
-}
-
-__device__ float interpolate(
-    float xi, float eta, float zeta,
-    float* nodeValues
-) {
-    float result = 0;
-
-    for (int i = 0 ; i < 32 ; i++) {
-        result += shapeFunction(
-            xi, eta, zeta,
-            hex32Nodes[i].xi, hex32Nodes[i].eta, hex32Nodes[i].zeta,
-            hex32Nodes[i].type
-        ) * nodeValues[i];
-    }
-
-    return result;
-}
-
-__global__ void calcDensityMapKernel(
+__global__ void densityMapKernel(
     curandState* states,
     const Hex32Field sdfField,
     const Hex32Field densityField,
     const CudaAABB domain,
+    float mcSamples,
     float restDensity,
     float h
 ) {
@@ -422,84 +192,62 @@ __global__ void calcDensityMapKernel(
     if (id >= cellCount)
         return;
 
-    // Cell pos
+    Hex32Cell* sdfCell = &sdfField.d_cells[id];
+    densityField.d_cells[id].used = sdfCell->used;
+
+    // Skip further calculations is cell is unused
+    if (!sdfCell->used) {
+        // Fill unused nodes with zeros
+        for (auto& value : densityField.d_cells[id].nodes)
+            value = 0;
+
+        return;
+    }
+
     int cellX = id % sdfField.resolution.x;
     int cellY = (id / sdfField.resolution.x) % sdfField.resolution.y;
     int cellZ = id / (sdfField.resolution.x * sdfField.resolution.y);
 
-    // Cell size
     float3 cellSize = make_float3(
         (domain.max.x - domain.min.x) / sdfField.resolution.x,
         (domain.max.y - domain.min.y) / sdfField.resolution.y,
         (domain.max.z - domain.min.z) / sdfField.resolution.z
     );
 
-    float3 cellBasePos = make_float3(
+    float3 cellMinPos = make_float3(
         domain.min.x + cellX * cellSize.x,
         domain.min.y + cellY * cellSize.y,
         domain.min.z + cellZ * cellSize.z
     );
 
-    Hex32Cell* cell = &sdfField.d_cells[id];
-    densityField.d_cells[id].used = cell->used;
-
-    if (!cell->used)
-        return;
-
-    // for (int i = 0 ; i < 32 ; i++) {
-        // densityField.d_cells[id].nodeGradients[i] = cell->nodeGradients[i];
-        // densityField.d_cells[id].worldPositions[i] = cell->worldPositions[i];
-    // }
-
-    // if (!cell->used) {
-    //     for (auto& value : densityField.d_cells[id].nodes)
-    //         value = 0;
-    //     return;
-    // }
-
+    // Estimate density for each node of cell
     for (int nodeIndex = 0 ; nodeIndex < 32 ; nodeIndex++) {
-        HexNode node = hex32Nodes[nodeIndex];
-
-        float3 localPos = make_float3(
-            (node.xi   + 1.0f) * 0.5f,
-            (node.eta  + 1.0f) * 0.5f,
-            (node.zeta + 1.0f) * 0.5f
-        );
+        Hex32Node node = hex32Cube[nodeIndex];
 
         float3 nodePos = make_float3(
-            cellBasePos.x + localPos.x * cellSize.x,
-            cellBasePos.y + localPos.y * cellSize.y,
-            cellBasePos.z + localPos.z * cellSize.z
+            cellMinPos.x + node.x * cellSize.x,
+            cellMinPos.y + node.y * cellSize.y,
+            cellMinPos.z + node.z * cellSize.z
         );
 
         float density = 0;
-        // float n = 0;
 
-        const float sCount = 1000.0;
-        for (int sample = 0 ; sample < sCount ; sample++) {
+        // Monte Carlo estimate for Equation (6) of the corresponding paper
+        for (int sample = 0 ; sample < mcSamples ; sample++) {
             float3 samplePosition = sampleSphere(&states[id], nodePos, h);
+            float3 diff = nodePos - samplePosition;
 
-            // Reject samples outside domain entirely
+            // Reject samples outside domain
             if (samplePosition.x < domain.min.x || samplePosition.x > domain.max.x ||
                 samplePosition.y < domain.min.y || samplePosition.y > domain.max.y ||
                 samplePosition.z < domain.min.z || samplePosition.z > domain.max.z) {
                 continue;
             }
 
-            // Clamp to domain
-            // samplePosition.x = fmaxf(domain.min.x, fminf(domain.max.x, samplePosition.x));
-            // samplePosition.y = fmaxf(domain.min.y, fminf(domain.max.y, samplePosition.y));
-            // samplePosition.z = fmaxf(domain.min.z, fminf(domain.max.z, samplePosition.z));
-
-            // Find cell
-            int sampleCellX = (int)((samplePosition.x - domain.min.x) / cellSize.x);
-            int sampleCellY = (int)((samplePosition.y - domain.min.y) / cellSize.y);
-            int sampleCellZ = (int)((samplePosition.z - domain.min.z) / cellSize.z);
-
-            // Clamp cell indices to valid range
-            // sampleCellX = min(sampleCellX, sdfField.resolution.x - 1);
-            // sampleCellY = min(sampleCellY, sdfField.resolution.y - 1);
-            // sampleCellZ = min(sampleCellZ, sdfField.resolution.z - 1);
+            // Find cell which contains sample position
+            int sampleCellX = static_cast<int>((samplePosition.x - domain.min.x) / cellSize.x);
+            int sampleCellY = static_cast<int>((samplePosition.y - domain.min.y) / cellSize.y);
+            int sampleCellZ = static_cast<int>((samplePosition.z - domain.min.z) / cellSize.z);
 
             // Get cell
             int cellId = sampleCellX
@@ -507,54 +255,55 @@ __global__ void calcDensityMapKernel(
                      + sampleCellZ * sdfField.resolution.x * sdfField.resolution.y;
             Hex32Cell* sampleCell = &sdfField.d_cells[cellId];
 
-            if (sampleCell->used == false) {
+            // Unsued cell -> Does not contribute anything to density
+            if (sampleCell->used == false)
                 continue;
-            }
 
-            // World pos of cell
-            float3 sampleCellBase = make_float3(
+            float3 sampleCellMin = make_float3(
                 domain.min.x + sampleCellX * cellSize.x,
                 domain.min.y + sampleCellY * cellSize.y,
                 domain.min.z + sampleCellZ * cellSize.z
             );
 
             float3 sampleCellMax = make_float3(
-                sampleCellBase.x + cellSize.x,
-                sampleCellBase.y + cellSize.y,
-                sampleCellBase.z + cellSize.z
+                sampleCellMin.x + cellSize.x,
+                sampleCellMin.y + cellSize.y,
+                sampleCellMin.z + cellSize.z
             );
 
-            float3 normalizedPos = T(sampleCellBase, sampleCellMax, samplePosition);
-            float interpolateSampleSDF = interpolate(normalizedPos.x, normalizedPos.y, normalizedPos.z, sampleCell->nodes);
+            // Interpolate sdf values of sample cell based on sample position
+            float3 isoparametricCoords = T(sampleCellMin, sampleCellMax, samplePosition);
+            float interpolatedSDF = interpolateHex32(
+                isoparametricCoords.x,
+                isoparametricCoords.y,
+                isoparametricCoords.z,
+                sampleCell->nodes
+            );
 
-            // if (interpolateSampleSDF <= 0.0) {
-            // float absSdf = fabsf(interpolateSampleSDF);
-            float g = gamma(restDensity, h, interpolateSampleSDF);
-            float3 diff = nodePos - samplePosition;
+            float g = gamma(restDensity, h, interpolatedSDF);
             float w = poly6Kernel(make_float4(diff.x, diff.y, diff.z, 0.0f), h);
-            // n += w;
-
             density += g * w;
-            // }
         }
 
         float V = (4.0 / 3.0f) * M_PI * h * h * h;
-        density = density * (V / sCount);
-
-        // if (n >= 1e-8f)
-            // density /= n;
-
-        // if (density > 990)
-            // printf("%f\n", density);
-
-        densityField.d_cells[id].nodes[nodeIndex] = density;
+        densityField.d_cells[id].nodes[nodeIndex] = density * (V / mcSamples);
     }
 }
 
-void launchCalcDensityMapKernel(
+__global__ void initCuRand(curandState* states, unsigned long long seed, int n) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (id >= n)
+        return;
+
+    curand_init(seed, id, 0, &states[id]);
+}
+
+void launchDensityMapKernel(
     const Hex32Field sdfField,
     const Hex32Field densityField,
     const CudaAABB domain,
+    float mcSamples,
     float restDensity,
     float h
 ) {
@@ -567,17 +316,16 @@ void launchCalcDensityMapKernel(
 
     // Init random states of curand
     initCuRand<<<blocks, threadsPerBlock>>>(d_states, 0xDEADBEEF, cells);
-    cudaDeviceSynchronize();
 
-    calcDensityMapKernel<<<blocks, threadsPerBlock>>>(
+    densityMapKernel<<<blocks, threadsPerBlock>>>(
         d_states,
         sdfField,
         densityField,
         domain,
+        mcSamples,
         restDensity,
         h
     );
-    cudaDeviceSynchronize();
 
     cudaFree(d_states);
 }

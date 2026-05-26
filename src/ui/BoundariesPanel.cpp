@@ -32,13 +32,18 @@ void BoundariesPanel::draw() {
         ImGui::SetTooltip("Resolution of signed distance field and density map used by boundaries");
     ImGui::DragInt3("##bbres", glm::value_ptr(boundaryBuilder->settings.resolution), 1, 2, 1024, "%d", ImGuiSliderFlags_AlwaysClamp);
 
+    ImGui::Text("Samples:");
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Sample count for monte carlo integral calculations");
+    ImGui::DragInt("##bbsamples", &boundaryBuilder->settings.samples, 1, 1, 1024, "%d", ImGuiSliderFlags_AlwaysClamp);
+
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
 
     Hex32Field boundaryField = editor->getBoundaryDensityMap();
 
-    if (ImGui::Button(densityMapPreview ? "Rebuild Boundary Map" : "Build Boundary Map", ImVec2(totalWidth, 0.0f))) {
+    if (ImGui::Button(boundaryField.d_cells ? "Rebuild Boundary Map" : "Build Boundary Map", ImVec2(totalWidth, 0.0f))) {
         if (densityMapPreview)
             densityMapPreview->close();
 

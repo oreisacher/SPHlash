@@ -79,7 +79,12 @@ BoundaryBuilder* Editor::getBoundaryBuilder() {
 }
 
 void Editor::buildBoundaryDensityMap() const {
-    auto densityMap = boundryBuilder.constructDensityMap(*scene, simulation->settings.domainArea);
+    auto densityMap = boundryBuilder.constructDensityMap(
+        scene,
+        simulation->settings.domainArea,
+        simulation->settings.h,
+        simulation->settings.p_0
+    );
 
     simulation->clearBoundaryField();
     simulation->setBoundaryField(densityMap);

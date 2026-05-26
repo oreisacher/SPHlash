@@ -27,8 +27,6 @@ struct ParticleGPU {
     float4 properties               = { -1.0f, -1.0f, -1.0f, -1.0f };   // x: mass, y: density, z: pressure, w: id
     float4 flags                    = { 0.0f, 0.0f, 0.0f, 0.0f };       // x: surface, y: undefined, z: undefined, w: undefined
 
-    float4 boundary                 = { 0.0f, 0.0f, 0.0f, 0.0f };
-
     // SPH Forces
     float4 pressureForce            = { 0.0f, 0.0f, 0.0f, 0.0f };
     float4 viscosityForce           = { 0.0f, 0.0f, 0.0f, 0.0f };

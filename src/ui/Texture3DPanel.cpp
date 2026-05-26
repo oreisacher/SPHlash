@@ -12,7 +12,7 @@ Texture3DPanel::Texture3DPanel(const std::string& name, GLuint texture, int widt
     glGenVertexArrays(1, &VAO);
 
     framebuffer = new Framebuffer(width, height);
-    framebuffer->addColorAttachment();
+    framebuffer->addColorAttachment(GL_NEAREST);
 
     shader = Shader::createTexture3DSlice();
 }
