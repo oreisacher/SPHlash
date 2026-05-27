@@ -128,7 +128,8 @@ __global__ void sdfKernel(
             phiMax = value;
     }
 
-    cell->used = (phiMax < 2.0f * h);
+    // cell->used = (phiMax < 2.0f * h);
+    cell->used = true;
 }
 
 void launchSdfKernel(
@@ -288,6 +289,157 @@ __global__ void densityMapKernel(
         float V = (4.0 / 3.0f) * M_PI * h * h * h;
         densityField.d_cells[id].nodes[nodeIndex] = density * (V / mcSamples);
     }
+}
+
+__device__ float cubicSplineKernel(float x, float h) {
+    float q = x / h;
+
+    if (q >= 2.0f)
+        return 0.0f;
+
+    float alpha = 1.0f / (3.14159265358979323846f * h * h * h);
+
+    if (q < 1.0f)
+        return alpha * (1.0f - 1.5f * q * q + 0.75f * q * q * q);
+
+    float t = (2.0f - q);
+    return alpha * 0.25f * t * t * t;
+}
+
+__device__ float gammaStar(float x, float r) {
+    if (x <= 0.0f)
+        return 1.0f;
+
+    if (x >= r)
+        return 0.0f;
+
+    return cubicSplineKernel(x, 0.5 * r) / cubicSplineKernel(0, 0.5 * r);
+}
+
+__global__ void volumeMapKernel(
+    const Hex32Field sdfField,
+    const Hex32Field volumeField,
+    const CudaAABB domain
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+    const int cellCount = sdfField.resolution.x * sdfField.resolution.y * sdfField.resolution.z;
+
+    if (id >= cellCount)
+        return;
+
+    Hex32Cell* sdfCell = &sdfField.d_cells[id];
+
+    int cellX = id % sdfField.resolution.x;
+    int cellY = (id / sdfField.resolution.x) % sdfField.resolution.y;
+    int cellZ = id / (sdfField.resolution.x * sdfField.resolution.y);
+
+    float3 cellSize = make_float3(
+        (domain.max.x - domain.min.x) / sdfField.resolution.x,
+        (domain.max.y - domain.min.y) / sdfField.resolution.y,
+        (domain.max.z - domain.min.z) / sdfField.resolution.z
+    );
+
+    float3 cellMinPos = make_float3(
+        domain.min.x + cellX * cellSize.x,
+        domain.min.y + cellY * cellSize.y,
+        domain.min.z + cellZ * cellSize.z
+    );
+
+    float3 cellMaxPos = make_float3(
+        cellMinPos.x + cellSize.x,
+        cellMinPos.y + cellSize.y,
+        cellMinPos.z + cellSize.z
+    );
+
+    // Gauss-Legendre
+    const float xi[5] = { -0.90618f, -0.538469f, 0.0f, 0.538469f, 0.90618f };
+    const float w[5]  = { 0.236927f, 0.478629f, 0.568889f, 0.478629f, 0.236927f };
+
+    const float r = 0.05f;
+
+    for (int nodeIndex = 0 ; nodeIndex < 32 ; nodeIndex++) {
+        Hex32Node node = Hex32CubeLookup[nodeIndex];
+
+        float3 nodePos = make_float3(
+            cellMinPos.x + node.x * cellSize.x,
+            cellMinPos.y + node.y * cellSize.y,
+            cellMinPos.z + node.z * cellSize.z
+        );
+
+        float volume = 0.0f;
+
+        for (int z = 0 ; z < 5 ; z++) {
+            for (int y = 0 ; y < 5 ; y++) {
+                for (int x = 0 ; x < 5 ; x++) {
+                    float3 queryPosition = make_float3(
+                        nodePos.x + r * xi[x],
+                        nodePos.y + r * xi[y],
+                        nodePos.z + r * xi[z]
+                    );
+
+                    // Reject samples outside domain
+                    if (queryPosition.x < domain.min.x || queryPosition.x > domain.max.x ||
+                        queryPosition.y < domain.min.y || queryPosition.y > domain.max.y ||
+                        queryPosition.z < domain.min.z || queryPosition.z > domain.max.z) {
+                        continue;
+                    }
+
+                    // Find cell which contains sample position
+                    int sampleCellX = min(max(static_cast<int>((queryPosition.x - domain.min.x) / cellSize.x), 0), sdfField.resolution.x - 1);
+                    int sampleCellY = min(max(static_cast<int>((queryPosition.y - domain.min.y) / cellSize.y), 0), sdfField.resolution.y - 1);
+                    int sampleCellZ = min(max(static_cast<int>((queryPosition.z - domain.min.z) / cellSize.z), 0), sdfField.resolution.z - 1);
+
+                    // Get cell
+                    int cellId = sampleCellX
+                             + sampleCellY * sdfField.resolution.x
+                             + sampleCellZ * sdfField.resolution.x * sdfField.resolution.y;
+                    Hex32Cell* sampleCell = &sdfField.d_cells[cellId];
+
+                    float3 sampleCellMin = make_float3(
+                        domain.min.x + sampleCellX * cellSize.x,
+                        domain.min.y + sampleCellY * cellSize.y,
+                        domain.min.z + sampleCellZ * cellSize.z
+                    );
+
+                    float3 sampleCellMax = make_float3(
+                        sampleCellMin.x + cellSize.x,
+                        sampleCellMin.y + cellSize.y,
+                        sampleCellMin.z + cellSize.z
+                    );
+
+                    // Interpolate sdf values of sample cell based on sample position
+                    float3 isoparametricCoords = T(sampleCellMin, sampleCellMax, queryPosition);
+                    float interpolatedSDF = interpolateHex32(
+                        isoparametricCoords.x,
+                        isoparametricCoords.y,
+                        isoparametricCoords.z,
+                        sampleCell->nodes
+                    );
+
+                    float gamma = gammaStar(interpolatedSDF, r);
+                    volume += gamma * w[x] * w[y] * w[z];
+                }
+            }
+        }
+
+        volumeField.d_cells[id].nodes[nodeIndex] = volume * r * r * r;
+    }
+}
+
+void launchVolumeMapKernel(
+    const Hex32Field sdfField,
+    const Hex32Field volumeField,
+    const CudaAABB domain
+) {
+    int threadsPerBlock = 256;
+    int cells = sdfField.resolution.x * sdfField.resolution.y * sdfField.resolution.z;
+    int blocks = (cells + threadsPerBlock - 1) / threadsPerBlock;
+
+    volumeMapKernel<<<blocks, threadsPerBlock>>>(
+        sdfField,
+        volumeField,
+        domain
+    );
 }
 
 __global__ void initCuRand(curandState* states, unsigned long long seed, int n) {

@@ -80,8 +80,9 @@ void FluidSimulation::updateParticles() {
         d_sortedParticles,
         d_sortedParticleHashes,
         d_offsets,
-        boundaryField.d_cells != nullptr,
-        boundaryField,
+        sdfMap.d_cells != nullptr,
+        sdfMap,
+        volumeMap,
         settings.domainArea.toCudaAABB(),
         settings.h,
         settings.k,
@@ -93,8 +94,9 @@ void FluidSimulation::updateParticles() {
         d_sortedParticles,
         d_sortedParticleHashes,
         d_offsets,
-        boundaryField.d_cells != nullptr,
-        boundaryField,
+        sdfMap.d_cells != nullptr,
+        sdfMap,
+        volumeMap,
         settings.domainArea.toCudaAABB(),
         settings.h,
         settings.alpha,
@@ -231,20 +233,31 @@ void FluidSimulation::updateForceFieldBuffer() const {
     cudaMemcpy(d_forceFields, scene->getForceFields().data(), scene->getForceFields().size() * sizeof(ForceField), cudaMemcpyHostToDevice);
 }
 
-void FluidSimulation::setBoundaryField(const Hex32Field& field) {
-    boundaryField = field;
+void FluidSimulation::setBoundaryMaps(const Hex32Field& sdfMap, const Hex32Field& volumeMap) {
+    this->sdfMap = sdfMap;
+    this->volumeMap = volumeMap;
 }
 
+// void FluidSimulation::setBoundaryMaps(const Hex32Field& field) {
+//     boundaryField = field;
+// }
+
 void FluidSimulation::clearBoundaryField() {
-    if (boundaryField.d_cells != nullptr) {
-        cudaFree(boundaryField.d_cells);
-        boundaryField.d_cells = nullptr;
-        boundaryField.resolution = { 0, 0, 0 };
+    if (sdfMap.d_cells != nullptr) {
+        cudaFree(sdfMap.d_cells);
+        sdfMap.d_cells = nullptr;
+        sdfMap.resolution = { 0, 0, 0 };
+    }
+
+    if (volumeMap.d_cells != nullptr) {
+        cudaFree(volumeMap.d_cells);
+        volumeMap.d_cells = nullptr;
+        volumeMap.resolution = { 0, 0, 0 };
     }
 }
 
 Hex32Field FluidSimulation::getBoundaryField() const {
-    return boundaryField;
+    return volumeMap;
 }
 
 bool FluidSimulation::computeVoxelField(const VoxelField& field) const {

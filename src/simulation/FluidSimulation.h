@@ -116,7 +116,7 @@ public:
     void rebuildForceFieldBuffer();
     void updateForceFieldBuffer() const;
 
-    void setBoundaryField(const Hex32Field &field);
+    void setBoundaryMaps(const Hex32Field &sdfMap, const Hex32Field &volumeMap);
     void clearBoundaryField();
     Hex32Field getBoundaryField() const;
 
@@ -157,7 +157,8 @@ private:
     ForceField* d_forceFields           = nullptr;
 
     // --- Boundary Density Map ---
-    Hex32Field boundaryField;
+    Hex32Field sdfMap;
+    Hex32Field volumeMap;
 
     // --- Rendering ---
     cudaGraphicsResource* rendererResource = nullptr;

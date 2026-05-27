@@ -222,7 +222,8 @@ __global__ void densityPressureKernel(
     const int* hashes,
     const int* offsets,
     const bool hasBoundary,
-    const Hex32Field boundaryField,
+    const Hex32Field sdfMap,
+    const Hex32Field volumeMap,
     const CudaAABB domain,
     const float h,
     const float k,
@@ -277,49 +278,63 @@ __global__ void densityPressureKernel(
     // Handle boundary density
     if (hasBoundary) {
         float3 boundaryCellSize = make_float3(
-            (domain.max.x - domain.min.x) / boundaryField.resolution.x,
-            (domain.max.y - domain.min.y) / boundaryField.resolution.y,
-            (domain.max.z - domain.min.z) / boundaryField.resolution.z
+            (domain.max.x - domain.min.x) / volumeMap.resolution.x,
+            (domain.max.y - domain.min.y) / volumeMap.resolution.y,
+            (domain.max.z - domain.min.z) / volumeMap.resolution.z
         );
 
         // Determine boundary cell coords and clamp to valid range
-        int boundaryCellX = min(static_cast<int>((position.x - domain.min.x) / boundaryCellSize.x), boundaryField.resolution.x - 1);
-        int boundaryCellY = min(static_cast<int>((position.y - domain.min.y) / boundaryCellSize.y), boundaryField.resolution.y - 1);
-        int boundaryCellZ = min(static_cast<int>((position.z - domain.min.z) / boundaryCellSize.z), boundaryField.resolution.z - 1);
+        int boundaryCellX = min(static_cast<int>((position.x - domain.min.x) / boundaryCellSize.x), volumeMap.resolution.x - 1);
+        int boundaryCellY = min(static_cast<int>((position.y - domain.min.y) / boundaryCellSize.y), volumeMap.resolution.y - 1);
+        int boundaryCellZ = min(static_cast<int>((position.z - domain.min.z) / boundaryCellSize.z), volumeMap.resolution.z - 1);
         boundaryCellX = max(0, boundaryCellX);
         boundaryCellY = max(0, boundaryCellY);
         boundaryCellZ = max(0, boundaryCellZ);
 
         int boundaryCellId = boundaryCellX
-                        + boundaryCellY * boundaryField.resolution.x
-                        + boundaryCellZ * boundaryField.resolution.x * boundaryField.resolution.y;
-        Hex32Cell* boundaryCell = &boundaryField.d_cells[boundaryCellId];
+                        + boundaryCellY * volumeMap.resolution.x
+                        + boundaryCellZ * volumeMap.resolution.x * volumeMap.resolution.y;
+
+        Hex32Cell* sdfCell      = &sdfMap.d_cells[boundaryCellId];
+        Hex32Cell* volumeCell   = &volumeMap.d_cells[boundaryCellId];
 
         // Cell does not contribute any density if unused, meaning the cell is far away from any boundary
-        if (boundaryCell->used) {
-            float3 boundaryCellMin = make_float3(
-                domain.min.x + boundaryCellX * boundaryCellSize.x,
-                domain.min.y + boundaryCellY * boundaryCellSize.y,
-                domain.min.z + boundaryCellZ * boundaryCellSize.z
-            );
+        // if (boundaryCell->used) {
 
-            float3 boundaryCellMax = make_float3(
-                boundaryCellMin.x + boundaryCellSize.x,
-                boundaryCellMin.y + boundaryCellSize.y,
-                boundaryCellMin.z + boundaryCellSize.z
-            );
+        float3 boundaryCellMin = make_float3(
+            domain.min.x + boundaryCellX * boundaryCellSize.x,
+            domain.min.y + boundaryCellY * boundaryCellSize.y,
+            domain.min.z + boundaryCellZ * boundaryCellSize.z
+        );
 
-            // Interpolate density values of boundary cell based on particles position
-            float3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, make_float3(position.x, position.y, position.z));
-            float boundaryDensity = interpolateHex32(
-                isoparametricCoords.x,
-                isoparametricCoords.y,
-                isoparametricCoords.z,
-                boundaryCell->nodes
-            );
+        float3 boundaryCellMax = make_float3(
+            boundaryCellMin.x + boundaryCellSize.x,
+            boundaryCellMin.y + boundaryCellSize.y,
+            boundaryCellMin.z + boundaryCellSize.z
+        );
 
-            density += boundaryDensity;
-        }
+        // Interpolate density values of boundary cell based on particles position
+        float3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, make_float3(position.x, position.y, position.z));
+
+        float interpolatedSDF = interpolateHex32(
+            isoparametricCoords.x,
+            isoparametricCoords.y,
+            isoparametricCoords.z,
+            sdfCell->nodes
+        );
+
+        float interpolatedVolume = interpolateHex32(
+            isoparametricCoords.x,
+            isoparametricCoords.y,
+            isoparametricCoords.z,
+            volumeCell->nodes
+        );
+
+        // printf("%f\n", interpolatedVolume * p_0 * poly6Kernel(interpolatedSDF, h));
+        density += interpolatedVolume * p_0 * poly6Kernel(interpolatedSDF, h);
+
+            // density += boundaryDensity;
+        // }
     }
 
     // Assign density to particle
@@ -337,7 +352,8 @@ void launchDensityPressureKernel(
     const int* hashes,
     const int* offsets,
     const bool hasBoundary,
-    const Hex32Field boundaryField,
+    const Hex32Field sdfMap,
+    const Hex32Field volumeMap,
     const CudaAABB domain,
     const float h,
     const float k,
@@ -347,7 +363,7 @@ void launchDensityPressureKernel(
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     densityPressureKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, hashes, offsets, hasBoundary, boundaryField, domain, h, k, p_0
+        numParticles, particles, hashes, offsets, hasBoundary, sdfMap, volumeMap, domain, h, k, p_0
     );
 }
 
@@ -447,7 +463,8 @@ __global__ void sphForcesKernel(
     const int* hashes,
     const int* offsets,
     const bool hasBoundary,
-    const Hex32Field boundaryField,
+    const Hex32Field sdfMap,
+    const Hex32Field volumeMap,
     const CudaAABB domain,
     const float h,
     const float alpha,
@@ -550,28 +567,28 @@ __global__ void sphForcesKernel(
     // Handle boundary force
     if (hasBoundary) {
         float3 boundaryCellSize = make_float3(
-            (domain.max.x - domain.min.x) / boundaryField.resolution.x,
-            (domain.max.y - domain.min.y) / boundaryField.resolution.y,
-            (domain.max.z - domain.min.z) / boundaryField.resolution.z
+            (domain.max.x - domain.min.x) / volumeMap.resolution.x,
+            (domain.max.y - domain.min.y) / volumeMap.resolution.y,
+            (domain.max.z - domain.min.z) / volumeMap.resolution.z
         );
 
         // Determine boundary cell coords and clamp to valid range
-        int boundaryCellX = min(static_cast<int>((position.x - domain.min.x) / boundaryCellSize.x), boundaryField.resolution.x - 1);
-        int boundaryCellY = min(static_cast<int>((position.y - domain.min.y) / boundaryCellSize.y), boundaryField.resolution.y - 1);
-        int boundaryCellZ = min(static_cast<int>((position.z - domain.min.z) / boundaryCellSize.z), boundaryField.resolution.z - 1);
+        int boundaryCellX = min(static_cast<int>((position.x - domain.min.x) / boundaryCellSize.x), volumeMap.resolution.x - 1);
+        int boundaryCellY = min(static_cast<int>((position.y - domain.min.y) / boundaryCellSize.y), volumeMap.resolution.y - 1);
+        int boundaryCellZ = min(static_cast<int>((position.z - domain.min.z) / boundaryCellSize.z), volumeMap.resolution.z - 1);
         boundaryCellX = max(0, boundaryCellX);
         boundaryCellY = max(0, boundaryCellY);
         boundaryCellZ = max(0, boundaryCellZ);
 
         int boundaryCellId = boundaryCellX
-            + boundaryCellY * boundaryField.resolution.x
-            + boundaryCellZ * boundaryField.resolution.x * boundaryField.resolution.y;
-        Hex32Cell* boundaryCell = &boundaryField.d_cells[boundaryCellId];
+            + boundaryCellY * volumeMap.resolution.x
+            + boundaryCellZ * volumeMap.resolution.x * volumeMap.resolution.y;
 
-        particle->boundaryForce = make_float4(0.0, 0.0, 0.0, 0.0);
+        Hex32Cell* sdfCell      = &sdfMap.d_cells[boundaryCellId];
+        Hex32Cell* volumeCell   = &volumeMap.d_cells[boundaryCellId];
 
         // Cell does not contribute any additional force if unused, meaning the cell is far away from any boundary
-        if (boundaryCell->used) {
+        // if (boundaryCell->used) {
             float3 boundaryCellMin = make_float3(
                 domain.min.x + boundaryCellX * boundaryCellSize.x,
                 domain.min.y + boundaryCellY * boundaryCellSize.y,
@@ -586,21 +603,72 @@ __global__ void sphForcesKernel(
 
             float3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, make_float3(position.x, position.y, position.z));
 
-            float3 gradientLocal = interpolateHex32Gradient(
+            float interpolatedSDF = interpolateHex32(
                 isoparametricCoords.x,
                 isoparametricCoords.y,
                 isoparametricCoords.z,
-                boundaryCell->nodes
+                sdfCell->nodes
             );
+
+            float3 gradLocal = interpolateHex32Gradient(
+                isoparametricCoords.x, isoparametricCoords.y, isoparametricCoords.z,
+                sdfCell->nodes
+            );
+
+            float3 gradSDF = make_float3(
+                gradLocal.x * 2.0f / (boundaryCellMax.x - boundaryCellMin.x),
+                gradLocal.y * 2.0f / (boundaryCellMax.y - boundaryCellMin.y),
+                gradLocal.z * 2.0f / (boundaryCellMax.z - boundaryCellMin.z)
+            );
+
+            // 4. Normalize gradient → surface normal
+            float len = sqrtf(gradSDF.x * gradSDF.x + gradSDF.y * gradSDF.y + gradSDF.z * gradSDF.z + 1e-10f);
+            float3 normal = make_float3(gradSDF.x/len, gradSDF.y/len, gradSDF.z/len);
+
+            // 5. Step back along normal by SDF value → nearest surface point
+            float sdfClamped = fmaxf(interpolatedSDF, 0.01f * h);
+            float3 nearest = make_float3(
+                position.x - sdfClamped * normal.x,
+                position.y - sdfClamped * normal.y,
+                position.z - sdfClamped * normal.z
+            );
+
+            float4 diff = make_float4(
+                position.x - nearest.x,
+                position.y - nearest.y,
+                position.z - nearest.z,
+                0.0
+            );
+
+            float interpolatedVolume = interpolateHex32(
+                isoparametricCoords.x,
+                isoparametricCoords.y,
+                isoparametricCoords.z,
+                volumeCell->nodes
+            );
+
+            particle->pressureForce -=
+                interpolatedVolume * 1000.0f *
+                (
+                    (particle->properties.z / (particle->properties.y * particle->properties.y + 1e-6f)) +
+                    (particle->properties.z / (1000.0f * 1000.0f))
+                ) * spikyKernelGradient(diff, h);
+
+            // float3 gradientLocal = interpolateHex32Gradient(
+                // isoparametricCoords.x,
+                // isoparametricCoords.y,
+                // isoparametricCoords.z,
+                // boundaryCell->nodes
+            // );
 
             // Jacobian of T^-1: dxi/dx = 2 / (cellMax - cellMin)
-            float3 J = make_float3(
-                2.0f / (boundaryCellMax.x - boundaryCellMin.x),
-                2.0f / (boundaryCellMax.y - boundaryCellMin.y),
-                2.0f / (boundaryCellMax.z - boundaryCellMin.z)
-            );
+            // float3 J = make_float3(
+                // 2.0f / (boundaryCellMax.x - boundaryCellMin.x),
+                // 2.0f / (boundaryCellMax.y - boundaryCellMin.y),
+                // 2.0f / (boundaryCellMax.z - boundaryCellMin.z)
+            // );
 
-            float3 gradient = gradientLocal * J;
+            // float3 gradient = gradientLocal * J;
 
             // float3 fBoundary = make_float3(
             //     -(fmaxf(0.0f, particle->properties.z) / (particle->properties.y * particle->properties.y)) * gradient.x,
@@ -612,12 +680,12 @@ __global__ void sphForcesKernel(
             // particle->pressureForce.y += fBoundary.y;
             // particle->pressureForce.z += fBoundary.z;
 
-            float clampedPressure = fmaxf(0.0f, particle->properties.z);
-            float fluidTerm = (clampedPressure / (particle->properties.y * particle->properties.y + 1e-6f));
+            // float clampedPressure = fmaxf(0.0f, particle->properties.z);
+            // float fluidTerm = (clampedPressure / (particle->properties.y * particle->properties.y + 1e-6f));
             // float boundaryTerm = particle->boundary.y / (1000 * 1000);
 
             // // 5. Compute the final force scaled correctly by fluid mass
-            float3 fBoundary = -fluidTerm * gradient;
+            // float3 fBoundary = -fluidTerm * gradient;
             //
 
             // float3 fBoundary = make_float3(
@@ -627,9 +695,9 @@ __global__ void sphForcesKernel(
             // );
 
             // // Apply directly—no arbitrary '1000.0f' scalar needed!
-            particle->pressureForce.x += fBoundary.x;
-            particle->pressureForce.y += fBoundary.y;
-            particle->pressureForce.z += fBoundary.z;
+            // particle->pressureForce.x += fBoundary.x;
+            // particle->pressureForce.y += fBoundary.y;
+            // particle->pressureForce.z += fBoundary.z;
 
             // float3 fBoundary =
             //     -particle->properties.x * (clampedPressure / (particle->properties.y * particle->properties.y)) * gradient;
@@ -663,7 +731,7 @@ __global__ void sphForcesKernel(
             // particle->pressureForce.x -= scale * gradient.x;
             // particle->pressureForce.y -= scale * gradient.y;
             // particle->pressureForce.z -= scale * gradient.z;
-        }
+        // }
     }
 
 
@@ -710,7 +778,8 @@ void launchSphForcesKernel(
     const int* hashes,
     const int* offsets,
     const bool hasBoundary,
-    const Hex32Field boundaryField,
+    const Hex32Field sdfMap,
+    const Hex32Field volumeMap,
     const CudaAABB domain,
     const float h,
     const float alpha,
@@ -721,7 +790,7 @@ void launchSphForcesKernel(
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     sphForcesKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, hashes, offsets, hasBoundary, boundaryField, domain, h, alpha, speedSound, tension
+        numParticles, particles, hashes, offsets, hasBoundary, sdfMap, volumeMap, domain, h, alpha, speedSound, tension
     );
 }
 

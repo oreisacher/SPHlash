@@ -79,15 +79,18 @@ BoundaryBuilder* Editor::getBoundaryBuilder() {
 }
 
 void Editor::buildBoundaryDensityMap() const {
-    auto densityMap = boundryBuilder.constructDensityMap(
-        scene,
-        simulation->settings.domainArea,
-        simulation->settings.h,
-        simulation->settings.p_0
-    );
+    // auto densityMap = boundryBuilder.constructDensityMap(
+    //     scene,
+    //     simulation->settings.domainArea,
+    //     simulation->settings.h,
+    //     simulation->settings.p_0
+    // );
+
+    auto sdfMap     = boundryBuilder.constructSDFMap(scene, simulation->settings.domainArea);
+    auto volumeMap  = boundryBuilder.constructVolumeMap(sdfMap, simulation->settings.domainArea);
 
     simulation->clearBoundaryField();
-    simulation->setBoundaryField(densityMap);
+    simulation->setBoundaryMaps(sdfMap, volumeMap);
 }
 
 void Editor::clearBoundaryDensityMap() const {

@@ -52,6 +52,14 @@ __device__ inline float4& operator+=(float4& a, const float4& b) {
     return a;
 }
 
+__device__ inline float4& operator-=(float4& a, const float4& b) {
+    a.x -= b.x;
+    a.y -= b.y;
+    a.z -= b.z;
+    a.w -= b.w;
+    return a;
+}
+
 __device__ inline float4 operator/(const float4& v, float s) {
     return make_float4(
         v.x / s,

@@ -15,6 +15,19 @@ __device__ inline float poly6Kernel(float4 dist, float h) {
     return 0.0f;
 }
 
+__device__ inline float poly6Kernel(float r, float h) {
+    float r2 = r * r;
+    float h2 = h * h;
+
+    if (r2 <= h2) {
+        float x = h2 - r2;
+        float h9 = h2 * h2 * h2 * h2 * h;
+        return 315.0f / (64.0f * CUDART_PI_F * h9) * x * x * x;
+    }
+
+    return 0.0f;
+}
+
 __device__ inline float4 poly6KernelGradient(float4 dist, float h) {
     float r2 = dist.x * dist.x + dist.y * dist.y + dist.z * dist.z;
     float h2 = h * h;

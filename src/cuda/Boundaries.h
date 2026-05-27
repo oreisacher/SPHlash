@@ -26,4 +26,10 @@ void launchDensityMapKernel(
     float h
 );
 
+void launchVolumeMapKernel(
+    const Hex32Field sdfField,
+    const Hex32Field volumeField,
+    const CudaAABB domain
+);
+
 #endif //SPHLASH_BOUNDARIES_H

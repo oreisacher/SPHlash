@@ -18,6 +18,9 @@ class BoundaryBuilder {
 public:
     Hex32Field constructDensityMap(const Scene* scene, AABB domain, float h, float restDensity) const;
 
+    Hex32Field constructSDFMap(const Scene* scene, AABB domain) const;
+    Hex32Field constructVolumeMap(Hex32Field sdfMap, AABB domain) const;
+
     BoundarySettings settings;
 };
 
