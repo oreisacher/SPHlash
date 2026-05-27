@@ -109,40 +109,45 @@ void FluidSimulation::update(const float deltaTime) {
     if (state == UNINITIALIZED  || state == PAUSED)
         return;
 
-    updateParticles();
+    for (int s = 0 ; s < settings.stepsPerUpdate ; s++) {
+        updateParticles();
 
-    // --- CFL ---
-    float maxVelocity = getMaxVelocity(particleCount, d_particles);
-    cfl = settings.safetyFactor * settings.h / (settings.speedSound + maxVelocity + 1e-5f);
+        // --- CFL ---
+        // float maxVelocity = getMaxVelocity(particleCount, d_particles);
+        // cfl = settings.safetyFactor * settings.h / (settings.speedSound + maxVelocity + 1e-5f);
 
+        cfl = 0.4f * (settings.h / (settings.speedSound * (1.0f + 0.6 * settings.alpha)));
+        settings.safetyFactor = cfl;
 
-    launchCalculateVelocityKernel(
-        d_particles,
-        particleCount,
-        d_forceFields,
-        scene->getForceFields().size(),
-        settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
-        settings.enableGravity ? settings.gravity : 0.0f
-    );
+        launchCalculateVelocityKernel(
+            d_particles,
+            particleCount,
+            d_forceFields,
+            scene->getForceFields().size(),
+            settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
+            settings.enableGravity ? settings.gravity : 0.0f
+        );
 
-    launchXsphKernel(
-        particleCount,
-        d_particles,
-        d_sortedParticleHashes,
-        d_offsets,
-        settings.h
-    );
+        launchXsphKernel(
+            particleCount,
+            d_particles,
+            d_sortedParticleHashes,
+            d_offsets,
+            settings.h
+        );
 
-    launchUpdateParticlesKernel(
-        d_particles,
-        particleCount,
-        d_forceFields,
-        scene->getForceFields().size(),
-        settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
-        settings.domainArea.toCudaAABB(),
-        settings.enableGravity ? settings.gravity : 0.0f
-    );
+        launchUpdateParticlesKernel(
+            d_particles,
+            particleCount,
+            d_forceFields,
+            scene->getForceFields().size(),
+            settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
+            settings.domainArea.toCudaAABB(),
+            settings.enableGravity ? settings.gravity : 0.0f
+        );
+    }
 
+    // Prepare particles for rendering
     size_t numBytes;
     cudaGraphicsMapResources(1, &rendererResource);
     cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_rendererParticles), &numBytes, rendererResource);

@@ -19,6 +19,13 @@ __device__ inline float3 operator*(const float s, const float3& b) {
     );
 }
 
+__device__ inline float3& operator+=(float3& a, const float3& b) {
+    a.x += b.x;
+    a.y += b.y;
+    a.z += b.z;
+    return a;
+}
+
 __device__ inline float4 operator+(const float4& a, const float4& b) {
     return make_float4(
         a.x + b.x,

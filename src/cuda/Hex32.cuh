@@ -12,7 +12,7 @@ struct Hex32Node {
     NodeType type;
 };
 
-__constant__ Hex32Node hex32Cube[32] = {
+__constant__ Hex32Node Hex32CubeLookup[32] = {
     // Corner nodes
     { -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, CORNER },
     {  1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, CORNER },
@@ -114,6 +114,66 @@ __device__ inline float shapeFunction(
     }
 }
 
+__device__ inline float3 shapeFunctionGradient(
+    float xi,   float eta,   float zeta,        // Position to interpolate
+    float xi_i, float eta_i, float zeta_i,      // Coordinates of hex32 node
+    NodeType type
+) {
+    float3 grad = make_float3(0, 0, 0);
+
+    switch (type) {
+        case CORNER: {
+            float A = (1.0f + xi_i*xi);
+            float B = (1.0f + eta_i*eta);
+            float C = (1.0f + zeta_i*zeta);
+            float Q = 9.0f*(xi*xi + eta*eta + zeta*zeta) - 19.0f;
+
+            grad.x = (1.0f/64.0f) * (xi_i*B*C*Q + A*B*C*18.0f*xi);
+            grad.y = (1.0f/64.0f) * (A*eta_i*C*Q + A*B*C*18.0f*eta);
+            grad.z = (1.0f/64.0f) * (A*B*zeta_i*Q + A*B*C*18.0f*zeta);
+            break;
+        }
+
+        case EDGE_XI: {
+            float A = (1.0f - xi*xi);
+            float B = (1.0f + 9.0f*xi_i*xi);
+            float C = (1.0f + eta_i*eta);
+            float D = (1.0f + zeta_i*zeta);
+
+            grad.x = (9.0f/64.0f) * ((-2.0f*xi)*B*C*D + A*9.0f*xi_i*C*D);
+            grad.y = (9.0f/64.0f) * A*B*(eta_i)*D;
+            grad.z = (9.0f/64.0f) * A*B*C*(zeta_i);
+            break;
+        }
+
+        case EDGE_ETA: {
+            float A = (1.0f - eta*eta);
+            float B = (1.0f + 9.0f*eta_i*eta);
+            float C = (1.0f + xi_i*xi);
+            float D = (1.0f + zeta_i*zeta);
+
+            grad.x = (9.0f/64.0f) * A*B*(xi_i)*D;
+            grad.y = (9.0f/64.0f) * ((-2.0f*eta)*B*C*D + A*9.0f*eta_i*C*D);
+            grad.z = (9.0f/64.0f) * A*B*C*(zeta_i);
+            break;
+        }
+
+        case EDGE_ZETA: {
+            float A = (1.0f - zeta*zeta);
+            float B = (1.0f + 9.0f*zeta_i*zeta);
+            float C = (1.0f + xi_i*xi);
+            float D = (1.0f + eta_i*eta);
+
+            grad.x = (9.0f/64.0f) * A*B*(xi_i)*D;
+            grad.y = (9.0f/64.0f) * A*B*C*(eta_i);
+            grad.z = (9.0f/64.0f) * ((-2.0f*zeta)*B*C*D + A*9.0f*zeta_i*C*D);
+            break;
+        }
+    }
+
+    return grad;
+}
+
 /*
      Interpolate value inside a Hex32Cube at given position in isoparametric space.
      Passed values need to be of length 32!
@@ -127,10 +187,29 @@ __device__ inline float interpolateHex32(
     for (int i = 0 ; i < 32 ; i++) {
         result += shapeFunction(
             xi, eta, zeta,
-            hex32Cube[i].xi, hex32Cube[i].eta, hex32Cube[i].zeta,
-            hex32Cube[i].type
+            Hex32CubeLookup[i].xi, Hex32CubeLookup[i].eta, Hex32CubeLookup[i].zeta,
+            Hex32CubeLookup[i].type
         ) * values[i];
     }
 
     return result;
+}
+
+__device__ inline float3 interpolateHex32Gradient(
+    float xi, float eta, float zeta,     // Position to interpolate
+    const float* values                  // Values of the 32 nodes used for interpolation
+) {
+    float3 gradient = make_float3(0.0f, 0.0f, 0.0f);
+
+    for (int i = 0; i < 32; i++) {
+        float3 dN = shapeFunctionGradient(
+            xi, eta, zeta,
+            Hex32CubeLookup[i].xi, Hex32CubeLookup[i].eta, Hex32CubeLookup[i].zeta,
+            Hex32CubeLookup[i].type
+        );
+
+        gradient += dN * values[i];
+    }
+
+    return gradient;
 }

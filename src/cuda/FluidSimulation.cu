@@ -10,6 +10,7 @@
 #include <thrust/device_vector.h>
 #include <cub/cub.cuh>
 
+#include "Hex32.cuh"
 #include "rendering/FluidRenderer.h"
 
 void queryRequiredSortingStorage(
@@ -185,127 +186,6 @@ void launchReorderParticlesKernel(
     );
 }
 
-__device__ float3 TT(float3 min, float3 max, float3 position) {
-    float3 s = max - min;
-    float3 t = 2.0f * position - (max + min);
-
-    return make_float3(
-        t.x / s.x,
-        t.y / s.y,
-        t.z / s.z
-    );
-}
-
-
-enum NodeType { CORNER, EDGE_XI, EDGE_ETA, EDGE_ZETA };
-
-struct HexNode {
-    float xi, eta, zeta;
-    NodeType type;
-};
-
-__device__ float sshapeFunction(
-    float xi,   float eta,   float zeta,        // Query positon
-    float xi_i, float eta_i, float zeta_i,      // Node coords [-1, 1]
-    NodeType type
-) {
-    switch (type) {
-    case CORNER:
-        // Equation 9
-        return (1.0f / 64.0f)
-            * (1.0f + xi_i   * xi)
-            * (1.0f + eta_i  * eta)
-            * (1.0f + zeta_i * zeta)
-            * (9.0f * (xi*xi + eta*eta + zeta*zeta) - 19.0f);
-
-    case EDGE_XI:
-        // Equation 10
-        return (9.0f / 64.0f)
-            * (1.0f - xi*xi)
-            * (1.0f + 9.0f * xi_i * xi)
-            * (1.0f + eta_i  * eta)
-            * (1.0f + zeta_i * zeta);
-
-    case EDGE_ETA:
-        // Equation 10
-        return (9.0f / 64.0f)
-            * (1.0f - eta*eta)
-            * (1.0f + 9.0f * eta_i * eta)
-            * (1.0f + xi_i  * xi)
-            * (1.0f + zeta_i * zeta);
-
-    case EDGE_ZETA:
-        // Equation 10
-        return (9.0f / 64.0f)
-            * (1.0f - zeta*zeta)
-            * (1.0f + 9.0f * zeta_i * zeta)
-            * (1.0f + xi_i  * xi)
-            * (1.0f + eta_i * eta);
-    }
-}
-
-
-__constant__ HexNode hex32Nodes[32] = {
-    // Corner nodes
-    { -1.0f, -1.0f, -1.0f, CORNER },
-    {  1.0f, -1.0f, -1.0f, CORNER },
-    {  1.0f,  1.0f, -1.0f, CORNER },
-    { -1.0f,  1.0f, -1.0f, CORNER },
-    { -1.0f, -1.0f,  1.0f, CORNER },
-    {  1.0f, -1.0f,  1.0f, CORNER },
-    {  1.0f,  1.0f,  1.0f, CORNER },
-    { -1.0f,  1.0f,  1.0f, CORNER },
-
-    // Edge nodes along xi
-    { -1.0f/3.0f, -1.0f, -1.0f, EDGE_XI },
-    {  1.0f/3.0f, -1.0f, -1.0f, EDGE_XI },
-    { -1.0f/3.0f,  1.0f, -1.0f, EDGE_XI },
-    {  1.0f/3.0f,  1.0f, -1.0f, EDGE_XI },
-    { -1.0f/3.0f, -1.0f,  1.0f, EDGE_XI },
-    {  1.0f/3.0f, -1.0f,  1.0f, EDGE_XI },
-    { -1.0f/3.0f,  1.0f,  1.0f, EDGE_XI },
-    {  1.0f/3.0f,  1.0f,  1.0f, EDGE_XI },
-
-    // Edge nodes along eta
-    { -1.0f, -1.0/3.0f, -1.0f, EDGE_ETA },
-    {  1.0f, -1.0/3.0f, -1.0f, EDGE_ETA },
-    { -1.0f,  1.0/3.0f, -1.0f, EDGE_ETA },
-    {  1.0f,  1.0/3.0f, -1.0f, EDGE_ETA },
-    { -1.0f, -1.0/3.0f,  1.0f, EDGE_ETA },
-    {  1.0f, -1.0/3.0f,  1.0f, EDGE_ETA },
-    { -1.0f,  1.0/3.0f,  1.0f, EDGE_ETA },
-    {  1.0f,  1.0/3.0f,  1.0f, EDGE_ETA },
-
-    // Edge nodes along zeta
-    { -1.0f, -1.0f, -1.0/3.0f, EDGE_ZETA },
-    {  1.0f, -1.0f, -1.0/3.0f, EDGE_ZETA },
-    { -1.0f,  1.0f, -1.0/3.0f, EDGE_ZETA },
-    {  1.0f,  1.0f, -1.0/3.0f, EDGE_ZETA },
-    { -1.0f, -1.0f,  1.0/3.0f, EDGE_ZETA },
-    {  1.0f, -1.0f,  1.0/3.0f, EDGE_ZETA },
-    { -1.0f,  1.0f,  1.0/3.0f, EDGE_ZETA },
-    {  1.0f,  1.0f,  1.0/3.0f, EDGE_ZETA },
-};
-
-__device__ float iinterpolate(
-    float xi, float eta, float zeta,
-    float* nodeValues
-) {
-    float result = 0;
-
-    for (int i = 0 ; i < 32 ; i++) {
-        float value = sshapeFunction(
-            xi, eta, zeta,
-            hex32Nodes[i].xi, hex32Nodes[i].eta, hex32Nodes[i].zeta,
-            hex32Nodes[i].type
-        );
-
-        result += value * nodeValues[i];
-    }
-
-    return result;
-}
-
 __device__ float ggamma(float restDensity, float h, float x) {
     if (x <= h)
         return restDensity * (1 - x / h);
@@ -353,12 +233,12 @@ __global__ void densityPressureKernel(
     if (id >= numParticles)
         return;
 
-    float4 pos = particles[id].position;
+    float4 position = particles[id].position;
 
     // Get cell of particle
-    int cellX = floor(pos.x / h);
-    int cellY = floor(pos.y / h);
-    int cellZ = floor(pos.z / h);
+    int cellX = floor(position.x / h);
+    int cellY = floor(position.y / h);
+    int cellZ = floor(position.z / h);
 
     float density = 0.0f;
     float h2 = h * h;
@@ -382,7 +262,7 @@ __global__ void densityPressureKernel(
                         break;
 
                     const ParticleGPU other = particles[neighborIndex];
-                    const float4 diff = pos - other.position;
+                    const float4 diff = position - other.position;
 
                     // Check if within radius
                     float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
@@ -394,77 +274,61 @@ __global__ void densityPressureKernel(
         }
     }
 
+    // Handle boundary density
     if (hasBoundary) {
-        // Boundary density
-        float3 bCellSize = make_float3(
+        float3 boundaryCellSize = make_float3(
             (domain.max.x - domain.min.x) / boundaryField.resolution.x,
             (domain.max.y - domain.min.y) / boundaryField.resolution.y,
             (domain.max.z - domain.min.z) / boundaryField.resolution.z
         );
 
-        int bCellX = min((int)((pos.x - domain.min.x) / bCellSize.x), boundaryField.resolution.x - 1);
-        int bCellY = min((int)((pos.y - domain.min.y) / bCellSize.y), boundaryField.resolution.y - 1);
-        int bCellZ = min((int)((pos.z - domain.min.z) / bCellSize.z), boundaryField.resolution.z - 1);
+        // Determine boundary cell coords and clamp to valid range
+        int boundaryCellX = min(static_cast<int>((position.x - domain.min.x) / boundaryCellSize.x), boundaryField.resolution.x - 1);
+        int boundaryCellY = min(static_cast<int>((position.y - domain.min.y) / boundaryCellSize.y), boundaryField.resolution.y - 1);
+        int boundaryCellZ = min(static_cast<int>((position.z - domain.min.z) / boundaryCellSize.z), boundaryField.resolution.z - 1);
+        boundaryCellX = max(0, boundaryCellX);
+        boundaryCellY = max(0, boundaryCellY);
+        boundaryCellZ = max(0, boundaryCellZ);
 
-        // Clamp to valid range
-        bCellX = max(0, bCellX);
-        bCellY = max(0, bCellY);
-        bCellZ = max(0, bCellZ);
+        int boundaryCellId = boundaryCellX
+                        + boundaryCellY * boundaryField.resolution.x
+                        + boundaryCellZ * boundaryField.resolution.x * boundaryField.resolution.y;
+        Hex32Cell* boundaryCell = &boundaryField.d_cells[boundaryCellId];
 
-        int bCellId = bCellX
-                + bCellY * boundaryField.resolution.x
-                + bCellZ * boundaryField.resolution.x * boundaryField.resolution.y;
-
-        Hex32Cell* bCell = &boundaryField.d_cells[bCellId];
-
-        if (bCell->used) {
-            // Cell bounds in world space
-            float3 bCellBase = make_float3(
-                domain.min.x + bCellX * bCellSize.x,
-                domain.min.y + bCellY * bCellSize.y,
-                domain.min.z + bCellZ * bCellSize.z
+        // Cell does not contribute any density if unused, meaning the cell is far away from any boundary
+        if (boundaryCell->used) {
+            float3 boundaryCellMin = make_float3(
+                domain.min.x + boundaryCellX * boundaryCellSize.x,
+                domain.min.y + boundaryCellY * boundaryCellSize.y,
+                domain.min.z + boundaryCellZ * boundaryCellSize.z
             );
 
-            float3 bCellMax = make_float3(
-                bCellBase.x + bCellSize.x,
-                bCellBase.y + bCellSize.y,
-                bCellBase.z + bCellSize.z
+            float3 boundaryCellMax = make_float3(
+                boundaryCellMin.x + boundaryCellSize.x,
+                boundaryCellMin.y + boundaryCellSize.y,
+                boundaryCellMin.z + boundaryCellSize.z
             );
 
-            float3 clampedPos = make_float3(
-                fmaxf(domain.min.x, fminf(domain.max.x, pos.x)),
-                fmaxf(domain.min.y, fminf(domain.max.y, pos.y)),
-                fmaxf(domain.min.z, fminf(domain.max.z, pos.z))
+            // Interpolate density values of boundary cell based on particles position
+            float3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, make_float3(position.x, position.y, position.z));
+            float boundaryDensity = interpolateHex32(
+                isoparametricCoords.x,
+                isoparametricCoords.y,
+                isoparametricCoords.z,
+                boundaryCell->nodes
             );
 
-            // Map particle to natural coords [-1,1] within its boundary cell
-            float3 naturalPos = TT(bCellBase, bCellMax, clampedPos);
-            naturalPos.x = fmaxf(-1.0f, fminf(1.0f, naturalPos.x));
-            naturalPos.y = fmaxf(-1.0f, fminf(1.0f, naturalPos.y));
-            naturalPos.z = fmaxf(-1.0f, fminf(1.0f, naturalPos.z));
-
-            float boundaryDensity = iinterpolate(naturalPos.x, naturalPos.y, naturalPos.z, bCell->nodes);
-
-            // if (boundaryDensity < 0.0f) {
-            // printf("%f\n", boundaryDensity);
-            // }
-
-            // Add to total density
-            // if (boundaryDensity > 0.0) {
-                // printf("%f\n", boundaryDensity);
-                density += boundaryDensity;
-            // }
-            // particles[id].boundary.x = boundaryDensity;
+            density += boundaryDensity;
         }
-
-        // density += domainBoundaryDensity(make_float3(pos.x, pos.y, pos.z), domain, 1000, h);
-        // particles[id].properties.z = k * (density - p_0);
     }
 
+    // Assign density to particle
     particles[id].properties.y = density;
 
-    const float B = (k * p_0) / 7;
-    particles[id].properties.z = fmaxf(0.0f, B * (pow((density / p_0), 7) - 1));
+    // Determine pressure based on Equation (7) of according paper
+    const float B = (k * k * p_0) / 7.0f;
+    // particles[id].properties.z = fmaxf(0.0f, B * (pow((density / p_0), 7) - 1.0f));
+    particles[id].properties.z = B * (pow((density / p_0), 7) - 1.0f);
 }
 
 void launchDensityPressureKernel(
@@ -487,95 +351,95 @@ void launchDensityPressureKernel(
     );
 }
 
-__device__ float3 shapeFunctionGradient(
-    float xi,   float eta,   float zeta,
-    float xi_i, float eta_i, float zeta_i,
-    NodeType type
-) {
-    float3 grad = make_float3(0, 0, 0);
+// __device__ float3 shapeFunctionGradient(
+//     float xi,   float eta,   float zeta,
+//     float xi_i, float eta_i, float zeta_i,
+//     NodeType type
+// ) {
+//     float3 grad = make_float3(0, 0, 0);
+//
+//     switch (type) {
+//         case CORNER: {
+//             float A = (1.0f + xi_i*xi);
+//             float B = (1.0f + eta_i*eta);
+//             float C = (1.0f + zeta_i*zeta);
+//             float Q = 9.0f*(xi*xi + eta*eta + zeta*zeta) - 19.0f;
+//
+//             grad.x = (1.0f/64.0f) * (xi_i*B*C*Q + A*B*C*18.0f*xi);
+//             grad.y = (1.0f/64.0f) * (A*eta_i*C*Q + A*B*C*18.0f*eta);
+//             grad.z = (1.0f/64.0f) * (A*B*zeta_i*Q + A*B*C*18.0f*zeta);
+//             break;
+//         }
+//         case EDGE_XI: {
+//             float A = (1.0f - xi*xi);
+//             float B = (1.0f + 9.0f*xi_i*xi);
+//             float C = (1.0f + eta_i*eta);
+//             float D = (1.0f + zeta_i*zeta);
+//
+//             grad.x = (9.0f/64.0f) * ((-2.0f*xi)*B*C*D + A*9.0f*xi_i*C*D);
+//             grad.y = (9.0f/64.0f) * A*B*(eta_i)*D;
+//             grad.z = (9.0f/64.0f) * A*B*C*(zeta_i);
+//             break;
+//         }
+//         case EDGE_ETA: {
+//             float A = (1.0f - eta*eta);
+//             float B = (1.0f + 9.0f*eta_i*eta);
+//             float C = (1.0f + xi_i*xi);
+//             float D = (1.0f + zeta_i*zeta);
+//
+//             grad.x = (9.0f/64.0f) * A*B*(xi_i)*D;
+//             grad.y = (9.0f/64.0f) * ((-2.0f*eta)*B*C*D + A*9.0f*eta_i*C*D);
+//             grad.z = (9.0f/64.0f) * A*B*C*(zeta_i);
+//             break;
+//         }
+//         case EDGE_ZETA: {
+//             float A = (1.0f - zeta*zeta);
+//             float B = (1.0f + 9.0f*zeta_i*zeta);
+//             float C = (1.0f + xi_i*xi);
+//             float D = (1.0f + eta_i*eta);
+//
+//             grad.x = (9.0f/64.0f) * A*B*(xi_i)*D;
+//             grad.y = (9.0f/64.0f) * A*B*C*(eta_i);
+//             grad.z = (9.0f/64.0f) * ((-2.0f*zeta)*B*C*D + A*9.0f*zeta_i*C*D);
+//             break;
+//         }
+//     }
+//     return grad;
+// }
 
-    switch (type) {
-        case CORNER: {
-            float A = (1.0f + xi_i*xi);
-            float B = (1.0f + eta_i*eta);
-            float C = (1.0f + zeta_i*zeta);
-            float Q = 9.0f*(xi*xi + eta*eta + zeta*zeta) - 19.0f;
-
-            grad.x = (1.0f/64.0f) * (xi_i*B*C*Q + A*B*C*18.0f*xi);
-            grad.y = (1.0f/64.0f) * (A*eta_i*C*Q + A*B*C*18.0f*eta);
-            grad.z = (1.0f/64.0f) * (A*B*zeta_i*Q + A*B*C*18.0f*zeta);
-            break;
-        }
-        case EDGE_XI: {
-            float A = (1.0f - xi*xi);
-            float B = (1.0f + 9.0f*xi_i*xi);
-            float C = (1.0f + eta_i*eta);
-            float D = (1.0f + zeta_i*zeta);
-
-            grad.x = (9.0f/64.0f) * ((-2.0f*xi)*B*C*D + A*9.0f*xi_i*C*D);
-            grad.y = (9.0f/64.0f) * A*B*(eta_i)*D;
-            grad.z = (9.0f/64.0f) * A*B*C*(zeta_i);
-            break;
-        }
-        case EDGE_ETA: {
-            float A = (1.0f - eta*eta);
-            float B = (1.0f + 9.0f*eta_i*eta);
-            float C = (1.0f + xi_i*xi);
-            float D = (1.0f + zeta_i*zeta);
-
-            grad.x = (9.0f/64.0f) * A*B*(xi_i)*D;
-            grad.y = (9.0f/64.0f) * ((-2.0f*eta)*B*C*D + A*9.0f*eta_i*C*D);
-            grad.z = (9.0f/64.0f) * A*B*C*(zeta_i);
-            break;
-        }
-        case EDGE_ZETA: {
-            float A = (1.0f - zeta*zeta);
-            float B = (1.0f + 9.0f*zeta_i*zeta);
-            float C = (1.0f + xi_i*xi);
-            float D = (1.0f + eta_i*eta);
-
-            grad.x = (9.0f/64.0f) * A*B*(xi_i)*D;
-            grad.y = (9.0f/64.0f) * A*B*C*(eta_i);
-            grad.z = (9.0f/64.0f) * ((-2.0f*zeta)*B*C*D + A*9.0f*zeta_i*C*D);
-            break;
-        }
-    }
-    return grad;
-}
-
-__device__ float3 interpolateGradient(
-    float xi, float eta, float zeta,    // natural coords [-1,1]
-    float3 cellMin, float3 cellMax,     // world space cell bounds
-    float* nodeValues                   // ρB,i
-) {
-    // Jacobian of T^-1: dxi/dx = 2 / (cellMax - cellMin)
-    float3 dXi_dX = make_float3(
-        2.0f / (cellMax.x - cellMin.x),
-        2.0f / (cellMax.y - cellMin.y),
-        2.0f / (cellMax.z - cellMin.z)
-    );
-
-    float3 grad = make_float3(0.0f, 0.0f, 0.0f);
-
-    for (int i = 0; i < 32; i++) {
-        HexNode node = hex32Nodes[i];
-        float rhoB_i = nodeValues[i];
-
-        // Gradient of shape function in isoparametric space
-        float3 dN_diso = shapeFunctionGradient(
-            xi, eta, zeta,
-            node.xi, node.eta, node.zeta,
-            node.type
-        );
-
-        // Chain rule: dN/dx = dN/dxi * dxi/dx etc.
-        grad.x += dN_diso.x * dXi_dX.x * rhoB_i;
-        grad.y += dN_diso.y * dXi_dX.y * rhoB_i;
-        grad.z += dN_diso.z * dXi_dX.z * rhoB_i;
-    }
-
-    return grad;
-}
+// __device__ float3 interpolateGradient(
+//     float xi, float eta, float zeta,    // natural coords [-1,1]
+//     float3 cellMin, float3 cellMax,     // world space cell bounds
+//     float* nodeValues                   // ρB,i
+// ) {
+//     // Jacobian of T^-1: dxi/dx = 2 / (cellMax - cellMin)
+//     float3 dXi_dX = make_float3(
+//         2.0f / (cellMax.x - cellMin.x),
+//         2.0f / (cellMax.y - cellMin.y),
+//         2.0f / (cellMax.z - cellMin.z)
+//     );
+//
+//     float3 grad = make_float3(0.0f, 0.0f, 0.0f);
+//
+//     for (int i = 0; i < 32; i++) {
+//         Hex32Node* node = &Hex32CubeLookup[i];
+//         float rhoB_i = nodeValues[i];
+//
+//         // Gradient of shape function in isoparametric space
+//         float3 dN_diso = shapeFunctionGradient(
+//             xi, eta, zeta,
+//             node->xi, node->eta, node->zeta,
+//             node->type
+//         );
+//
+//         // Chain rule: dN/dx = dN/dxi * dxi/dx etc.
+//         grad.x += dN_diso.x * dXi_dX.x * rhoB_i;
+//         grad.y += dN_diso.y * dXi_dX.y * rhoB_i;
+//         grad.z += dN_diso.z * dXi_dX.z * rhoB_i;
+//     }
+//
+//     return grad;
+// }
 
 __global__ void sphForcesKernel(
     const int numParticles,
@@ -598,12 +462,12 @@ __global__ void sphForcesKernel(
     // int pi = particleIndex[id];
     ParticleGPU* particle = &particles[id];
 
-    float4 pos = particle->position;
+    float4 position = particle->position;
 
     // Get cell of particle
-    int cellX = floor(pos.x / h);
-    int cellY = floor(pos.y / h);
-    int cellZ = floor(pos.z / h);
+    int cellX = floor(position.x / h);
+    int cellY = floor(position.y / h);
+    int cellZ = floor(position.z / h);
 
     particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -638,22 +502,23 @@ __global__ void sphForcesKernel(
                     if (neighborIndex == id)
                         continue;
 
-                    const ParticleGPU other = particles[neighborIndex];
-                    const float4 diff = pos - other.position;
+                    const ParticleGPU* other = &particles[neighborIndex];
+                    const float4 diff = position - other->position;
 
                     // Check if within radius
                     float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
                     if (distSq < h2) {
                         // Pressure
-                        const float scalar =
-                            other.properties.x *
-                            (particle->properties.z / (particle->properties.y * particle->properties.y + 1e-6f) +
-                             other.properties.z / (other.properties.y * other.properties.y + 1e-6f));
-
-                        particle->pressureForce += scalar * spikyKernelGradient(diff, h);
+                        particle->pressureForce +=
+                            other->properties.x *
+                            (
+                                particle->properties.z / (particle->properties.y * particle->properties.y + 1e-6f) +
+                                other->properties.z    / (other->properties.y * other->properties.y + 1e-6f)
+                            ) *
+                            spikyKernelGradient(diff, h);
 
                         // Viscosity
-                        float4 vab = particle->velocity - other.velocity;
+                        float4 vab = particle->velocity - other->velocity;
 
                         float dotTerm = dot(vab, diff);
 
@@ -662,39 +527,16 @@ __global__ void sphForcesKernel(
 
                             const float nu =
                                 (2.0f * alpha * h * speedSound) /
-                                (particle->properties.y + other.properties.y + 1e-6f);
+                                (particle->properties.y + other->properties.y + 1e-6f);
 
                             const float pi_ab =
                                 -nu * (dotTerm / (distSq + eps * h2));
 
-                            particle->viscosityForce += other.properties.x * pi_ab * spikyKernelGradient(diff, h);
+                            particle->viscosityForce += other->properties.x * pi_ab * spikyKernelGradient(diff, h);
                         }
 
                         // Surface Tension
-                        const float4 normDir = diff / sqrtf(distSq);
-                        particle->surfaceTensionForce += other.properties.x * poly6Kernel(diff, h) * normDir;
-
-                        // OLD STUFF
-                        // float invDensity = 1.0f / (other.properties.y + 1e-6f);
-                        //
-                        // // Pressure
-                        // // const float scalar = other.properties.x * (particle->properties.z + other.properties.z) * 0.5f * invDensity;
-                        // const float scalar =
-                        //     other.properties.x *
-                        //     (particle->properties.z / (particle->properties.y * particle->properties.y + 1e-6f) +
-                        //      other.properties.z / (other.properties.y * other.properties.y + 1e-6f));
-                        // // particle->pressureForce += scalar * spikyKernelGradient(diff, h);
-                        //
-                        // // const float scalar = other.properties.x * (particle->properties.z + other.properties.z) / (2.0 * other.properties.y);
-                        // particle->pressureForce += scalar * spikyKernelGradient(diff, h);
-                        //
-                        // // Viscosity
-                        // const float4 viscTerm = other.properties.x * (other.velocity - particle->velocity) * invDensity;
-                        // particle->viscosityForce += viscosityLaplacianKernel(diff, h) * viscTerm;
-                        //
-                        //  // Surface tension
-                        // n += other.properties.x * invDensity * poly6KernelGradient(diff, h);
-                        // c += other.properties.x * invDensity * poly6KernelLaplacian(diff, h);
+                        particle->surfaceTensionForce += other->properties.x * poly6Kernel(diff, h) * diff;
                     }
                 }
             }
@@ -703,72 +545,87 @@ __global__ void sphForcesKernel(
 
     particle->pressureForce = -1.0f * particle->pressureForce;
     particle->viscosityForce = -1.0f * particle->viscosityForce;
-
-    // float lenN = sqrtf(n.x * n.x + n.y * n.y + n.z * n.z);
-    // if (lenN > tensionThreshold) {
-    //     const float4 k = -1.0f * c / lenN;
-    //     particle->surfaceTensionForce = -1.0f * t * (k / particle->properties.x);
-    //     particle->flags.x = 1.0f;
-    // }
-
     particle->surfaceTensionForce = -1.0f * (tension / particle->properties.x) * particle->surfaceTensionForce;
 
+    // Handle boundary force
     if (hasBoundary) {
-        float3 bCellSize = make_float3(
+        float3 boundaryCellSize = make_float3(
             (domain.max.x - domain.min.x) / boundaryField.resolution.x,
             (domain.max.y - domain.min.y) / boundaryField.resolution.y,
             (domain.max.z - domain.min.z) / boundaryField.resolution.z
         );
 
-        int bCellX = min((int)((pos.x - domain.min.x) / bCellSize.x), boundaryField.resolution.x - 1);
-        int bCellY = min((int)((pos.y - domain.min.y) / bCellSize.y), boundaryField.resolution.y - 1);
-        int bCellZ = min((int)((pos.z - domain.min.z) / bCellSize.z), boundaryField.resolution.z - 1);
+        // Determine boundary cell coords and clamp to valid range
+        int boundaryCellX = min(static_cast<int>((position.x - domain.min.x) / boundaryCellSize.x), boundaryField.resolution.x - 1);
+        int boundaryCellY = min(static_cast<int>((position.y - domain.min.y) / boundaryCellSize.y), boundaryField.resolution.y - 1);
+        int boundaryCellZ = min(static_cast<int>((position.z - domain.min.z) / boundaryCellSize.z), boundaryField.resolution.z - 1);
+        boundaryCellX = max(0, boundaryCellX);
+        boundaryCellY = max(0, boundaryCellY);
+        boundaryCellZ = max(0, boundaryCellZ);
 
-        // Clamp to valid range
-        bCellX = max(0, bCellX);
-        bCellY = max(0, bCellY);
-        bCellZ = max(0, bCellZ);
+        int boundaryCellId = boundaryCellX
+            + boundaryCellY * boundaryField.resolution.x
+            + boundaryCellZ * boundaryField.resolution.x * boundaryField.resolution.y;
+        Hex32Cell* boundaryCell = &boundaryField.d_cells[boundaryCellId];
 
-        int bCellId = bCellX
-            + bCellY * boundaryField.resolution.x
-            + bCellZ * boundaryField.resolution.x * boundaryField.resolution.y;
+        particle->boundaryForce = make_float4(0.0, 0.0, 0.0, 0.0);
 
-        Hex32Cell* bCell = &boundaryField.d_cells[bCellId];
-
-        if (bCell->used) {
-            float3 bCellBase = make_float3(
-                domain.min.x + bCellX * bCellSize.x,
-                domain.min.y + bCellY * bCellSize.y,
-                domain.min.z + bCellZ * bCellSize.z
+        // Cell does not contribute any additional force if unused, meaning the cell is far away from any boundary
+        if (boundaryCell->used) {
+            float3 boundaryCellMin = make_float3(
+                domain.min.x + boundaryCellX * boundaryCellSize.x,
+                domain.min.y + boundaryCellY * boundaryCellSize.y,
+                domain.min.z + boundaryCellZ * boundaryCellSize.z
             );
 
-            float3 bCellMax = make_float3(
-                bCellBase.x + bCellSize.x,
-                bCellBase.y + bCellSize.y,
-                bCellBase.z + bCellSize.z
+            float3 boundaryCellMax = make_float3(
+                boundaryCellMin.x + boundaryCellSize.x,
+                boundaryCellMin.y + boundaryCellSize.y,
+                boundaryCellMin.z + boundaryCellSize.z
             );
 
-            float3 naturalPos = TT(bCellBase, bCellMax, make_float3(pos.x, pos.y, pos.z));
-            naturalPos.x = fmaxf(-1.0f, fminf(1.0f, naturalPos.x));
-            naturalPos.y = fmaxf(-1.0f, fminf(1.0f, naturalPos.y));
-            naturalPos.z = fmaxf(-1.0f, fminf(1.0f, naturalPos.z));
+            float3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, make_float3(position.x, position.y, position.z));
 
-            float3 gradient = interpolateGradient(
-                naturalPos.x, naturalPos.y, naturalPos.z,
-                bCellBase, bCellMax,
-                bCell->nodes
+            float3 gradientLocal = interpolateHex32Gradient(
+                isoparametricCoords.x,
+                isoparametricCoords.y,
+                isoparametricCoords.z,
+                boundaryCell->nodes
             );
 
+            // Jacobian of T^-1: dxi/dx = 2 / (cellMax - cellMin)
+            float3 J = make_float3(
+                2.0f / (boundaryCellMax.x - boundaryCellMin.x),
+                2.0f / (boundaryCellMax.y - boundaryCellMin.y),
+                2.0f / (boundaryCellMax.z - boundaryCellMin.z)
+            );
 
+            float3 gradient = gradientLocal * J;
+
+            // float3 fBoundary = make_float3(
+            //     -(fmaxf(0.0f, particle->properties.z) / (particle->properties.y * particle->properties.y)) * gradient.x,
+            //     -(fmaxf(0.0f, particle->properties.z) / (particle->properties.y * particle->properties.y)) * gradient.y,
+            //     -(fmaxf(0.0f, particle->properties.z) / (particle->properties.y * particle->properties.y)) * gradient.z
+            // );
+            //
+            // particle->pressureForce.x += fBoundary.x;
+            // particle->pressureForce.y += fBoundary.y;
+            // particle->pressureForce.z += fBoundary.z;
 
             float clampedPressure = fmaxf(0.0f, particle->properties.z);
-
-            float fluidTerm = clampedPressure / (particle->properties.y * particle->properties.y + 1e-6f);
+            float fluidTerm = (clampedPressure / (particle->properties.y * particle->properties.y + 1e-6f));
             // float boundaryTerm = particle->boundary.y / (1000 * 1000);
 
             // // 5. Compute the final force scaled correctly by fluid mass
             float3 fBoundary = -fluidTerm * gradient;
             //
+
+            // float3 fBoundary = make_float3(
+                // particle->properties.x * (particle->properties.z / (particle->properties.y * particle->properties.y + 1e-6f)) * gradient.x,
+                // particle->properties.x * (particle->properties.z / (particle->properties.y * particle->properties.y + 1e-6f)) * gradient.y,
+                // particle->properties.x * (particle->properties.z / (particle->properties.y * particle->properties.y + 1e-6f)) * gradient.z
+            // );
+
             // // Apply directly—no arbitrary '1000.0f' scalar needed!
             particle->pressureForce.x += fBoundary.x;
             particle->pressureForce.y += fBoundary.y;
@@ -836,7 +693,7 @@ __global__ void sphForcesKernel(
     // particle->viscosityForce = (mu / (particle->properties.y + 1e-6f)) * particle->viscosityForce;
 
     // Flag for surface particle
-    particle->flags.x = 0.0f;
+    // particle->flags.x = 0.0f;
 
     // float lenN = sqrtf(n.x * n.x + n.y * n.y + n.z * n.z);
     // if (lenN > tensionThreshold) {
@@ -946,7 +803,6 @@ __global__ void calculateVelocityKernel(
 
     // Update position
     const float4 force = particle->pressureForce + particle->viscosityForce + particle->surfaceTensionForce;
-    // float4 acceleration = force / particle->properties.y + make_float4(0.0f, gravity, 0.0f, 0.0f);
     float4 acceleration = force + make_float4(0.0f, gravity, 0.0f, 0.0f);
 
     // Check force fields
@@ -1022,7 +878,7 @@ __global__ void xsphKernel(
                     // Check if within radius
                     float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
                     if (distSq < h2) {
-                        xsph += 0.2f * other.properties.x * (other.velocity - particle->velocity) / other.properties.y * poly6Kernel(diff, h);
+                        xsph += 0.0f * other.properties.x * (other.velocity - particle->velocity) / other.properties.y * poly6Kernel(diff, h);
                     }
                 }
             }

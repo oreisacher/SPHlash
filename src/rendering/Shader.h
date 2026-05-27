@@ -53,7 +53,7 @@ public:
 
 private:
     std::unordered_map<Type, std::string> sources;
-    GLuint shader = -1;
+    GLuint shader = 0;
 };
 
 #endif //FLUIDSIMSPH_SHADER_H

@@ -25,6 +25,13 @@ void SimulationSettingsPanel::draw() {
     ImGui::PushItemWidth(-FLT_MIN);
     float totalWidth = ImGui::GetContentRegionAvail().x;
 
+    if (ImGui::CollapsingHeader("Simulation Settings")) {
+        ImGui::PushID("Simulation");
+        ImGui::Text("Steps per update:");
+        ImGui::DragInt("##stepsPerUpdate", &simulation->settings.stepsPerUpdate);
+        ImGui::PopID();
+    }
+
     if (ImGui::CollapsingHeader("Domain Settings")) {
         ImGui::PushID("Domain");
         ImGui::Text("Center:");

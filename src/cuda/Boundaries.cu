@@ -105,7 +105,7 @@ __global__ void sdfKernel(
 
     // Calculate sdf value for each node of cell
     for (int n = 0 ; n < 32 ; n++) {
-        const Hex32Node& node = hex32Cube[n];
+        const Hex32Node& node = Hex32CubeLookup[n];
 
         float3 worldPos = make_float3(
             cellMinPos.x + node.x * cellSize.x,
@@ -222,7 +222,7 @@ __global__ void densityMapKernel(
 
     // Estimate density for each node of cell
     for (int nodeIndex = 0 ; nodeIndex < 32 ; nodeIndex++) {
-        Hex32Node node = hex32Cube[nodeIndex];
+        Hex32Node node = Hex32CubeLookup[nodeIndex];
 
         float3 nodePos = make_float3(
             cellMinPos.x + node.x * cellSize.x,

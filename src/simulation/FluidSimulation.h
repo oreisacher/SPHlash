@@ -31,6 +31,7 @@ struct ParticleGPU {
     float4 pressureForce            = { 0.0f, 0.0f, 0.0f, 0.0f };
     float4 viscosityForce           = { 0.0f, 0.0f, 0.0f, 0.0f };
     float4 surfaceTensionForce      = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float4 boundaryForce            = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     // Debugging
     float4 debugging                = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -64,6 +65,8 @@ struct SimulationSettings {
         { 0.0f, 0.0f, 0.0f },
         { 2.0f, 2.0f, 2.0f }
     };
+
+    int stepsPerUpdate = 1;
 
     // Particles
     float h = 0.05f;
