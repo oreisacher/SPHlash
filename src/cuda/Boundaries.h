@@ -17,15 +17,6 @@ void launchSdfKernel(
     const float h
 );
 
-void launchDensityMapKernel(
-    const Hex32Field sdfField,
-    const Hex32Field densityField,
-    const CudaAABB domain,
-    float mcSamples,
-    float restDensity,
-    float h
-);
-
 void launchVolumeMapKernel(
     const Hex32Field sdfField,
     const Hex32Field volumeField,

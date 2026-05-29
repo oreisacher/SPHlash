@@ -38,6 +38,11 @@ float getMaxVelocity(
     ParticleGPU* particles
 );
 
+float getMaxAcceleration(
+    int numParticles,
+    ParticleGPU* particles
+);
+
 void queryRequiredSortingStorage(
     const int numParticles,
     size_t &sortTempStorageBytes,
@@ -64,7 +69,7 @@ void launchDensityPressureKernel(
     const Hex32Field volumeMap,
     const CudaAABB domain,
     const float h,
-    const float k,
+    const float cs,
     const float p_0
 );
 
@@ -79,8 +84,9 @@ void launchSphForcesKernel(
     const CudaAABB domain,
     const float h,
     const float alpha,
-    const float speedSound,
-    const float tension
+    const float cs,
+    const float tension,
+    const float p_0
 );
 
 void launchCalculateVelocityKernel(
@@ -90,14 +96,6 @@ void launchCalculateVelocityKernel(
     const int numForceFields,
     const float deltaTime,
     const float gravity
-);
-
-void launchXsphKernel(
-    const int numParticles,
-    ParticleGPU* particles,
-    const int* hashes,
-    const int* offsets,
-    const float h
 );
 
 void launchUpdateParticlesKernel(
@@ -129,7 +127,6 @@ void launchResetParticlesKernel(
     ParticleGPU* particles,
     int numParticles
 );
-
 
 void launchVoxelFieldKernel(
     const VoxelField& field,

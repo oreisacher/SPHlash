@@ -85,7 +85,7 @@ void FluidSimulation::updateParticles() {
         volumeMap,
         settings.domainArea.toCudaAABB(),
         settings.h,
-        settings.k,
+        settings.speedSound,
         settings.p_0
     );
 
@@ -101,7 +101,8 @@ void FluidSimulation::updateParticles() {
         settings.h,
         settings.alpha,
         settings.speedSound,
-        settings.surfaceTension
+        settings.surfaceTension,
+        settings.p_0
     );
 
     std::swap(d_particles, d_sortedParticles);
@@ -115,11 +116,19 @@ void FluidSimulation::update(const float deltaTime) {
         updateParticles();
 
         // --- CFL ---
-        // float maxVelocity = getMaxVelocity(particleCount, d_particles);
-        // cfl = settings.safetyFactor * settings.h / (settings.speedSound + maxVelocity + 1e-5f);
+        float cs = 10.0f * settings.maxVelocity;
+        settings.speedSound = cs;
 
-        cfl = 0.4f * (settings.h / (settings.speedSound * (1.0f + 0.6 * settings.alpha)));
-        settings.safetyFactor = cfl;
+        float cflTimeStep = settings.safetyFactor * settings.h / (cs * (1.0f + 0.6f * settings.alpha));
+
+        float maxAcc = getMaxAcceleration(particleCount, d_particles);
+
+        if (settings.enableGravity)
+            maxAcc = fminf(maxAcc, abs(settings.gravity));
+
+        float accTimeStep = 0.25f * sqrtf(settings.h / maxAcc);
+
+        cfl = fminf(cflTimeStep, accTimeStep);
 
         launchCalculateVelocityKernel(
             d_particles,
@@ -128,14 +137,6 @@ void FluidSimulation::update(const float deltaTime) {
             scene->getForceFields().size(),
             settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
             settings.enableGravity ? settings.gravity : 0.0f
-        );
-
-        launchXsphKernel(
-            particleCount,
-            d_particles,
-            d_sortedParticleHashes,
-            d_offsets,
-            settings.h
         );
 
         launchUpdateParticlesKernel(
@@ -497,8 +498,11 @@ void FluidSimulation::initParticles() {
     cudaMalloc(&d_sortTempStorage, sortTempStorageBytes);
 
     // TODO - Check if this is correct
-    float mass = initSettings.totalMass * (initSettings.spawnArea.volume() / particleCount);
+    // float mass = initSettings.totalMass * (initSettings.spawnArea.volume() / particleCount);
     // float mass = initSettings.totalMass / particleCount;
+
+    float mass = initSettings.particleSpacing * initSettings.particleSpacing * initSettings.particleSpacing * 1000.0f;
+
     glm::vec3 spawnAreaMinimum = initSettings.spawnArea.min();
 
     // Set particle data

@@ -23,7 +23,6 @@ struct ParticleGPU {
     float4 position                 = { 0.0f, 0.0f, 0.0f, 0.0f };       // vec4 to avoid padding issues
     float4 startPosition            = { 0.0f, 0.0f, 0.0f, 0.0f };
     float4 velocity                 = { 0.0f, 0.0f, 0.0f, 0.0f };
-    float4 xsphVelocity             = { 0.0f, 0.0f, 0.0f, 0.0f };
     float4 properties               = { -1.0f, -1.0f, -1.0f, -1.0f };   // x: mass, y: density, z: pressure, w: id
     float4 flags                    = { 0.0f, 0.0f, 0.0f, 0.0f };       // x: surface, y: undefined, z: undefined, w: undefined
 
@@ -31,7 +30,6 @@ struct ParticleGPU {
     float4 pressureForce            = { 0.0f, 0.0f, 0.0f, 0.0f };
     float4 viscosityForce           = { 0.0f, 0.0f, 0.0f, 0.0f };
     float4 surfaceTensionForce      = { 0.0f, 0.0f, 0.0f, 0.0f };
-    float4 boundaryForce            = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     // Debugging
     float4 debugging                = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -71,10 +69,10 @@ struct SimulationSettings {
     // Particles
     float h = 0.05f;
     float p_0 = 1000.0f;
-    float k = 2000.0f;
-    float alpha = 0.3f;
+    float maxVelocity = 6.0f;
     float speedSound = 10.0f;
-    float surfaceTension = 0.01f;
+    float alpha = 0.05f;
+    float surfaceTension = 0.22f;
 
     // Gravity
     bool enableGravity = true;

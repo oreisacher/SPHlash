@@ -134,7 +134,7 @@ Hex32Field BoundaryBuilder::constructSDFMap(const Scene* scene, AABB domain) con
         d_triangles,
         sdfHexField,
         domain.toCudaAABB(),
-        0.05
+        0.025
     );
 
     cudaFree(d_triangles);

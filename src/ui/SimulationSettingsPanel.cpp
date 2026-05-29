@@ -57,20 +57,16 @@ void SimulationSettingsPanel::draw() {
             ImGui::SetTooltip("Rest Density");
         ImGui::DragFloat("##P_0", &simulation->settings.p_0, 0.001f);
 
-        ImGui::Text("K:");
+        ImGui::Text("Max Velocity:");
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Stiffness");
-        ImGui::DragFloat("##k", &simulation->settings.k, 0.001f);
+            ImGui::SetTooltip("Maximum velocity to expect. Estimate like sqrt(2gH) for example for dam break");
+        ImGui::DragFloat("##mv", &simulation->settings.maxVelocity, 0.001f);
 
         ImGui::Text("Alpha:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Viscosity Coefficient");
         ImGui::DragFloat("##alpha", &simulation->settings.alpha, 0.001f);
 
-        ImGui::Text("Speed of Sound:");
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Speed of Sound");
-        ImGui::DragFloat("##sos", &simulation->settings.speedSound, 0.001f);
 
         ImGui::Text("Surface Tension:");
         if (ImGui::IsItemHovered())
@@ -135,7 +131,6 @@ void SimulationSettingsPanel::saveSettings(const std::string& path) const {
     // Particles
     config.set("h",                 simulation->settings.h,             "particles");
     config.set("p_0",               simulation->settings.p_0,           "particles");
-    config.set("k",                 simulation->settings.k,             "particles");
     config.set("alpha",             simulation->settings.alpha,         "particles");
     config.set("speedOfSound",      simulation->settings.speedSound,    "particles");
     config.set("surfaceTension",    simulation->settings.surfaceTension,"particles");
@@ -158,7 +153,6 @@ void SimulationSettingsPanel::loadSettings(const std::string& path) const {
         // Particles
         simulation->settings.h              = config.get<float>("h",                simulation->settings.h,                 "particles");
         simulation->settings.p_0            = config.get<float>("p_0",              simulation->settings.p_0,               "particles");
-        simulation->settings.k              = config.get<float>("k",                simulation->settings.k,                 "particles");
         simulation->settings.alpha          = config.get<float>("alpha",            simulation->settings.alpha,             "particles");
         simulation->settings.speedSound     = config.get<float>("speedOfSound",     simulation->settings.speedSound,        "particles");
         simulation->settings.surfaceTension = config.get<float>("surfaceTension",   simulation->settings.surfaceTension,    "particles");

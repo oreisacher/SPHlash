@@ -128,8 +128,7 @@ __global__ void sdfKernel(
             phiMax = value;
     }
 
-    // cell->used = (phiMax < 2.0f * h);
-    cell->used = true;
+    cell->used = (2.0f * h > phiMin && phiMax > -h);
 }
 
 void launchSdfKernel(
@@ -150,145 +149,6 @@ void launchSdfKernel(
         domain,
         h
     );
-}
-
-/*
-    Monotonically decreasing function which yields higher values for higher penetration depth.
-    See Equation (8) in corresponding Paper.
-*/
-__device__ float gamma(float restDensity, float h, float x) {
-    if (x <= h)
-        return restDensity * (1 - x / h);
-    return 0;
-}
-
-__device__ float3 sampleSphere(curandState* state, float3 center, float radius) {
-    float x = curand_normal(state);
-    float y = curand_normal(state);
-    float z = curand_normal(state);
-
-    float3 dir = normalize(make_float3(x, y, z));
-
-    float r = cbrtf(curand_uniform(state)) * radius;
-
-    return make_float3(
-        center.x + dir.x * r,
-        center.y + dir.y * r,
-        center.z + dir.z * r
-    );
-}
-
-__global__ void densityMapKernel(
-    curandState* states,
-    const Hex32Field sdfField,
-    const Hex32Field densityField,
-    const CudaAABB domain,
-    float mcSamples,
-    float restDensity,
-    float h
-) {
-    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
-    const int cellCount = sdfField.resolution.x * sdfField.resolution.y * sdfField.resolution.z;
-
-    if (id >= cellCount)
-        return;
-
-    Hex32Cell* sdfCell = &sdfField.d_cells[id];
-    densityField.d_cells[id].used = sdfCell->used;
-
-    // Skip further calculations is cell is unused
-    if (!sdfCell->used) {
-        // Fill unused nodes with zeros
-        for (auto& value : densityField.d_cells[id].nodes)
-            value = 0;
-
-        return;
-    }
-
-    int cellX = id % sdfField.resolution.x;
-    int cellY = (id / sdfField.resolution.x) % sdfField.resolution.y;
-    int cellZ = id / (sdfField.resolution.x * sdfField.resolution.y);
-
-    float3 cellSize = make_float3(
-        (domain.max.x - domain.min.x) / sdfField.resolution.x,
-        (domain.max.y - domain.min.y) / sdfField.resolution.y,
-        (domain.max.z - domain.min.z) / sdfField.resolution.z
-    );
-
-    float3 cellMinPos = make_float3(
-        domain.min.x + cellX * cellSize.x,
-        domain.min.y + cellY * cellSize.y,
-        domain.min.z + cellZ * cellSize.z
-    );
-
-    // Estimate density for each node of cell
-    for (int nodeIndex = 0 ; nodeIndex < 32 ; nodeIndex++) {
-        Hex32Node node = Hex32CubeLookup[nodeIndex];
-
-        float3 nodePos = make_float3(
-            cellMinPos.x + node.x * cellSize.x,
-            cellMinPos.y + node.y * cellSize.y,
-            cellMinPos.z + node.z * cellSize.z
-        );
-
-        float density = 0;
-
-        // Monte Carlo estimate for Equation (6) of the corresponding paper
-        for (int sample = 0 ; sample < mcSamples ; sample++) {
-            float3 samplePosition = sampleSphere(&states[id], nodePos, h);
-            float3 diff = nodePos - samplePosition;
-
-            // Reject samples outside domain
-            if (samplePosition.x < domain.min.x || samplePosition.x > domain.max.x ||
-                samplePosition.y < domain.min.y || samplePosition.y > domain.max.y ||
-                samplePosition.z < domain.min.z || samplePosition.z > domain.max.z) {
-                continue;
-            }
-
-            // Find cell which contains sample position
-            int sampleCellX = static_cast<int>((samplePosition.x - domain.min.x) / cellSize.x);
-            int sampleCellY = static_cast<int>((samplePosition.y - domain.min.y) / cellSize.y);
-            int sampleCellZ = static_cast<int>((samplePosition.z - domain.min.z) / cellSize.z);
-
-            // Get cell
-            int cellId = sampleCellX
-                     + sampleCellY * sdfField.resolution.x
-                     + sampleCellZ * sdfField.resolution.x * sdfField.resolution.y;
-            Hex32Cell* sampleCell = &sdfField.d_cells[cellId];
-
-            // Unsued cell -> Does not contribute anything to density
-            if (sampleCell->used == false)
-                continue;
-
-            float3 sampleCellMin = make_float3(
-                domain.min.x + sampleCellX * cellSize.x,
-                domain.min.y + sampleCellY * cellSize.y,
-                domain.min.z + sampleCellZ * cellSize.z
-            );
-
-            float3 sampleCellMax = make_float3(
-                sampleCellMin.x + cellSize.x,
-                sampleCellMin.y + cellSize.y,
-                sampleCellMin.z + cellSize.z
-            );
-
-            // Interpolate sdf values of sample cell based on sample position
-            float3 isoparametricCoords = T(sampleCellMin, sampleCellMax, samplePosition);
-            float interpolatedSDF = interpolateHex32(
-                isoparametricCoords.x,
-                isoparametricCoords.y,
-                isoparametricCoords.z,
-                sampleCell->nodes
-            );
-
-            float g = gamma(restDensity, h, interpolatedSDF);
-            float w = poly6Kernel(make_float4(diff.x, diff.y, diff.z, 0.0f), h);
-            density += g * w;
-        }
-
-        float V = (4.0 / 3.0f) * M_PI * h * h * h;
-        densityField.d_cells[id].nodes[nodeIndex] = density * (V / mcSamples);
-    }
 }
 
 __device__ float cubicSplineKernel(float x, float h) {
@@ -328,6 +188,16 @@ __global__ void volumeMapKernel(
         return;
 
     Hex32Cell* sdfCell = &sdfField.d_cells[id];
+    volumeField.d_cells[id].used = sdfCell->used;
+
+    // Skip further calculations is cell is unused
+    if (!sdfCell->used) {
+        // Fill unused nodes with zeros
+        for (auto& value : volumeField.d_cells[id].nodes)
+            value = 0;
+
+        return;
+    }
 
     int cellX = id % sdfField.resolution.x;
     int cellY = (id / sdfField.resolution.x) % sdfField.resolution.y;
@@ -345,15 +215,22 @@ __global__ void volumeMapKernel(
         domain.min.z + cellZ * cellSize.z
     );
 
-    float3 cellMaxPos = make_float3(
-        cellMinPos.x + cellSize.x,
-        cellMinPos.y + cellSize.y,
-        cellMinPos.z + cellSize.z
-    );
-
     // Gauss-Legendre
-    const float xi[5] = { -0.90618f, -0.538469f, 0.0f, 0.538469f, 0.90618f };
-    const float w[5]  = { 0.236927f, 0.478629f, 0.568889f, 0.478629f, 0.236927f };
+    const float xi[5] = {
+        (1.0f / 3.0f) * sqrt(5.0f + 2.0f * sqrt(10.0f / 7.0f)),
+        (1.0f / 3.0f) * sqrt(5.0f - 2.0f * sqrt(10.0f / 7.0f)),
+        0.0f,
+        -1.0f * (1.0f / 3.0f) * sqrt(5.0f - 2.0f * sqrt(10.0f / 7.0f)),
+        -1.0f * (1.0f / 3.0f) * sqrt(5.0f + 2.0f * sqrt(10.0f / 7.0f)),
+    };
+
+    const float w[5]  = {
+        (322.0f - 13.0f * sqrt(70.0f)) / 900.0f,
+        (322.0f + 13.0f * sqrt(70.0f)) / 900.0f,
+        128.0f / 225.0f,
+        (322.0f + 13.0f * sqrt(70.0f)) / 900.0f,
+        (322.0f - 13.0f * sqrt(70.0f)) / 900.0f
+    };
 
     const float r = 0.05f;
 
@@ -440,44 +317,4 @@ void launchVolumeMapKernel(
         volumeField,
         domain
     );
-}
-
-__global__ void initCuRand(curandState* states, unsigned long long seed, int n) {
-    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
-
-    if (id >= n)
-        return;
-
-    curand_init(seed, id, 0, &states[id]);
-}
-
-void launchDensityMapKernel(
-    const Hex32Field sdfField,
-    const Hex32Field densityField,
-    const CudaAABB domain,
-    float mcSamples,
-    float restDensity,
-    float h
-) {
-    int threadsPerBlock = 256;
-    int cells = sdfField.resolution.x * sdfField.resolution.y * sdfField.resolution.z;
-    int blocks = (cells + threadsPerBlock - 1) / threadsPerBlock;
-
-    curandState* d_states;
-    cudaMalloc(&d_states, cells * sizeof(curandState));
-
-    // Init random states of curand
-    initCuRand<<<blocks, threadsPerBlock>>>(d_states, 0xDEADBEEF, cells);
-
-    densityMapKernel<<<blocks, threadsPerBlock>>>(
-        d_states,
-        sdfField,
-        densityField,
-        domain,
-        mcSamples,
-        restDensity,
-        h
-    );
-
-    cudaFree(d_states);
 }
