@@ -2,14 +2,9 @@
 
 #define PI 3.1415
 
-in vec3 Velocity;
-in vec4 Properties;
-//in vec2 TexCoord;
-in vec4 Flags;
-//in vec4 Debugging;
-flat in int ID;
-
-out vec4 FragColor;
+flat in vec3 Velocity;
+flat in vec4 Properties;
+flat in vec4 Flags;
 
 uniform int selectedParticleID = -1;
 
@@ -28,7 +23,11 @@ uniform float minPres;
 uniform vec4 maxPresColor;
 uniform float maxPres;
 
+uniform float maxSurfaceTension;
+
 uniform vec3 solidColor;
+
+out vec4 FragColor;
 
 vec3 velocityToHSV(vec2 v, float maxSpeed)
 {
@@ -62,7 +61,7 @@ vec3 indexToColor(float i) {
 }
 
 void main() {
-    if (selectedParticleID == ID) {
+    if (selectedParticleID == Properties.w) {
         FragColor = vec4(0.0f, 1.0f, 0.0f, 1.0f);
         return;
     }
@@ -109,11 +108,13 @@ void main() {
 
     // SURFACE PARTICLES
     if (mode == 3) {
-        if (Flags.x > 0.5) {
-            FragColor = vec4(1.0);
-        } else {
-            FragColor = particleColor;
-        }
+        float t = clamp(Flags.x / maxSurfaceTension, 0.0, 1.0);
+        FragColor = mix(particleColor, vec4(1.0), t);
+//        if (Flags.x > 0.5) {
+//            FragColor = vec4(1.0);
+//        } else {
+//            FragColor = particleColor;
+//        }
         return;
     }
 }

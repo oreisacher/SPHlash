@@ -44,6 +44,9 @@ struct RenderingSettings {
     glm::vec4 maxPresColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
     float pressureMin = 0.0f;
     float pressureMax = 1.0f;
+
+    // SURFACE_PARTICLES
+    float maxSurfaceTension = 100.0f;
 };
 
 struct RendererParticle {

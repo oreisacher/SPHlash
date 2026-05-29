@@ -466,6 +466,17 @@ __global__ void sphForcesKernel(
     particle->viscosityForce = -1.0f * particle->viscosityForce;
     particle->surfaceTensionForce = -1.0f * (tension / particle->properties.x) * particle->surfaceTensionForce;
 
+    particle->flags.x =
+        particle->surfaceTensionForce.x * particle->surfaceTensionForce.x +
+        particle->surfaceTensionForce.y * particle->surfaceTensionForce.y +
+        particle->surfaceTensionForce.z * particle->surfaceTensionForce.z;
+
+    // if (surfaceTensionMagnitude2 > 2) {
+    //     particle->flags.x = 1.0;
+    // } else {
+    //     particle->flags.x = 0.0;
+    // }
+
     // Handle boundary force
     if (hasBoundary) {
         float3 boundaryCellSize = make_float3(
@@ -854,7 +865,7 @@ __global__ void initParticlesKernel(
     particle->position = { posX, posY, posZ, 0.0 };
     particle->startPosition = particle->position;
     particle->velocity = { 0.0, 0.0, 0.0, 0.0 };
-    particle->properties = { mass, 0.0, 0.0, 0.0 };
+    particle->properties = { mass, 0.0, 0.0, static_cast<float>(id) };
     particle->flags = { 0.0, 0.0, 0.0, 0.0 };
     particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);

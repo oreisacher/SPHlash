@@ -89,6 +89,17 @@ void RenderingSettingsPanel::draw() {
             renderer->updateRenderingSettings();
         break;
 
+    case SURFACE_PARTICLES:
+        ImGui::Text("Size:");
+        if (ImGui::DragFloat("##ps", &renderer->settings.particleSize, 0.0001f, 0.0)) {
+            renderer->updateParticleSize();
+        }
+
+        ImGui::Text("Maximum Surface Tension:");
+        if (ImGui::DragFloat("##mst", &renderer->settings.maxSurfaceTension, 0.01f))
+            renderer->updateRenderingSettings();
+        break;
+
     case MARCHING_CUBES:
         ImGui::PushID(MARCHING_CUBES);
         ImGui::Text("Color:");

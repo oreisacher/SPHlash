@@ -146,6 +146,8 @@ void FluidRenderer::updateRenderingSettings() const {
     particleShader->setFloat("minPres", settings.pressureMin);
     particleShader->setFloat("maxPres", settings.pressureMax);
 
+    particleShader->setFloat("maxSurfaceTension", settings.maxSurfaceTension);
+
     // Update particle visibility
     if (simulation->state != UNINITIALIZED) {
         particleModel->setVisible(settings.mode != MARCHING_CUBES);
