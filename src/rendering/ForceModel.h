@@ -10,11 +10,11 @@
 
 class ForceModel : public Model {
 public:
-    ForceModel(ForceField* forceField);
-    ForceField* getForceField() const;
+    ForceModel();
+    ForceField* getForceField();
 
 private:
-    ForceField* forceField = nullptr;
+    ForceField forceField;
 };
 
 #endif //SPHLASH_FORCEMODEL_H

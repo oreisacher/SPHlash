@@ -157,6 +157,10 @@ int Mesh::getMaxVertexCount() const {
     return maxVertices;
 }
 
+std::vector<Vertex> Mesh::getVertices() {
+    return vertices;
+}
+
 void Mesh::setIndexCount(int indexCount) {
     this->indexCount = indexCount;
 }
@@ -167,6 +171,10 @@ int Mesh::getIndexCount() const {
 
 int Mesh::getMaxIndexCount() const {
     return maxIndices;
+}
+
+std::vector<unsigned int> Mesh::getIndices() {
+    return indices;
 }
 
 GLuint Mesh::getVAO() const {

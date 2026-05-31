@@ -6,7 +6,7 @@
 #define SPHLASH_AABB_H
 
 #include <vector_types.h>
-
+#include "glm/fwd.hpp"
 #include "glm/vec3.hpp"
 
 struct CudaAABB {
@@ -26,6 +26,8 @@ struct AABB {
 
     float volume() const;
     bool contains(const glm::vec3& point) const;
+
+    AABB tranform(glm::mat4 matrix);
 
     CudaAABB toCudaAABB() const;
 };

@@ -48,11 +48,11 @@ void FluidRenderer::render(const Scene& scene) const {
     auto view = camera->getViewMatrix();
     auto projection = camera->getProjectionMatrix();
 
-    for (const auto model : scene.getModels()) {
-        if (!model->isVisible())
+    for (const auto renderable : scene.getRenderables()) {
+        if (!renderable.first->isVisible())
             continue;
 
-        model->draw(view, projection);
+        renderable.second->draw(view, projection);
     }
 }
 

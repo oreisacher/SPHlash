@@ -58,9 +58,13 @@ public:
     int getVertexCount() const;
     int getMaxVertexCount() const;
 
+    std::vector<Vertex> getVertices();
+
     void setIndexCount(int indexCount);
     int getIndexCount() const;
     int getMaxIndexCount() const;
+
+    std::vector<unsigned int> getIndices();
 
     GLuint getVAO() const;
 

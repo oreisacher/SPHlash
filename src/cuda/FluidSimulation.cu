@@ -647,14 +647,6 @@ float getMaxAcceleration(
 }
 
 __device__ float3 toLocal(float3 p, const ForceField& f) {
-    // float3 d = p - f.position;
-    //
-    // return make_float3(
-    //     dot(d, make_float3(f.right.x,   f.up.x,   f.forward.x)),
-    //     dot(d, make_float3(f.right.y,   f.up.y,   f.forward.y)),
-    //     dot(d, make_float3(f.right.z,   f.up.z,   f.forward.z))
-    // );
-
     float3 d = p - f.position;
 
     return make_float3(

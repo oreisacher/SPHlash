@@ -1,0 +1,16 @@
+//
+// Created by ruut on 5/31/26.
+//
+
+#ifndef SPHLASH_ISELECTABLE_H
+#define SPHLASH_ISELECTABLE_H
+
+#include "Properties.h"
+
+class ISelectable {
+public:
+    virtual ~ISelectable() = default;
+    virtual Properties buildProperties() = 0;
+};
+
+#endif //SPHLASH_ISELECTABLE_H

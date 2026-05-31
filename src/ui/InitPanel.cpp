@@ -35,15 +35,15 @@ void InitPanel::draw() {
 
     ImGui::SeparatorText("Area");
 
-    ImGui::Text("Center: ");
-    if (ImGui::DragFloat3("##saCenter", glm::value_ptr(simulation->initSettings.spawnArea.center), 0.01f)) {
-        editor->updateSpawnAreaTransform();
-    }
-
-    ImGui::Text("Size: ");
-    if (ImGui::DragFloat3("##saSize", glm::value_ptr(simulation->initSettings.spawnArea.size), 0.01f)) {
-        editor->updateSpawnAreaTransform();
-    }
+    // ImGui::Text("Center: ");
+    // if (ImGui::DragFloat3("##saCenter", glm::value_ptr(simulation->initSettings.spawnArea.center), 0.01f)) {
+    //     editor->updateSpawnAreaTransform();
+    // }
+    //
+    // ImGui::Text("Size: ");
+    // if (ImGui::DragFloat3("##saSize", glm::value_ptr(simulation->initSettings.spawnArea.size), 0.01f)) {
+    //     editor->updateSpawnAreaTransform();
+    // }
 
     recalculateParticles();
 

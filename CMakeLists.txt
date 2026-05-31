@@ -44,6 +44,16 @@ add_executable(SPHlash
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
+        src/rendering/Transform.cpp
+        src/rendering/Transform.h
+        src/rendering/IRenderable.h
+        src/ui/PropertiesPanel.cpp
+        src/ui/PropertiesPanel.h
+        src/ui/Properties.cpp
+        src/ui/Properties.h
+        src/ui/ISelectable.h
+        src/ui/SceneNode.h
+        src/ui/SceneNode.cpp
 )
 
 add_library(imgui

@@ -4,7 +4,9 @@
 
 #ifndef SPHLASH_EDITOR_H
 #define SPHLASH_EDITOR_H
+
 #include "ForceModel.h"
+#include "ParticleSpawnModel.h"
 #include "Scene.h"
 #include "simulation/BoundaryBuilder.h"
 #include "simulation/FluidSimulation.h"
@@ -13,13 +15,19 @@ class Editor {
 public:
     Editor(Scene& scene, FluidSimulation* sim);
 
-    void updateSpawnAreaTransform();
-    void updateDomainAreaTransform();
+    Scene* getScene() const;
+
+    // void updateSpawnAreaTransform();
+
+    void addParticleSpawn(std::unique_ptr<ParticleSpawnModel> model) const;
 
     void addForceField() const;
     void removeForceField(ForceModel* model) const;
 
     void addBoundaryModel(std::unique_ptr<Model> model) const;
+
+    void setSelected(SceneNode* node);
+    SceneNode* getSelected() const;
 
     BoundaryBuilder* getBoundaryBuilder();
 
@@ -31,6 +39,8 @@ private:
     Scene* scene;
     FluidSimulation* simulation;
     BoundaryBuilder boundryBuilder;
+
+    SceneNode* selectedNode;
 
     // --- Editor Objects ---
     Model* spawnAreaModel       = nullptr;

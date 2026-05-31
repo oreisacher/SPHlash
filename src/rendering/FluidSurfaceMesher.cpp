@@ -80,7 +80,7 @@ void FluidSurfaceMesher::generateMesh(bool force) const {
 
     launchMarchingCubesKernel(
         voxelField,
-        simulation->settings.domainArea.toCudaAABB(),
+        simulation->getDomain()->getCudaAABB(),
         d_vertexCount,
         d_triangleCount,
         d_vertices,

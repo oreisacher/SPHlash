@@ -7,41 +7,35 @@
 
 #include <string>
 
+#include "IRenderable.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "Shader.h"
+#include "Transform.h"
 #include "glm/detail/type_quat.hpp"
-
-struct Transform {
-    glm::vec3 position  = { 0.0f, 0.0f, 0.0f };
-    glm::quat rotation  = { 1.0f, 0.0f, 0.0f, 0.0f };
-    glm::vec3 scale     = { 1.0f, 1.0f, 1.0f };
-
-    glm::mat4 modelMatrix = glm::mat4(1.0f);
-};
+#include "ui/ISelectable.h"
+#include "ui/SceneNode.h"
+#include "utils/AABB.h"
 
 enum class Type {
     NONE,
     BOUNDARY
 };
 
-class Model {
+class Model : public Transform, public IRenderable, public SceneNode {
 public:
     Model(const std::string& path, bool shaded = true);
     Model(const std::string& name, std::unique_ptr<Mesh> mesh);
     Model(const std::string& name, std::vector<std::unique_ptr<Mesh>> meshes);
-    virtual ~Model() = default;
 
-    void draw(const glm::mat4& view, const glm::mat4& projection) const;
+    void draw(const glm::mat4& view, const glm::mat4& projection) const override;
 
-    Transform getTransform() const;
-    void setTransform(Transform transform);
-    void setTransform(glm::mat4 transform);
+    // --- Transformation ---
+    void setTransform(glm::mat4 transform) override;
 
-    void updateTransform();
-
-    void setName(const std::string& name);
-    std::string getName() const;
+    // --- Bounding Boxes ---
+    void updateLocalBoundingBox();
+    void updateWorldBoundingBox();
 
     std::vector<Triangle> getWorldSpaceTriangles() const;
 
@@ -51,35 +45,27 @@ public:
     int addMaterial(const Material& material);
     Material& getMaterial(int index);
 
-    void setVisible(bool on);
-    bool isVisible() const;
-
     void setType(Type type);
     Type getType() const;
 
     void setSceneGraphDeletable(bool deletable);
     bool isSceneGraphDeletable() const;
 
-    void setSceneGraphVisible(bool visible);
-    bool isSceneGraphVisible() const;
-
     void setInstanceCount(int c);
 
     void addOnTransformChangedListener(const std::function<void(Model*)>& listener);
     void notifyOnTransformChangedListeners();
 
+    Properties buildProperties() override;
+
     // --- Factory ---
     static std::unique_ptr<Model> createCubeModel(const std::string& name);
 protected:
-    std::string name = "Undefined";
-
     bool visible = true;
     Type type = Type::NONE;
 
-    bool sceneGraphVisible = true;
-    bool sceneGraphDeletable = true;
-
-    Transform transform;
+    AABB localBounds;
+    AABB worldBounds;
 
     std::vector<std::unique_ptr<Mesh>> meshes   = {};
     std::vector<Material> materials             = {};

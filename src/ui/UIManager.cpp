@@ -187,21 +187,22 @@ void UIManager::draw() const {
 
         // Left
         ImGui::DockBuilderSplitNode(dock_left, ImGuiDir_Down, 0.80f, &dock_left_2, &dock_left_1);
-        ImGui::DockBuilderSplitNode(dock_left_2, ImGuiDir_Down, 0.30f, &dock_left_3, &dock_left_2);
+        ImGui::DockBuilderSplitNode(dock_left_2, ImGuiDir_Down, 0.50f, &dock_left_3, &dock_left_2);
 
         // Right
-        ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Down,  0.70f, &dock_right_2, &dock_right_1);
-        ImGui::DockBuilderSplitNode(dock_right_2, ImGuiDir_Up,  0.50f, &dock_right_2, &dock_right_3);
+        ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Down,  0.50f, &dock_right_2, &dock_right_1);
+        ImGui::DockBuilderSplitNode(dock_right_2, ImGuiDir_Up,  0.70f, &dock_right_2, &dock_right_3);
 
         ImGui::DockBuilderDockWindow("Simulation", dock_main);
         ImGui::DockBuilderDockWindow("Simulation Settings", dock_right_1);
         ImGui::DockBuilderDockWindow("Rendering Settings", dock_right_2);
-        ImGui::DockBuilderDockWindow("Particles", dock_right_3);
+        ImGui::DockBuilderDockWindow("Particles", dock_right_2);
+        ImGui::DockBuilderDockWindow("Statistics", dock_right_3);
         ImGui::DockBuilderDockWindow("Controls", dock_left_1);
         ImGui::DockBuilderDockWindow("Init Settings", dock_left_2);
         ImGui::DockBuilderDockWindow("Scene", dock_left_2);
+        ImGui::DockBuilderDockWindow("Properties", dock_left_3);
         ImGui::DockBuilderDockWindow("Boundaries", dock_left_2);
-        ImGui::DockBuilderDockWindow("Statistics", dock_left_3);
 
         ImGui::DockBuilderFinish(dockspace_id);
     }

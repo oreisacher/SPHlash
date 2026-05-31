@@ -3,9 +3,7 @@
 //
 
 #include "Scene.h"
-
 #include <algorithm>
-#include <iostream>
 #include "simulation/FluidSimulation.h"
 
 void Scene::setCamera(std::unique_ptr<Camera> camera) {
@@ -54,6 +52,20 @@ std::vector<Model*> Scene::getModels() const {
     return result;
 }
 
+void Scene::addBoundingBox(std::unique_ptr<BoundingBox> boundingBox) {
+    boundingBoxes.push_back(std::move(boundingBox));
+}
+
+std::vector<BoundingBox*> Scene::getBoundingBoxes() const {
+    std::vector<BoundingBox*> result;
+    result.reserve(boundingBoxes.size());
+
+    for (auto& bb : boundingBoxes)
+        result.push_back(bb.get());
+
+    return result;
+}
+
 void Scene::addForceField(std::unique_ptr<ForceField> forceField) {
     forceFields.push_back(std::move(forceField));
 }
@@ -68,4 +80,34 @@ std::vector<ForceField> Scene::getForceFields() const {
     for (auto& m : forceFields)
         result.push_back(*m);
     return result;
+}
+
+std::vector<std::pair<SceneNode*, IRenderable*>> Scene::getRenderables() const {
+    std::vector<std::pair<SceneNode*, IRenderable*>> renderables;
+
+    for (auto& model : models)
+        renderables.push_back({ model.get(), model.get() });
+
+    for (auto& boundary : boundaries)
+        renderables.push_back({ boundary.get(), boundary.get() });
+
+    for (auto& boundingBox : boundingBoxes)
+        renderables.push_back({ boundingBox.get(), boundingBox.get() });
+
+    return renderables;
+}
+
+std::vector<SceneNode*> Scene::getSceneNodes() const {
+    std::vector<SceneNode*> sceneNodes;
+
+    for (auto& model : models)
+        sceneNodes.push_back(model.get());
+
+    for (auto& boundary : boundaries)
+        sceneNodes.push_back(boundary.get());
+
+    for (auto& boundingBox : boundingBoxes)
+        sceneNodes.push_back(boundingBox.get());
+
+    return sceneNodes;
 }

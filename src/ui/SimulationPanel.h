@@ -7,6 +7,7 @@
 
 #include "UIPanel.h"
 #include "../rendering/FluidRenderer.h"
+#include "rendering/Editor.h"
 #include "utils/Hex32Field.h"
 
 struct PanelEvent {
@@ -22,7 +23,7 @@ struct PanelEvent {
 
 class SimulationPanel : public UIPanel {
 public:
-    explicit SimulationPanel(GLuint textureId);
+    explicit SimulationPanel(Editor* editor, GLuint textureId);
 
     void update(double deltaTime) override;
     void draw() override;
@@ -33,6 +34,7 @@ public:
 
 private:
     GLuint texture;
+    Editor* editor;
 
     std::vector<PanelEvent> events;
 

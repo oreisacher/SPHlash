@@ -22,7 +22,6 @@ private:
     Scene* scene;
 
     int selected = -1;
-    Model* selectedModel = nullptr;
 };
 
 #endif //SPHLASH_MODELSPANEL_H

@@ -6,8 +6,8 @@
 #define FLUIDSIMSPH_FLUIDSIMULATIONGPU_H
 
 #include "glm/glm.hpp"
-#include "rendering/Shader.h"
 #include <cuda_runtime.h>
+#include "rendering/BoundingBox.h"
 #include "rendering/FluidRenderer.h"
 #include "utils/AABB.h"
 #include "utils/Hex32Field.h"
@@ -57,15 +57,13 @@ struct InitSettings {
     };
 };
 
+struct ParticleSpawn {
+    float totalMass         = 1000.0f;
+    float particleSpacing   = 0.025f;
+    Model* model            = nullptr;
+};
+
 struct SimulationSettings {
-    // Domain
-    AABB domainArea = {
-        { 0.0f, 0.0f, 0.0f },
-        { 2.0f, 2.0f, 2.0f }
-    };
-
-    int stepsPerUpdate = 1;
-
     // Particles
     float h = 0.05f;
     float p_0 = 1000.0f;
@@ -111,6 +109,8 @@ public:
 
     void setRendererVBO(GLuint vbo);
 
+    BoundingBox* getDomain() const;
+
     void rebuildForceFieldBuffer();
     void updateForceFieldBuffer() const;
 
@@ -133,6 +133,7 @@ public:
     SimulationState state = UNINITIALIZED;
 private:
     Scene* scene;
+    BoundingBox* domain;
 
     // --- Particles ---
     ParticleGPU* d_particles            = nullptr;

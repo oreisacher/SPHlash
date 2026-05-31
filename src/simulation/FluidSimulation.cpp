@@ -16,11 +16,17 @@
 
 #include "imgui.h"
 #include "glad/gl.h"
-#include "../cuda/MarchingCubesLookup.h"
 #include "rendering/Scene.h"
 
-FluidSimulation::FluidSimulation(Scene& scene) : scene(&scene){
+FluidSimulation::FluidSimulation(Scene& scene) : scene(&scene) {
     cudaSetDevice(0);
+
+    // Setup domain bounding box
+    auto domainBB = std::make_unique<BoundingBox>("Simulation Domain", glm::vec3(0.2f, 0.6f, 1.0f));
+    domain = domainBB.get();
+    domain->setScale({2.0f, 2.0f, 2.0f});
+    domain->setDeletable(false);
+    scene.addBoundingBox(std::move(domainBB));
 }
 
 FluidSimulation::~FluidSimulation() {
@@ -83,7 +89,7 @@ void FluidSimulation::updateParticles() {
         sdfMap.d_cells != nullptr,
         sdfMap,
         volumeMap,
-        settings.domainArea.toCudaAABB(),
+        domain->getCudaAABB(),
         settings.h,
         settings.speedSound,
         settings.p_0
@@ -97,7 +103,7 @@ void FluidSimulation::updateParticles() {
         sdfMap.d_cells != nullptr,
         sdfMap,
         volumeMap,
-        settings.domainArea.toCudaAABB(),
+        domain->getCudaAABB(),
         settings.h,
         settings.alpha,
         settings.speedSound,
@@ -112,43 +118,41 @@ void FluidSimulation::update(const float deltaTime) {
     if (state == UNINITIALIZED  || state == PAUSED)
         return;
 
-    for (int s = 0 ; s < settings.stepsPerUpdate ; s++) {
-        updateParticles();
+    updateParticles();
 
-        // --- CFL ---
-        float cs = 10.0f * settings.maxVelocity;
-        settings.speedSound = cs;
+    // --- CFL ---
+    float cs = 10.0f * settings.maxVelocity;
+    settings.speedSound = cs;
 
-        float cflTimeStep = settings.safetyFactor * settings.h / (cs * (1.0f + 0.6f * settings.alpha));
+    float cflTimeStep = settings.safetyFactor * settings.h / (cs * (1.0f + 0.6f * settings.alpha));
 
-        float maxAcc = getMaxAcceleration(particleCount, d_particles);
+    float maxAcc = getMaxAcceleration(particleCount, d_particles);
 
-        if (settings.enableGravity)
-            maxAcc = fminf(maxAcc, abs(settings.gravity));
+    if (settings.enableGravity)
+        maxAcc = fminf(maxAcc, abs(settings.gravity));
 
-        float accTimeStep = 0.25f * sqrtf(settings.h / maxAcc);
+    float accTimeStep = 0.25f * sqrtf(settings.h / maxAcc);
 
-        cfl = fminf(cflTimeStep, accTimeStep);
+    cfl = fminf(cflTimeStep, accTimeStep);
 
-        launchCalculateVelocityKernel(
-            d_particles,
-            particleCount,
-            d_forceFields,
-            scene->getForceFields().size(),
-            settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
-            settings.enableGravity ? settings.gravity : 0.0f
-        );
+    launchCalculateVelocityKernel(
+        d_particles,
+        particleCount,
+        d_forceFields,
+        scene->getForceFields().size(),
+        settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
+        settings.enableGravity ? settings.gravity : 0.0f
+    );
 
-        launchUpdateParticlesKernel(
-            d_particles,
-            particleCount,
-            d_forceFields,
-            scene->getForceFields().size(),
-            settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
-            settings.domainArea.toCudaAABB(),
-            settings.enableGravity ? settings.gravity : 0.0f
-        );
-    }
+    launchUpdateParticlesKernel(
+        d_particles,
+        particleCount,
+        d_forceFields,
+        scene->getForceFields().size(),
+        settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
+        domain->getCudaAABB(),
+        settings.enableGravity ? settings.gravity : 0.0f
+    );
 
     // Prepare particles for rendering
     size_t numBytes;
@@ -221,6 +225,10 @@ void FluidSimulation::setRendererVBO(const GLuint vbo) {
     cudaGraphicsUnmapResources(1, &rendererResource);
 }
 
+BoundingBox* FluidSimulation::getDomain() const {
+    return domain;
+}
+
 void FluidSimulation::rebuildForceFieldBuffer() {
     if (d_forceFields) cudaFree(d_forceFields);
 
@@ -267,7 +275,7 @@ bool FluidSimulation::computeVoxelField(const VoxelField& field) const {
 
     launchVoxelFieldKernel(
         field,
-        settings.domainArea.toCudaAABB(),
+        domain->getCudaAABB(),
         particleCount,
         d_particles,
         d_sortedParticleHashes,

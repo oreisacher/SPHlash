@@ -25,27 +25,6 @@ void SimulationSettingsPanel::draw() {
     ImGui::PushItemWidth(-FLT_MIN);
     float totalWidth = ImGui::GetContentRegionAvail().x;
 
-    if (ImGui::CollapsingHeader("Simulation Settings")) {
-        ImGui::PushID("Simulation");
-        ImGui::Text("Steps per update:");
-        ImGui::DragInt("##stepsPerUpdate", &simulation->settings.stepsPerUpdate);
-        ImGui::PopID();
-    }
-
-    if (ImGui::CollapsingHeader("Domain Settings")) {
-        ImGui::PushID("Domain");
-        ImGui::Text("Center:");
-        if (ImGui::DragFloat3("##domainCenter", glm::value_ptr(simulation->settings.domainArea.center), 0.01f)) {
-            editor->updateDomainAreaTransform();
-        }
-
-        ImGui::Text("Size:");
-        if (ImGui::DragFloat3("##domainSize", glm::value_ptr(simulation->settings.domainArea.size), 0.01f)) {
-            editor->updateDomainAreaTransform();
-        }
-        ImGui::PopID();
-    }
-
     if (ImGui::CollapsingHeader("Particle Settings")) {
         ImGui::Text("H:");
         if (ImGui::IsItemHovered())

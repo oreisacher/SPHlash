@@ -17,6 +17,8 @@
 #include "glm/gtx/transform.hpp"
 #include <glm/gtx/matrix_decompose.hpp>
 
+#include "BoundingBox.h"
+
 Model::Model(const std::string& path, bool shaded) {
     name = std::filesystem::path(path).stem().string();
 
@@ -113,14 +115,27 @@ Model::Model(const std::string& path, bool shaded) {
     Material material("Default", Shader::createDefaultShaded());
     material.setVec3("albedo", { 1.0f, 1.0f, 1.0f });
     this->materials.push_back(material);
+
+    updateLocalBoundingBox();
+    updateWorldBoundingBox();
 }
 
-Model::Model(const std::string& name, std::unique_ptr<Mesh> mesh) : name(name) {
+Model::Model(const std::string& name, std::unique_ptr<Mesh> mesh) {
+    this->name = name;
+
     if (mesh)
         meshes.push_back(std::move(mesh));
+
+    updateLocalBoundingBox();
+    updateWorldBoundingBox();
 }
 
-Model::Model(const std::string& name, std::vector<std::unique_ptr<Mesh>> meshes) : name(name), meshes(std::move(meshes)) {}
+Model::Model(const std::string& name, std::vector<std::unique_ptr<Mesh>> meshes) : meshes(std::move(meshes)) {
+    this->name = name;
+
+    updateLocalBoundingBox();
+    updateWorldBoundingBox();
+}
 
 void Model::draw(const glm::mat4& view, const glm::mat4& projection) const {
     if (materials.empty()) {
@@ -144,7 +159,7 @@ void Model::draw(const glm::mat4& view, const glm::mat4& projection) const {
             // Update model matrix in materials shader
             material.getShader()->setMat4("view", view);
             material.getShader()->setMat4("projection", projection);
-            material.getShader()->setMat4("model", transform.modelMatrix);
+            material.getShader()->setMat4("model", transform);
 
             // Draw mesh
             if (instanceCount > 0) {
@@ -175,7 +190,7 @@ void Model::draw(const glm::mat4& view, const glm::mat4& projection) const {
             // Update model matrix in materials shader
             material.getShader()->setMat4("view", view);
             material.getShader()->setMat4("projection", projection);
-            material.getShader()->setMat4("model", transform.modelMatrix);
+            material.getShader()->setMat4("model", transform);
 
             // Draw mesh
             if (instanceCount > 0) {
@@ -191,56 +206,37 @@ void Model::draw(const glm::mat4& view, const glm::mat4& projection) const {
     glDepthMask(GL_TRUE);
 }
 
-Transform Model::getTransform() const {
-    return transform;
-}
-
-void Model::setTransform(Transform transform) {
-    this->transform = transform;
-    updateTransform();
-
-    notifyOnTransformChangedListeners();
-}
-
 void Model::setTransform(glm::mat4 transform) {
-    glm::vec3 skew;
-    glm::vec4 perspective;
+    Transform::setTransform(transform);
 
-    glm::decompose(
-        transform,
-        this->transform.scale,
-        this->transform.rotation,
-        this->transform.position,
-        skew,
-        perspective
-    );
-
-    this->transform.modelMatrix = transform;
-
-    notifyOnTransformChangedListeners();
+    updateWorldBoundingBox();
+//     notifyOnTransformChangedListeners();
 }
 
-void Model::updateTransform() {
-    glm::mat4 T = glm::translate(glm::mat4(1.0f), transform.position);
-    glm::mat4 R = glm::mat4_cast(transform.rotation);
-    glm::mat4 S = glm::scale(glm::mat4(1.0f), transform.scale);
+void Model::updateLocalBoundingBox() {
+    glm::vec3 min(FLT_MAX);
+    glm::vec3 max(-FLT_MAX);
 
-    transform.modelMatrix = T * R * S;
+    for (const auto& mesh : meshes) {
+        for (const auto& v : mesh->getVertices()) {
+            min = glm::min(min, { v.position.x , v.position.y , v.position.z });
+            max = glm::max(max, { v.position.x , v.position.y , v.position.z });
+        }
+    }
+
+    localBounds.size = max - min;
+    localBounds.center = min + localBounds.size * 0.5f;
 }
 
-void Model::setName(const std::string& name) {
-    this->name = name;
-}
-
-std::string Model::getName() const {
-    return name;
+void Model::updateWorldBoundingBox() {
+    worldBounds = localBounds.tranform(transform);
 }
 
 std::vector<Triangle> Model::getWorldSpaceTriangles() const {
     std::vector<Triangle> triangles;
 
     for (const auto& mesh : meshes) {
-        auto meshTriangles = mesh->getWorldSpaceTriangles(transform.modelMatrix);
+        auto meshTriangles = mesh->getWorldSpaceTriangles(transform);
         triangles.insert(triangles.end(), meshTriangles.begin(), meshTriangles.end());
     }
 
@@ -249,6 +245,9 @@ std::vector<Triangle> Model::getWorldSpaceTriangles() const {
 
 void Model::addMesh(std::unique_ptr<Mesh> mesh) {
     meshes.push_back(std::move(mesh));
+
+    updateLocalBoundingBox();
+    updateWorldBoundingBox();
 }
 
 std::vector<Mesh*> Model::getMeshes() const {
@@ -275,36 +274,12 @@ Material& Model::getMaterial(const int index) {
     return materials[index];
 }
 
-void Model::setVisible(const bool on) {
-    visible = on;
-}
-
-bool Model::isVisible() const {
-    return visible;
-}
-
 void Model::setType(Type type) {
     this->type = type;
 }
 
 Type Model::getType() const {
     return type;
-}
-
-void Model::setSceneGraphDeletable(bool deletable) {
-    sceneGraphDeletable = deletable;
-}
-
-bool Model::isSceneGraphDeletable() const {
-    return sceneGraphDeletable;
-}
-
-void Model::setSceneGraphVisible(bool visible) {
-    sceneGraphVisible = visible;
-}
-
-bool Model::isSceneGraphVisible() const {
-    return sceneGraphVisible;
 }
 
 void Model::setInstanceCount(int c) {
@@ -323,4 +298,27 @@ void Model::notifyOnTransformChangedListeners() {
     for (auto& listener : onTransformChangedListeners) {
         listener(this);
     }
+}
+
+Properties Model::buildProperties() {
+    Properties properties;
+
+    properties.addSection("Transform");
+    properties.addProperty(std::make_unique<Vec3Property>(
+        "Position",
+        [this] () { return getPosition(); },
+        [this] (glm::vec3 position) { setPosition(position); }
+    ));
+    properties.addProperty(std::make_unique<Vec3Property>(
+        "Rotation",
+        [this] () { return getEulerRotation(); },
+        [this] (glm::vec3 rotation) { setEulerRotation(rotation); }
+    ));
+    properties.addProperty(std::make_unique<Vec3Property>(
+        "Scale",
+        [this] () { return getScale(); },
+        [this] (glm::vec3 scale) { setScale(scale); }
+    ));
+
+    return properties;
 }
