@@ -7,13 +7,10 @@
 #include <cuda_runtime_api.h>
 #include <cuda_gl_interop.h>
 #include <iostream>
-#include <ostream>
 #include <random>
 #include <nvtx3/nvToolsExt.h>
-
 #include "cuda/Boundaries.h"
 #include "cuda/FluidSimulation.h"
-
 #include "imgui.h"
 #include "glad/gl.h"
 #include "rendering/Scene.h"
@@ -22,7 +19,7 @@ FluidSimulation::FluidSimulation(Scene& scene) : scene(&scene) {
     cudaSetDevice(0);
 
     // Setup domain bounding box
-    auto domainBB = std::make_unique<BoundingBox>("Simulation Domain", glm::vec3(0.2f, 0.6f, 1.0f));
+    auto domainBB = std::make_unique<BoundingBoxNode>("Simulation Domain", glm::vec3(0.2f, 0.6f, 1.0f));
     domain = domainBB.get();
     domain->setScale({2.0f, 2.0f, 2.0f});
     domain->setDeletable(false);
@@ -118,6 +115,7 @@ void FluidSimulation::update(const float deltaTime) {
     if (state == UNINITIALIZED  || state == PAUSED)
         return;
 
+    updateForceFieldBuffer();
     updateParticles();
 
     // --- CFL ---
@@ -134,15 +132,6 @@ void FluidSimulation::update(const float deltaTime) {
     float accTimeStep = 0.25f * sqrtf(settings.h / maxAcc);
 
     cfl = fminf(cflTimeStep, accTimeStep);
-
-    launchCalculateVelocityKernel(
-        d_particles,
-        particleCount,
-        d_forceFields,
-        scene->getForceFields().size(),
-        settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
-        settings.enableGravity ? settings.gravity : 0.0f
-    );
 
     launchUpdateParticlesKernel(
         d_particles,
@@ -225,7 +214,7 @@ void FluidSimulation::setRendererVBO(const GLuint vbo) {
     cudaGraphicsUnmapResources(1, &rendererResource);
 }
 
-BoundingBox* FluidSimulation::getDomain() const {
+BoundingBoxNode* FluidSimulation::getDomain() const {
     return domain;
 }
 
@@ -235,11 +224,17 @@ void FluidSimulation::rebuildForceFieldBuffer() {
     if (scene->getForceFields().size() == 0)
         return;
 
-    cudaMalloc(&d_forceFields, scene->getForceFields().size() * sizeof(ForceField));
+    cudaMalloc(&d_forceFields, scene->getForceFields().size() * sizeof(CudaForceField));
 }
 
 void FluidSimulation::updateForceFieldBuffer() const {
-    cudaMemcpy(d_forceFields, scene->getForceFields().data(), scene->getForceFields().size() * sizeof(ForceField), cudaMemcpyHostToDevice);
+    std::vector<CudaForceField> forceFields;
+    forceFields.reserve(scene->getForceFields().size());
+
+    for (auto& forceField : scene->getForceFields())
+        forceFields.push_back(forceField->getForceField());
+
+    cudaMemcpy(d_forceFields, forceFields.data(), forceFields.size() * sizeof(CudaForceField), cudaMemcpyHostToDevice);
 }
 
 void FluidSimulation::setBoundaryMaps(const Hex32Field& sdfMap, const Hex32Field& volumeMap) {

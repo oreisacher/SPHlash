@@ -5,7 +5,7 @@
 #ifndef SPHLASH_EDITOR_H
 #define SPHLASH_EDITOR_H
 
-#include "ForceModel.h"
+#include "ForceFieldNode.h"
 #include "ParticleSpawnModel.h"
 #include "Scene.h"
 #include "simulation/BoundaryBuilder.h"
@@ -17,17 +17,14 @@ public:
 
     Scene* getScene() const;
 
-    // void updateSpawnAreaTransform();
-
-    void addParticleSpawn(std::unique_ptr<ParticleSpawnModel> model) const;
-
-    void addForceField() const;
-    void removeForceField(ForceModel* model) const;
-
-    void addBoundaryModel(std::unique_ptr<Model> model) const;
-
     void setSelected(SceneNode* node);
     SceneNode* getSelected() const;
+
+    void removeSceneNode(SceneNode* node) const;
+
+    // --- Boundary ---
+    void addBoundary(std::unique_ptr<Model> boundary) const;
+    void removeBoundary(Model* boundary) const;
 
     BoundaryBuilder* getBoundaryBuilder();
 
@@ -35,18 +32,18 @@ public:
     void clearBoundaryDensityMap() const;
     Hex32Field getBoundaryDensityMap() const;
 
+    // --- Force Fields ---
+    void addForceField() const;
+    void removeForceField(ForceFieldNode* forceFieldNode) const;
+
+    // --- Particle Spawns ---
+    void addParticleSpawn(std::unique_ptr<ParticleSpawnModel> model) const;
 private:
     Scene* scene;
     FluidSimulation* simulation;
     BoundaryBuilder boundryBuilder;
 
     SceneNode* selectedNode;
-
-    // --- Editor Objects ---
-    Model* spawnAreaModel       = nullptr;
-    Model* domainAreaModel      = nullptr;
-
-    glm::mat4 calculateModelMatrix(glm::vec3 center, glm::vec3 scale);
 };
 
 #endif //SPHLASH_EDITOR_H

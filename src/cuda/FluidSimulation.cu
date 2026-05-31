@@ -646,7 +646,7 @@ float getMaxAcceleration(
     return sqrtf(maxAcc);
 }
 
-__device__ float3 toLocal(float3 p, const ForceField& f) {
+__device__ float3 toLocal(float3 p, const CudaForceField& f) {
     float3 d = p - f.position;
 
     return make_float3(
@@ -656,7 +656,7 @@ __device__ float3 toLocal(float3 p, const ForceField& f) {
     );
 }
 
-__device__ bool isInsideField(float3 worldPos, const ForceField& f) {
+__device__ bool isInsideField(float3 worldPos, const CudaForceField& f) {
     float3 p = toLocal(worldPos, f);
 
     return (fabsf(p.x) <= f.halfExtents.x &&
@@ -664,7 +664,7 @@ __device__ bool isInsideField(float3 worldPos, const ForceField& f) {
             fabsf(p.z) <= f.halfExtents.z);
 }
 
-__device__ float4 toWorldForce(float4 fLocal, const ForceField& f) {
+__device__ float4 toWorldForce(float4 fLocal, const CudaForceField& f) {
     return make_float4(
         fLocal.x * f.right.x   + fLocal.y * f.up.x   + fLocal.z * f.forward.x,
         fLocal.x * f.right.y   + fLocal.y * f.up.y   + fLocal.z * f.forward.y,
@@ -673,55 +673,10 @@ __device__ float4 toWorldForce(float4 fLocal, const ForceField& f) {
     );
 }
 
-__global__ void calculateVelocityKernel(
-    ParticleGPU* particles,
-    const int numParticles,
-    const ForceField* forceFields,
-    const int numForceFields,
-    const float deltaTime,
-    const float gravity
-) {
-    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
-
-    if (id >= numParticles)
-        return;
-
-    ParticleGPU* particle = &particles[id];
-
-    // Update position
-    const float4 force = particle->pressureForce + particle->viscosityForce + particle->surfaceTensionForce;
-    float4 acceleration = force + make_float4(0.0f, gravity, 0.0f, 0.0f);
-
-    // Check force fields
-    for (int f = 0 ; f < numForceFields; f++) {
-        if (isInsideField(make_float3(particle->position.x, particle->position.y, particle->position.z), forceFields[f])) {
-            acceleration += toWorldForce({ forceFields[f].strength, 0.0, 0.0, 0.0 }, forceFields[f]);
-        }
-    }
-
-    particle->velocity += deltaTime * acceleration;
-}
-
-void launchCalculateVelocityKernel(
-    ParticleGPU* particles,
-    const int numParticles,
-    const ForceField* forceFields,
-    const int numForceFields,
-    const float deltaTime,
-    const float gravity
-) {
-    int threadsPerBlock = 256;
-    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
-
-    calculateVelocityKernel<<<blocks, threadsPerBlock>>>(
-        particles, numParticles, forceFields, numForceFields, deltaTime, gravity
-    );
-}
-
 __global__ void updateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
-    const ForceField* forceFields,
+    const CudaForceField* forceFields,
     const int numForceFields,
     const float deltaTime,
     const CudaAABB domain,
@@ -788,7 +743,7 @@ __global__ void updateParticlesKernel(
 void launchUpdateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
-    const ForceField* forceFields,
+    const CudaForceField* forceFields,
     const int numForceFields,
     const float deltaTime,
     const CudaAABB& domain,

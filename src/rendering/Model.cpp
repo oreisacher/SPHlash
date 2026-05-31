@@ -17,7 +17,7 @@
 #include "glm/gtx/transform.hpp"
 #include <glm/gtx/matrix_decompose.hpp>
 
-#include "BoundingBox.h"
+#include "BoundingBoxNode.h"
 
 Model::Model(const std::string& path, bool shaded) {
     name = std::filesystem::path(path).stem().string();
@@ -208,9 +208,12 @@ void Model::draw(const glm::mat4& view, const glm::mat4& projection) const {
 
 void Model::setTransform(glm::mat4 transform) {
     Transform::setTransform(transform);
-
     updateWorldBoundingBox();
-//     notifyOnTransformChangedListeners();
+}
+
+void Model::updateTransform() {
+    Transform::updateTransform();
+    updateWorldBoundingBox();
 }
 
 void Model::updateLocalBoundingBox() {
@@ -272,14 +275,6 @@ Material& Model::getMaterial(const int index) {
     }
 
     return materials[index];
-}
-
-void Model::setType(Type type) {
-    this->type = type;
-}
-
-Type Model::getType() const {
-    return type;
 }
 
 void Model::setInstanceCount(int c) {

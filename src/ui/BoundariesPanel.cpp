@@ -32,11 +32,6 @@ void BoundariesPanel::draw() {
         ImGui::SetTooltip("Resolution of signed distance field and density map used by boundaries");
     ImGui::DragInt3("##bbres", glm::value_ptr(boundaryBuilder->settings.resolution), 1, 2, 1024, "%d", ImGuiSliderFlags_AlwaysClamp);
 
-    ImGui::Text("Samples:");
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("Sample count for monte carlo integral calculations");
-    ImGui::DragInt("##bbsamples", &boundaryBuilder->settings.samples, 1, 1, 1024, "%d", ImGuiSliderFlags_AlwaysClamp);
-
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
@@ -44,32 +39,32 @@ void BoundariesPanel::draw() {
     Hex32Field boundaryField = editor->getBoundaryDensityMap();
 
     if (ImGui::Button(boundaryField.d_cells ? "Rebuild Boundary Map" : "Build Boundary Map", ImVec2(totalWidth, 0.0f))) {
-        if (densityMapPreview)
-            densityMapPreview->close();
+        if (volumeMapPreview)
+            volumeMapPreview->close();
 
         editor->buildBoundaryDensityMap();
     }
 
     if (boundaryField.d_cells) {
         if (ImGui::Button("Clear Boundary Map", ImVec2(totalWidth, 0.0f))) {
-            if (densityMapPreview)
-                densityMapPreview->close();
+            if (volumeMapPreview)
+                volumeMapPreview->close();
 
             editor->clearBoundaryDensityMap();
         }
 
-        if (ImGui::Button(densityMapPreview ? "Hide Boundary Map" : "Show Boundary Map", ImVec2(totalWidth, 0.0f))) {
+        if (ImGui::Button(volumeMapPreview ? "Hide Boundary Map" : "Show Boundary Map", ImVec2(totalWidth, 0.0f))) {
             // Show density map preview
-            if (densityMapPreview == nullptr) {
-                densityMapPreview = new Texture3DPanel("Density Map", boundaryField.texture, boundaryField.resolution.x, boundaryField.resolution.y, boundaryField.resolution.z);
-                manager->addPanel(densityMapPreview);
+            if (volumeMapPreview == nullptr) {
+                volumeMapPreview = new Texture3DPanel("Volume Map", boundaryField.texture, boundaryField.resolution.x, boundaryField.resolution.y, boundaryField.resolution.z);
+                manager->addPanel(volumeMapPreview);
 
-                densityMapPreview->addOnCloseListener([this] () {
-                    densityMapPreview = nullptr;
+                volumeMapPreview->addOnCloseListener([this] () {
+                    volumeMapPreview = nullptr;
                 });
             } else {
-                densityMapPreview->close();
-                densityMapPreview = nullptr;
+                volumeMapPreview->close();
+                volumeMapPreview = nullptr;
             }
         }
     }

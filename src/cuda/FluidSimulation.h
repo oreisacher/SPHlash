@@ -89,19 +89,10 @@ void launchSphForcesKernel(
     const float p_0
 );
 
-void launchCalculateVelocityKernel(
-    ParticleGPU* particles,
-    const int numParticles,
-    const ForceField* forceFields,
-    const int numForceFields,
-    const float deltaTime,
-    const float gravity
-);
-
 void launchUpdateParticlesKernel(
     ParticleGPU* particles,
     const int numParticles,
-    const ForceField* forceFields,
+    const CudaForceField* forceFields,
     const int numForceFields,
     const float deltaTime,
     const CudaAABB& domain,

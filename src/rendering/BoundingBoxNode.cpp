@@ -2,9 +2,9 @@
 // Created by ruut on 5/4/26.
 //
 
-#include "BoundingBox.h"
+#include "BoundingBoxNode.h"
 
-BoundingBox::BoundingBox(const std::string& name, glm::vec3 color) {
+BoundingBoxNode::BoundingBoxNode(const std::string& name, glm::vec3 color) {
     this->name = name;
 
     mesh = Mesh::createWireframeBox(name);
@@ -12,7 +12,7 @@ BoundingBox::BoundingBox(const std::string& name, glm::vec3 color) {
     material->setVec3("color", color);
 }
 
-void BoundingBox::draw(const glm::mat4& view, const glm::mat4& projection) const {
+void BoundingBoxNode::draw(const glm::mat4& view, const glm::mat4& projection) const {
     // Setup wireframe shader
     material->bind();
     material->getShader()->setMat4("view", view);
@@ -22,25 +22,25 @@ void BoundingBox::draw(const glm::mat4& view, const glm::mat4& projection) const
     mesh->draw();
 }
 
-void BoundingBox::setTransform(glm::mat4 transform) {
+void BoundingBoxNode::setTransform(glm::mat4 transform) {
     Transform::setTransform(transform);
 
     // Force rotation to zeros
     setRotation({0.0, 0.0, 0.0, 0.0});
 }
 
-AABB BoundingBox::getAABB() const {
+AABB BoundingBoxNode::getAABB() const {
     return {
         position,
         scale
     };
 }
 
-CudaAABB BoundingBox::getCudaAABB() const {
+CudaAABB BoundingBoxNode::getCudaAABB() const {
     return getAABB().toCudaAABB();
 }
 
-Properties BoundingBox::buildProperties() {
+Properties BoundingBoxNode::buildProperties() {
     Properties properties;
 
     properties.addSection("Transform");

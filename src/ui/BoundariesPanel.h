@@ -19,7 +19,7 @@ public:
 private:
     Editor* editor;
     BoundaryBuilder* boundaryBuilder;
-    Texture3DPanel* densityMapPreview = nullptr;
+    Texture3DPanel* volumeMapPreview = nullptr;
 };
 
 #endif //SPHLASH_BOUNDARIESPANEL_H

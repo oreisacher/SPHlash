@@ -10,17 +10,10 @@
 #include "IRenderable.h"
 #include "Material.h"
 #include "Mesh.h"
-#include "Shader.h"
 #include "Transform.h"
-#include "glm/detail/type_quat.hpp"
 #include "ui/ISelectable.h"
 #include "ui/SceneNode.h"
 #include "utils/AABB.h"
-
-enum class Type {
-    NONE,
-    BOUNDARY
-};
 
 class Model : public Transform, public IRenderable, public SceneNode {
 public:
@@ -32,6 +25,7 @@ public:
 
     // --- Transformation ---
     void setTransform(glm::mat4 transform) override;
+    void updateTransform() override;
 
     // --- Bounding Boxes ---
     void updateLocalBoundingBox();
@@ -45,12 +39,6 @@ public:
     int addMaterial(const Material& material);
     Material& getMaterial(int index);
 
-    void setType(Type type);
-    Type getType() const;
-
-    void setSceneGraphDeletable(bool deletable);
-    bool isSceneGraphDeletable() const;
-
     void setInstanceCount(int c);
 
     void addOnTransformChangedListener(const std::function<void(Model*)>& listener);
@@ -61,9 +49,6 @@ public:
     // --- Factory ---
     static std::unique_ptr<Model> createCubeModel(const std::string& name);
 protected:
-    bool visible = true;
-    Type type = Type::NONE;
-
     AABB localBounds;
     AABB worldBounds;
 

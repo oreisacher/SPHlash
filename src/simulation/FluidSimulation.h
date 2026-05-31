@@ -7,7 +7,7 @@
 
 #include "glm/glm.hpp"
 #include <cuda_runtime.h>
-#include "rendering/BoundingBox.h"
+#include "rendering/BoundingBoxNode.h"
 #include "rendering/FluidRenderer.h"
 #include "utils/AABB.h"
 #include "utils/Hex32Field.h"
@@ -35,7 +35,7 @@ struct ParticleGPU {
     float4 debugging                = { 0.0f, 0.0f, 0.0f, 0.0f };
 };
 
-struct ForceField {
+struct CudaForceField {
     float3 position     = { 0.0f, 0.0f, 0.0f };
     float3 halfExtents  = { 0.2f, 0.2f, 0.2f };
 
@@ -109,7 +109,7 @@ public:
 
     void setRendererVBO(GLuint vbo);
 
-    BoundingBox* getDomain() const;
+    BoundingBoxNode* getDomain() const;
 
     void rebuildForceFieldBuffer();
     void updateForceFieldBuffer() const;
@@ -133,7 +133,7 @@ public:
     SimulationState state = UNINITIALIZED;
 private:
     Scene* scene;
-    BoundingBox* domain;
+    BoundingBoxNode* domain;
 
     // --- Particles ---
     ParticleGPU* d_particles            = nullptr;
@@ -153,7 +153,7 @@ private:
     size_t sortTempStorageBytes         = 0;
 
     // --- Force Fields ---
-    ForceField* d_forceFields           = nullptr;
+    CudaForceField* d_forceFields           = nullptr;
 
     // --- Boundary Density Map ---
     Hex32Field sdfMap;

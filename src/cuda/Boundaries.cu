@@ -179,7 +179,8 @@ __device__ float gammaStar(float x, float r) {
 __global__ void volumeMapKernel(
     const Hex32Field sdfField,
     const Hex32Field volumeField,
-    const CudaAABB domain
+    const CudaAABB domain,
+    const float h
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
     const int cellCount = sdfField.resolution.x * sdfField.resolution.y * sdfField.resolution.z;
@@ -232,8 +233,6 @@ __global__ void volumeMapKernel(
         (322.0f - 13.0f * sqrt(70.0f)) / 900.0f
     };
 
-    const float r = 0.05f;
-
     for (int nodeIndex = 0 ; nodeIndex < 32 ; nodeIndex++) {
         Hex32Node node = Hex32CubeLookup[nodeIndex];
 
@@ -249,9 +248,9 @@ __global__ void volumeMapKernel(
             for (int y = 0 ; y < 5 ; y++) {
                 for (int x = 0 ; x < 5 ; x++) {
                     float3 queryPosition = make_float3(
-                        nodePos.x + r * xi[x],
-                        nodePos.y + r * xi[y],
-                        nodePos.z + r * xi[z]
+                        nodePos.x + h * xi[x],
+                        nodePos.y + h * xi[y],
+                        nodePos.z + h * xi[z]
                     );
 
                     // Reject samples outside domain
@@ -293,20 +292,21 @@ __global__ void volumeMapKernel(
                         sampleCell->nodes
                     );
 
-                    float gamma = gammaStar(interpolatedSDF, r);
+                    float gamma = gammaStar(interpolatedSDF, h);
                     volume += gamma * w[x] * w[y] * w[z];
                 }
             }
         }
 
-        volumeField.d_cells[id].nodes[nodeIndex] = volume * r * r * r;
+        volumeField.d_cells[id].nodes[nodeIndex] = volume * h * h * h;
     }
 }
 
 void launchVolumeMapKernel(
     const Hex32Field sdfField,
     const Hex32Field volumeField,
-    const CudaAABB domain
+    const CudaAABB domain,
+    const float h
 ) {
     int threadsPerBlock = 256;
     int cells = sdfField.resolution.x * sdfField.resolution.y * sdfField.resolution.z;
@@ -315,6 +315,7 @@ void launchVolumeMapKernel(
     volumeMapKernel<<<blocks, threadsPerBlock>>>(
         sdfField,
         volumeField,
-        domain
+        domain,
+        h
     );
 }

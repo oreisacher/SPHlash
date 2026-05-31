@@ -20,7 +20,8 @@ void launchSdfKernel(
 void launchVolumeMapKernel(
     const Hex32Field sdfField,
     const Hex32Field volumeField,
-    const CudaAABB domain
+    const CudaAABB domain,
+    const float h
 );
 
 #endif //SPHLASH_BOUNDARIES_H

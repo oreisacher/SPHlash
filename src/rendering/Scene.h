@@ -7,7 +7,8 @@
 
 #include <memory>
 
-#include "BoundingBox.h"
+#include "BoundingBoxNode.h"
+#include "ForceFieldNode.h"
 #include "Model.h"
 #include "simulation/FluidSimulation.h"
 #include "utils/Camera.h"
@@ -18,21 +19,28 @@ public:
     Camera* getCamera() const;
     void setCamera(std::unique_ptr<Camera> camera);
 
+    // --- Models ---
     void addModel(std::unique_ptr<Model> model);
     void removeModel(const Model* model);
     void removeModel(int index);
     void removeModel(const std::string& name);
-
     std::vector<Model*> getModels() const;
 
+    // --- Boundary ---
+    void addBoundary(std::unique_ptr<Model> boundary);
+    void removeBoundary(const Model* boundary);
+    std::vector<Model*> getBoundaries() const;
+
     // --- Bounding Boxes ---
-    void addBoundingBox(std::unique_ptr<BoundingBox> boundingBox);
-    std::vector<BoundingBox*> getBoundingBoxes() const;
+    void addBoundingBox(std::unique_ptr<BoundingBoxNode> boundingBox);
+    void removeBoundingBox(const BoundingBoxNode* model);
+    std::vector<BoundingBoxNode*> getBoundingBoxes() const;
 
     // --- Force Fields ---
-    void addForceField(std::unique_ptr<ForceField> forceField);
-    void removeForceField(const ForceField* forceField);
-    std::vector<ForceField> getForceFields() const;
+    void addForceField(std::unique_ptr<ForceFieldNode> forceField);
+    void removeForceField(const ForceFieldNode* forceField);
+    std::vector<ForceFieldNode*> getForceFields() const;
+
 
     std::vector<std::pair<SceneNode*, IRenderable*>> getRenderables() const;
     std::vector<SceneNode*> getSceneNodes() const;
@@ -40,10 +48,10 @@ public:
 private:
     std::unique_ptr<Camera> camera                                  = nullptr;
 
-    std::vector<std::unique_ptr<Model>>         models              = {};
-    std::vector<std::unique_ptr<Model>>         boundaries          = {};
-    std::vector<std::unique_ptr<BoundingBox>>   boundingBoxes       = {};
-    std::vector<std::unique_ptr<ForceField>>    forceFields         = {};
+    std::vector<std::unique_ptr<Model>>             models              = {};
+    std::vector<std::unique_ptr<Model>>             boundaries          = {};
+    std::vector<std::unique_ptr<BoundingBoxNode>>   boundingBoxes       = {};
+    std::vector<std::unique_ptr<ForceFieldNode>>    forceFields         = {};
 };
 
 #endif //SPHLASH_SCENE_H

@@ -25,7 +25,7 @@
 #define SIM_UNITS_PER_PIXEL (1.0 / 600)
 
 #include "tiny_obj_loader.h"
-#include "rendering/ForceModel.h"
+#include "rendering/ForceFieldNode.h"
 #include "rendering/Mesh.h"
 #include "ui/BoundariesPanel.h"
 #include "ui/ControlPanel.h"

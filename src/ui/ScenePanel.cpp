@@ -7,7 +7,7 @@
 #include "imgui.h"
 #include "ImGuiFileDialog.h"
 #include "PropertiesPanel.h"
-#include "rendering/BoundingBox.h"
+#include "rendering/BoundingBoxNode.h"
 #include "rendering/Editor.h"
 #include "rendering/Scene.h"
 
@@ -56,12 +56,8 @@ void ScenePanel::draw() {
                 if (selected != i) {
                     selected = i;
                     editor->setSelected(sceneNodes[i]);
-                    // propertiesPanel->updateSelected(sceneNodes[i]);
-                    // selectedNode = sceneNodes[i];
                 } else {
                     selected = -1;
-                    // propertiesPanel->updateSelected(nullptr);
-                    // selectedNode = nullptr;
                     editor->setSelected(nullptr);
                 }
             }
@@ -72,9 +68,6 @@ void ScenePanel::draw() {
             if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                 if (isSelected) {
                     selected = -1;
-                    // selectedNode = nullptr;
-                    // updatePropertiesPanel(nullptr);
-                    // propertiesPanel->updateSelected(nullptr);
                     editor->setSelected(nullptr);
                 }
             }
@@ -91,17 +84,10 @@ void ScenePanel::draw() {
                 if (ImGui::Button(" - ", ImVec2(0, 19))) {
                     if (isSelected) {
                         selected = -1;
-                        // selectedNode = nullptr;
-                        // propertiesPanel->updateSelected(nullptr);
                         editor->setSelected(nullptr);
                     }
 
-                    // // Remove force field
-                    // if (auto forceField = dynamic_cast<ForceModel*>(models[i])) {
-                    //     editor->removeForceField(forceField);
-                    // }
-
-                    scene->removeModel(i);
+                    editor->removeSceneNode(sceneNodes[i]);
                 }
             }
             ImGui::PopID();
@@ -115,7 +101,7 @@ void ScenePanel::draw() {
     if (ImGuiFileDialog::Instance()->Display("LoadModel")) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-            editor->addBoundaryModel(std::make_unique<Model>(filePathName.c_str()));
+            editor->addBoundary(std::make_unique<Model>(filePathName.c_str()));
         }
 
         ImGuiFileDialog::Instance()->Close();
@@ -130,50 +116,6 @@ void ScenePanel::draw() {
     if (ImGui::Button("Add Force Field", ImVec2(totalWidth, 0))) {
         editor->addForceField();
     }
-
-    // --- Properties ---
-    //     ImGui::SeparatorText("Properties");
-    //     ImGui::BeginChild("Properties");
-    //     ImGui::PushItemWidth(-FLT_MIN);
-    //
-    //     auto name = selectedModel->getName();
-    //     if (ImGui::InputText("Name:", &name, sizeof(name))) {
-    //         selectedModel->setName(name);
-    //     }
-    //
-    //     glm::vec3 position = selectedModel->getPosition();
-    //
-    //     ImGui::Text("Position (x, y, z):");
-    //     if (ImGui::DragFloat3("##modelPos", glm::value_ptr(position), 0.01f)) {
-    //         selectedModel->setPosition(position);
-    //     }
-    //
-    //     glm::vec3 eulerRotation = selectedModel->getEulerRotation();
-    //
-    //     if (!dynamic_cast<BoundingBox*>(selectedModel)) {
-    //         ImGui::Text("Rotation (x, y, z):");
-    //         if (ImGui::DragFloat3("##modelRot", glm::value_ptr(eulerRotation), 0.01f)) {
-    //             selectedModel->setEulerRotation(eulerRotation);
-    //         }
-    //     }
-    //
-    //     glm::vec3 scale = selectedModel->getScale();
-    //
-    //     ImGui::Text("Scale (x, y, z):");
-    //     if (ImGui::DragFloat3("##modelScl", glm::value_ptr(scale), 0.01f)) {
-    //         selectedModel->setScale(scale);
-    //     }
-    //
-    //     if (auto forceField = dynamic_cast<ForceModel*>(selectedModel)) {
-    //         ImGui::SeparatorText("Additional Properties");
-    //
-    //         ImGui::Text("Force Strength:");
-    //         if (ImGui::DragFloat("##ffStrength", &forceField->getForceField()->strength, 0.01f)) {
-    //             forceField->notifyOnTransformChangedListeners();
-    //         }
-    //     }
-    //     ImGui::EndChild();
-    // }
 
     ImGui::End();
 }

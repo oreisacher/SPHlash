@@ -52,12 +52,42 @@ std::vector<Model*> Scene::getModels() const {
     return result;
 }
 
-void Scene::addBoundingBox(std::unique_ptr<BoundingBox> boundingBox) {
+void Scene::addBoundary(std::unique_ptr<Model> boundary) {
+    boundaries.push_back(std::move(boundary));
+}
+
+void Scene::removeBoundary(const Model* boundary) {
+    std::erase_if(
+        boundaries,
+       [&](const std::unique_ptr<Model>& m){
+           return m.get() == boundary;
+    });
+}
+
+std::vector<Model*> Scene::getBoundaries() const {
+    std::vector<Model*> result;
+    result.reserve(boundaries.size());
+
+    for (auto& b : boundaries)
+        result.push_back(b.get());
+
+    return result;
+}
+
+void Scene::addBoundingBox(std::unique_ptr<BoundingBoxNode> boundingBox) {
     boundingBoxes.push_back(std::move(boundingBox));
 }
 
-std::vector<BoundingBox*> Scene::getBoundingBoxes() const {
-    std::vector<BoundingBox*> result;
+void Scene::removeBoundingBox(const BoundingBoxNode* model) {
+    std::erase_if(
+        boundingBoxes,
+       [&](const std::unique_ptr<BoundingBoxNode>& m){
+           return m.get() == model;
+    });
+}
+
+std::vector<BoundingBoxNode*> Scene::getBoundingBoxes() const {
+    std::vector<BoundingBoxNode*> result;
     result.reserve(boundingBoxes.size());
 
     for (auto& bb : boundingBoxes)
@@ -66,19 +96,19 @@ std::vector<BoundingBox*> Scene::getBoundingBoxes() const {
     return result;
 }
 
-void Scene::addForceField(std::unique_ptr<ForceField> forceField) {
+void Scene::addForceField(std::unique_ptr<ForceFieldNode> forceField) {
     forceFields.push_back(std::move(forceField));
 }
 
-void Scene::removeForceField(const ForceField* forceField) {
+void Scene::removeForceField(const ForceFieldNode* forceField) {
     std::erase_if(forceFields, [forceField] (const auto& m){ return m.get() == forceField; });
 }
 
-std::vector<ForceField> Scene::getForceFields() const {
-    std::vector<ForceField> result;
+std::vector<ForceFieldNode*> Scene::getForceFields() const {
+    std::vector<ForceFieldNode*> result;
     result.reserve(forceFields.size());
     for (auto& m : forceFields)
-        result.push_back(*m);
+        result.push_back(m.get());
     return result;
 }
 
@@ -94,11 +124,17 @@ std::vector<std::pair<SceneNode*, IRenderable*>> Scene::getRenderables() const {
     for (auto& boundingBox : boundingBoxes)
         renderables.push_back({ boundingBox.get(), boundingBox.get() });
 
+    for (auto& forceField : forceFields)
+        renderables.push_back({ forceField.get(), forceField.get() });
+
     return renderables;
 }
 
 std::vector<SceneNode*> Scene::getSceneNodes() const {
     std::vector<SceneNode*> sceneNodes;
+
+    for (auto& boundingBox : boundingBoxes)
+        sceneNodes.push_back(boundingBox.get());
 
     for (auto& model : models)
         sceneNodes.push_back(model.get());
@@ -106,8 +142,8 @@ std::vector<SceneNode*> Scene::getSceneNodes() const {
     for (auto& boundary : boundaries)
         sceneNodes.push_back(boundary.get());
 
-    for (auto& boundingBox : boundingBoxes)
-        sceneNodes.push_back(boundingBox.get());
+    for (auto& forceField : forceFields)
+        sceneNodes.push_back(forceField.get());
 
     return sceneNodes;
 }

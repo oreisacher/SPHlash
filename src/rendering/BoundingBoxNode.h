@@ -10,9 +10,9 @@
 #include "ui/SceneNode.h"
 #include "utils/AABB.h"
 
-class BoundingBox : public Transform, public IRenderable, public SceneNode {
+class BoundingBoxNode : public Transform, public IRenderable, public SceneNode {
 public:
-    BoundingBox(const std::string& name, glm::vec3 color);
+    BoundingBoxNode(const std::string& name, glm::vec3 color);
 
     void draw(const glm::mat4& view, const glm::mat4& projection) const override;
 
