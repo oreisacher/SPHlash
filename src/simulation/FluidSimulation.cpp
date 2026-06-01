@@ -23,7 +23,7 @@ FluidSimulation::FluidSimulation(Scene& scene) : scene(&scene) {
     domain = domainBB.get();
     domain->setScale({2.0f, 2.0f, 2.0f});
     domain->setDeletable(false);
-    scene.addBoundingBox(std::move(domainBB));
+    scene.addSceneNode(std::move(domainBB));
 }
 
 FluidSimulation::~FluidSimulation() {

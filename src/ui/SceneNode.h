@@ -6,8 +6,9 @@
 #define SPHLASH_SCENENODE_H
 
 #include "ISelectable.h"
+#include "rendering/IRenderable.h"
 
-class SceneNode : public ISelectable {
+class SceneNode : public ISelectable, public IRenderable {
 public:
     ~SceneNode() override = default;
 
@@ -25,6 +26,8 @@ public:
     bool isSceneGraphVisible() const;
     void setSceneGraphVisible(bool visible);
 
+    std::vector<SceneNode*> getChildren() const;
+
 protected:
     std::string name;
 
@@ -32,6 +35,8 @@ protected:
     bool deletable = true;
 
     bool sceneGraphVisible = true;
+
+    std::vector<std::unique_ptr<SceneNode>> children;
 };
 
 #endif //SPHLASH_SCENENODE_H

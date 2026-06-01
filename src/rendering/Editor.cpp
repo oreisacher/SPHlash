@@ -15,10 +15,12 @@ Editor::Editor(Scene& scene, FluidSimulation* sim)
     // Setup basic editor objects
     auto spawnArea = std::make_unique<BoundingBoxNode>("Spawn Area", glm::vec3(1.0f, 0.3f, 0.3f));
     spawnArea->setDeletable(false);
-    scene.addBoundingBox(std::move(spawnArea));
+    scene.addSceneNode(std::move(spawnArea));
 
     // DEBUG Suzanne model
-    addBoundary(std::make_unique<Model>("assets/models/suzanne.obj"));
+    auto model = std::make_shared<Model>("assets/models/suzanne.obj");
+    auto modelNode = std::make_unique<ModelNode>("Suzanne", model);
+    scene.addSceneNode(std::move(modelNode));
 }
 
 Scene* Editor::getScene() const {
@@ -34,39 +36,33 @@ Scene* Editor::getScene() const {
 //     ));
 // }
 
-void Editor::addParticleSpawn(std::unique_ptr<ParticleSpawnModel> model) const {
-    auto particleSpawn = std::make_unique<ParticleSpawn>();
+void Editor::addParticleSpawn(std::unique_ptr<ParticleSpawnNode> model) const {
+    auto particleSpawn = std::make_unique<CudaParticleSpawn>();
 }
 
 void Editor::addForceField() const {
     auto forceFieldNode = std::make_unique<ForceFieldNode>("Force Field");
-    scene->addForceField(std::move(forceFieldNode));
+    scene->addSceneNode(std::move(forceFieldNode));
     simulation->rebuildForceFieldBuffer();
-
-    // forceFieldModel->addOnTransformChangedListener([this](Model *) {
-        // simulation->updateForceFieldBuffer();
-    // });
-
-    // scene->addModel(std::move(forceFieldModel));
-    // scene->addForceField(std::move(forceField));
-
-    // simulation->rebuildForceFieldBuffer();
 }
 
-void Editor::removeForceField(ForceFieldNode* forceFieldNode) const {
-    scene->removeForceField(forceFieldNode);
+void Editor::removeForceField(const ForceFieldNode* forceFieldNode) const {
+    scene->removeSceneNode(forceFieldNode);
     simulation->rebuildForceFieldBuffer();
-
-    // simulation->rebuildForceFieldBuffer();
-    // simulation->updateForceFieldBuffer();
 }
 
-void Editor::addBoundary(std::unique_ptr<Model> boundary) const {
-    scene->addBoundary(std::move(boundary));
+void Editor::addBoundary(std::unique_ptr<ModelNode> boundaryNode) const {
+    scene->addSceneNode(std::move(boundaryNode));
 }
 
-void Editor::removeBoundary(Model* boundary) const {
-    scene->removeBoundary(boundary);
+void Editor::addBoundary(const std::string& path) const {
+    auto model = std::make_shared<Model>(path);
+    auto modelNode = std::make_unique<ModelNode>(model->getName(), model);
+    scene->addSceneNode(std::move(modelNode));
+}
+
+void Editor::removeBoundary(const ModelNode* boundaryNode) const {
+    scene->removeSceneNode(boundaryNode);
 }
 
 void Editor::setSelected(SceneNode* node) {
@@ -78,11 +74,7 @@ SceneNode* Editor::getSelected() const {
 }
 
 void Editor::removeSceneNode(SceneNode* node) const {
-    if (auto boundary = dynamic_cast<Model*>(node))
-        removeBoundary(boundary);
-
-    if (auto forceField = dynamic_cast<ForceFieldNode*>(node))
-        removeForceField(forceField);
+    scene->removeSceneNode(node);
 }
 
 BoundaryBuilder* Editor::getBoundaryBuilder() {

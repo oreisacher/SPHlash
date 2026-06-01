@@ -6,6 +6,8 @@
 #include "cuda/MarchingCubes.h"
 #include <cuda_gl_interop.h>
 #include <iostream>
+
+#include "ModelNode.h"
 #include "Scene.h"
 
 FluidSurfaceMesher::FluidSurfaceMesher(Scene& scene, FluidSimulation* simulation, FluidRenderer* renderer)
@@ -32,21 +34,24 @@ FluidSurfaceMesher::FluidSurfaceMesher(Scene& scene, FluidSimulation* simulation
     auto surfaceMesh = std::make_unique<Mesh>("Surface Mesh", maxVertices, maxIndices);
     this->surfaceMesh = surfaceMesh.get();
 
-    auto surfaceModel = std::make_unique<Model>(
+    auto surfaceModel = std::make_shared<Model>(
         "Surface",
         std::move(surfaceMesh)
     );
-    this->surfaceModel = surfaceModel.get();
 
     Material surfaceMaterial("Surface", Shader::createDefaultShaded());
     surfaceMaterial.setVec3("albedo", glm::vec3(0.2f, 0.6f, 1.0f));
     surfaceModel->addMaterial(surfaceMaterial);
 
-    // Default state invisible
-    surfaceModel->setVisible(false);
-    surfaceModel->setSceneGraphVisible(false);
+    std::unique_ptr<ModelNode> modelNode = std::make_unique<ModelNode>("Surface", surfaceModel);
+    this->surfaceModelNode = modelNode.get();
 
-    scene.addModel(std::move(surfaceModel));
+    // Default state invisible
+    modelNode->setVisible(false);
+    modelNode->setSceneGraphVisible(false);
+    modelNode->setBoundary(false);
+
+    scene.addSceneNode(std::move(modelNode));
 }
 
 FluidSurfaceMesher::~FluidSurfaceMesher() {
@@ -55,7 +60,7 @@ FluidSurfaceMesher::~FluidSurfaceMesher() {
 }
 
 void FluidSurfaceMesher::generateMesh(bool force) const {
-    if (!force && (!surfaceModel->isVisible() || simulation->state == PAUSED))
+    if (!force && (!surfaceModelNode->isVisible() || simulation->state == PAUSED))
         return;
 
     if (!simulation->computeVoxelField(voxelField))
@@ -132,10 +137,10 @@ void FluidSurfaceMesher::updateVoxelFieldSize() {
 
 void FluidSurfaceMesher::updateSettings() const {
     if (renderer->settings.mode != MARCHING_CUBES) {
-        surfaceModel->setVisible(false);
+        surfaceModelNode->setVisible(false);
     } else {
-        surfaceModel->setVisible(true);
-        surfaceModel->getMaterial(0).setVec4("albedo", settings.color);
+        surfaceModelNode->setVisible(true);
+        surfaceModelNode->getModel()->getMaterial(0).setVec4("albedo", settings.color);
 
         // Force generate new surface mesh after switching mode to avoid mesh based on old particle data
         generateMesh(true);

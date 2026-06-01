@@ -28,6 +28,15 @@ void SceneNode::setSceneGraphVisible(bool visible) {
     this->sceneGraphVisible = visible;
 }
 
+std::vector<SceneNode*> SceneNode::getChildren() const {
+    std::vector<SceneNode*> result;
+
+    for (auto &c : children)
+        result.push_back(c.get());
+
+    return result;
+}
+
 bool SceneNode::isDeletable() const {
     return deletable;
 }

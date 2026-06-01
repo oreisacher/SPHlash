@@ -15,23 +15,19 @@
 #include "ui/SceneNode.h"
 #include "utils/AABB.h"
 
-class Model : public Transform, public IRenderable, public SceneNode {
+class Model {
 public:
     Model(const std::string& path, bool shaded = true);
     Model(const std::string& name, std::unique_ptr<Mesh> mesh);
     Model(const std::string& name, std::vector<std::unique_ptr<Mesh>> meshes);
 
-    void draw(const glm::mat4& view, const glm::mat4& projection) const override;
+    std::string getName() const;
 
-    // --- Transformation ---
-    void setTransform(glm::mat4 transform) override;
-    void updateTransform() override;
+    void draw(const glm::mat4& view, const glm::mat4& projection, const glm::mat4& transform) const;
 
-    // --- Bounding Boxes ---
     void updateLocalBoundingBox();
-    void updateWorldBoundingBox();
-
-    std::vector<Triangle> getWorldSpaceTriangles() const;
+    AABB getBoundingBox() const;
+    AABB getWorldBoundingBox(const glm::mat4& transform) const;
 
     void addMesh(std::unique_ptr<Mesh> mesh);
     std::vector<Mesh*> getMeshes() const;
@@ -41,23 +37,14 @@ public:
 
     void setInstanceCount(int c);
 
-    void addOnTransformChangedListener(const std::function<void(Model*)>& listener);
-    void notifyOnTransformChangedListeners();
-
-    Properties buildProperties() override;
-
-    // --- Factory ---
-    static std::unique_ptr<Model> createCubeModel(const std::string& name);
 protected:
+    std::string name;
     AABB localBounds;
-    AABB worldBounds;
 
     std::vector<std::unique_ptr<Mesh>> meshes   = {};
     std::vector<Material> materials             = {};
 
     int instanceCount = 0;
-
-    std::vector<std::function<void(Model*)>> onTransformChangedListeners;
 };
 
 #endif //SPHLASH_MODEL_H

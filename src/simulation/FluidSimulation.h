@@ -57,10 +57,17 @@ struct InitSettings {
     };
 };
 
-struct ParticleSpawn {
+struct CudaParticleSpawn {
     float totalMass         = 1000.0f;
     float particleSpacing   = 0.025f;
-    Model* model            = nullptr;
+
+    CudaAABB area = {
+        { 0.0f, 0.0f, 0.0f },
+        { 1.0f, 1.0f, 1.0f }
+    };
+
+    bool hasShape               = false;
+    Triangle* d_shapeTriangles  = nullptr;
 };
 
 struct SimulationSettings {

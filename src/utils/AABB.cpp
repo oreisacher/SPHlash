@@ -2,8 +2,11 @@
 // Created by ruut on 5/2/26.
 //
 
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include "AABB.h"
 #include <glm/glm.hpp>
+#include "glm/gtx/transform.hpp"
 
 void AABB::setCenter(glm::vec3 center) {
     this->center = center;
@@ -35,21 +38,11 @@ bool AABB::contains(const glm::vec3& point) const {
         point.z >= min.z && point.z <= max.z;
 }
 
-AABB AABB::tranform(glm::mat4 matrix) {
-    glm::vec3 newCenter = glm::vec3(matrix * glm::vec4(center, 1.0));
-
-    glm::mat3 R = glm::mat3(matrix);
-
-    glm::vec3 newSize = glm::vec3(
-        glm::dot(glm::abs(R[0]), size),
-        glm::dot(glm::abs(R[1]), size),
-        glm::dot(glm::abs(R[2]), size)
-    );
-
-    return {
-        newCenter,
-        newSize
-    };
+glm::mat4 AABB::getTransformMatrix() const {
+    glm::mat4 m = glm::mat4(1.0f);
+    m = glm::translate(m, center);
+    m = glm::scale(m, size);
+    return m;
 }
 
 CudaAABB AABB::toCudaAABB() const {

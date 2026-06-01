@@ -6,7 +6,7 @@
 #define SPHLASH_EDITOR_H
 
 #include "ForceFieldNode.h"
-#include "ParticleSpawnModel.h"
+#include "ParticleSpawnNode.h"
 #include "Scene.h"
 #include "simulation/BoundaryBuilder.h"
 #include "simulation/FluidSimulation.h"
@@ -23,8 +23,9 @@ public:
     void removeSceneNode(SceneNode* node) const;
 
     // --- Boundary ---
-    void addBoundary(std::unique_ptr<Model> boundary) const;
-    void removeBoundary(Model* boundary) const;
+    void addBoundary(std::unique_ptr<ModelNode> boundary) const;
+    void addBoundary(const std::string& path) const;
+    void removeBoundary(const ModelNode* boundaryNode) const;
 
     BoundaryBuilder* getBoundaryBuilder();
 
@@ -34,16 +35,16 @@ public:
 
     // --- Force Fields ---
     void addForceField() const;
-    void removeForceField(ForceFieldNode* forceFieldNode) const;
+    void removeForceField(const ForceFieldNode* forceFieldNode) const;
 
     // --- Particle Spawns ---
-    void addParticleSpawn(std::unique_ptr<ParticleSpawnModel> model) const;
+    void addParticleSpawn(std::unique_ptr<ParticleSpawnNode> model) const;
 private:
     Scene* scene;
     FluidSimulation* simulation;
     BoundaryBuilder boundryBuilder;
 
-    SceneNode* selectedNode;
+    SceneNode* selectedNode = nullptr;
 };
 
 #endif //SPHLASH_EDITOR_H

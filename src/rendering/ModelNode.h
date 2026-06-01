@@ -1,0 +1,44 @@
+//
+// Created by ruut on 6/1/26.
+//
+
+#ifndef SPHLASH_MODELNODE_H
+#define SPHLASH_MODELNODE_H
+
+#include "BoundingBoxNode.h"
+#include "IBounded.h"
+#include "Model.h"
+#include "Transform.h"
+#include "ui/SceneNode.h"
+
+class ModelNode : public Transform, public SceneNode, public IBounded {
+public:
+    ModelNode(const std::string& name, const std::shared_ptr<Model>& model);
+
+    Model* getModel() const;
+    std::vector<Triangle> getWorldSpaceTriangles() const;
+
+    AABB getBoundingBox() const;
+    AABB getWorldBoundingBox() const override;
+
+    void setTransform(glm::mat4 transform) override;
+    void updateTransform() override;
+
+    // -- Boundary ---
+    bool isBoundary() const;
+    void setBoundary(bool on);
+
+    void draw(const glm::mat4& view, const glm::mat4& projection) const override;
+
+    Properties buildProperties() override;
+
+private:
+    std::shared_ptr<Model> model;
+
+    bool boundary = false;
+    AABB worldBoundingBox;
+
+    BoundingBoxNode* boundingBox;
+};
+
+#endif //SPHLASH_MODELNODE_H

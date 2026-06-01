@@ -44,7 +44,7 @@ void ScenePanel::draw() {
             ImGui::TableSetColumnIndex(0);
             ImGui::AlignTextToFramePadding();
 
-            bool isSelected = (selected == i);
+            bool isSelected = (sceneNodes[i] == editor->getSelected());
 
             if (isSelected) {
                 ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.60f, 0.28f, 0.28f, 1.00f));
@@ -100,8 +100,7 @@ void ScenePanel::draw() {
 
     if (ImGuiFileDialog::Instance()->Display("LoadModel")) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
-            std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-            editor->addBoundary(std::make_unique<Model>(filePathName.c_str()));
+            editor->addBoundary(ImGuiFileDialog::Instance()->GetFilePathName());
         }
 
         ImGuiFileDialog::Instance()->Close();

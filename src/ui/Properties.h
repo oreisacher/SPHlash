@@ -27,6 +27,18 @@ struct FloatProperty : Property {
     void draw() override;
 };
 
+struct BoolProperty : Property {
+    BoolProperty(const std::string& name, std::function<bool()> get, std::function<void (bool)> set)
+        : name(name), get(std::move(get)), set(std::move(set))
+    {}
+
+    std::string                     name;
+    std::function<bool()>          get;
+    std::function<void (bool)>     set;
+
+    void draw() override;
+};
+
 struct Vec3Property : Property {
     Vec3Property(const std::string& name, std::function<glm::vec3()> get, std::function<void (glm::vec3)> set)
         : name(name), get(std::move(get)), set(std::move(set))

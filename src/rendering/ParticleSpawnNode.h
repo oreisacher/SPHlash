@@ -8,13 +8,13 @@
 #include "Model.h"
 #include "simulation/FluidSimulation.h"
 
-class ParticleSpawnModel : public Model {
+class ParticleSpawnNode : public Model {
 public:
-    ParticleSpawnModel(const std::string& path, ParticleSpawn* spawn);
-    ParticleSpawn* getParticleSpawn() const;
+    ParticleSpawnNode(const std::string& path, CudaParticleSpawn* spawn);
+    CudaParticleSpawn* getParticleSpawn() const;
 
 private:
-    ParticleSpawn* spawn;
+    CudaParticleSpawn* spawn;
 };
 
 #endif //SPHLASH_PARTICLESPAWNMODEL_H

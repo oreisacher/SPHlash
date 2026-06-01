@@ -11,6 +11,8 @@
 #include "utils/Logger.h"
 #include "utils/SphereCreator.h"
 #include <vector>
+
+#include "ModelNode.h"
 #include "Scene.h"
 
 FluidRenderer::FluidRenderer(Scene& scene, FluidSimulation* simulation)
@@ -37,6 +39,16 @@ FluidRenderer::~FluidRenderer() {
     delete framebuffer;
 }
 
+void FluidRenderer::renderNode(const SceneNode* node, const glm::mat4& view, const glm::mat4& projection) const {
+    if (!node->isVisible())
+        return;
+
+    node->draw(view, projection);
+
+    for (const auto& child : node->getChildren())
+        renderNode(child, view, projection);
+}
+
 void FluidRenderer::render(const Scene& scene) const {
     // Render into framebuffer
     framebuffer->bind();
@@ -48,12 +60,8 @@ void FluidRenderer::render(const Scene& scene) const {
     auto view = camera->getViewMatrix();
     auto projection = camera->getProjectionMatrix();
 
-    for (const auto renderable : scene.getRenderables()) {
-        if (!renderable.first->isVisible())
-            continue;
-
-        renderable.second->draw(view, projection);
-    }
+    for (const auto node : scene.getSceneNodes())
+        renderNode(node, view, projection);
 }
 
 Shader* FluidRenderer::getParticleShader() const {
@@ -79,23 +87,26 @@ GLuint FluidRenderer::getParticleVBO() const { return particleVBO; }
 
 void FluidRenderer::setupParticles(Scene& scene) {
     // Create particle model
-    auto particleModel = std::make_unique<Model>(
+    auto particleModel = std::make_shared<Model>(
         "Particle",
         Mesh::createSphere("Particle Mesh", 4, 2)
     );
-    this->particleModel = particleModel.get();
 
     Material particleMaterial("Particle", Shader::createParticle());
     this->particleShader = particleMaterial.getShader();
     particleModel->addMaterial(particleMaterial);
 
-    particleModel->setVisible(false);
-    particleModel->setSceneGraphVisible(false);
+    auto particleModelNode = std::make_unique<ModelNode>("Particles", particleModel);
+    this->particleModelNode = particleModelNode.get();
 
-    scene.addModel(std::move(particleModel));
+    particleModelNode->setVisible(false);
+    particleModelNode->setSceneGraphVisible(false);
+    particleModelNode->setBoundary(false);
+
+    scene.addSceneNode(std::move(particleModelNode));
 
     // Setup instancing data
-    glBindVertexArray(this->particleModel->getMeshes()[0]->getVAO());
+    glBindVertexArray(this->particleModelNode->getModel()->getMeshes()[0]->getVAO());
 
     glGenBuffers(1, &particleVBO);
     glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
@@ -123,8 +134,8 @@ void FluidRenderer::updateParticleData() const {
     glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(RendererParticle) * simulation->particleCount, nullptr, GL_DYNAMIC_DRAW);
     simulation->setRendererVBO(particleVBO);
-    particleModel->setInstanceCount(simulation->particleCount);
-    particleModel->setVisible(settings.mode != MARCHING_CUBES);
+    particleModelNode->getModel()->setInstanceCount(simulation->particleCount);
+    particleModelNode->setVisible(settings.mode != MARCHING_CUBES);
 }
 
 void FluidRenderer::updateRenderingSettings() const {
@@ -150,6 +161,6 @@ void FluidRenderer::updateRenderingSettings() const {
 
     // Update particle visibility
     if (simulation->state != UNINITIALIZED) {
-        particleModel->setVisible(settings.mode != MARCHING_CUBES);
+        particleModelNode->setVisible(settings.mode != MARCHING_CUBES);
     }
 }

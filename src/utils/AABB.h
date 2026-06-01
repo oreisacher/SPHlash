@@ -27,7 +27,7 @@ struct AABB {
     float volume() const;
     bool contains(const glm::vec3& point) const;
 
-    AABB tranform(glm::mat4 matrix);
+    glm::mat4 getTransformMatrix() const;
 
     CudaAABB toCudaAABB() const;
 };

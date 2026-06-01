@@ -10,6 +10,7 @@
 #include "Framebuffer.h"
 #include "Mesh.h"
 #include "Model.h"
+#include "ModelNode.h"
 #include "Shader.h"
 #include "glad/gl.h"
 #include "utils/Camera.h"
@@ -80,10 +81,11 @@ public:
 
 private:
     void setupParticles(Scene& scene);
+    void renderNode(const SceneNode* node, const glm::mat4& view, const glm::mat4& projection) const;
 
     FluidSimulation* simulation;
 
-    Model* particleModel                = nullptr;
+    ModelNode* particleModelNode                = nullptr;
     Shader* particleShader;
 
     Framebuffer* framebuffer;

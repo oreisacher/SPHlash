@@ -17,7 +17,8 @@ void BoundingBoxNode::draw(const glm::mat4& view, const glm::mat4& projection) c
     material->bind();
     material->getShader()->setMat4("view", view);
     material->getShader()->setMat4("projection", projection);
-    material->getShader()->setMat4("model", transform);
+
+    material->getShader()->setMat4("model", target ? target->getWorldBoundingBox().getTransformMatrix() : transform );
 
     mesh->draw();
 }
@@ -29,15 +30,28 @@ void BoundingBoxNode::setTransform(glm::mat4 transform) {
     setRotation({0.0, 0.0, 0.0, 0.0});
 }
 
-AABB BoundingBoxNode::getAABB() const {
-    return {
-        position,
-        scale
-    };
+void BoundingBoxNode::setTransform(const AABB& boundingBox) {
+    position = boundingBox.center;
+    rotation = {0.0, 0.0, 0.0, 0.0};
+    scale = boundingBox.size;
+
+    updateTransform();
+}
+
+void BoundingBoxNode::setTarget(IBounded* target) {
+    this->target = target;
+}
+
+void BoundingBoxNode::clearTarget() {
+    this->target = nullptr;
 }
 
 CudaAABB BoundingBoxNode::getCudaAABB() const {
-    return getAABB().toCudaAABB();
+    return getWorldBoundingBox().toCudaAABB();
+}
+
+AABB BoundingBoxNode::getWorldBoundingBox() const {
+    return { position, scale };
 }
 
 Properties BoundingBoxNode::buildProperties() {

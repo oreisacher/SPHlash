@@ -14,6 +14,15 @@ void FloatProperty::draw() {
     float v = get();
     if (ImGui::DragFloat(id.c_str(), &v, 0.01f))
         set(v);
+}
+
+void BoolProperty::draw() {
+    ImGui::Text("%s:", name.c_str());
+    std::string id = "##" + name;
+
+    bool v = get();
+    if (ImGui::Checkbox(id.c_str(), &v))
+        set(v);
 };
 
 void Vec3Property::draw() {

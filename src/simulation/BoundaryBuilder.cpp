@@ -14,7 +14,10 @@ Hex32Field BoundaryBuilder::constructSDFMap(const Scene* scene, CudaAABB domain,
     // Extract list of all triangles from boundary objects of scene
     std::vector<Triangle> triangles;
 
-    for (const auto& model : scene->getBoundaries()) {
+    for (const auto& model : scene->getModels()) {
+        if (!model->isBoundary())
+            continue;
+
         auto modelTriangles = model->getWorldSpaceTriangles();
         triangles.insert(triangles.end(), modelTriangles.begin(), modelTriangles.end());
     }

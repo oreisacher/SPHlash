@@ -5,6 +5,7 @@
 #ifndef SPHLASH_FLUIDSURFACEMESHER_H
 #define SPHLASH_FLUIDSURFACEMESHER_H
 
+#include "ModelNode.h"
 #include "rendering/FluidRenderer.h"
 #include "simulation/FluidSimulation.h"
 
@@ -31,7 +32,7 @@ private:
     FluidRenderer* renderer;
     FluidSimulation* simulation;
 
-    Model* surfaceModel;
+    ModelNode* surfaceModelNode;
     Mesh* surfaceMesh;
 
     VoxelField voxelField;

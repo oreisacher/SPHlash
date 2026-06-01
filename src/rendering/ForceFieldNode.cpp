@@ -18,14 +18,14 @@ CudaForceField ForceFieldNode::getForceField() const {
 }
 
 void ForceFieldNode::draw(const glm::mat4& view, const glm::mat4& projection) const {
-    model->draw(view, projection);
+    model->draw(view, projection, transform);
 }
 
 void ForceFieldNode::setTransform(glm::mat4 transform) {
     Transform::setTransform(transform);
 
     // Sync arrow model transform with this transform
-    model->setTransform(transform);
+    // model->setTransform(transform);
 
     // Update cuda force field
     glm::vec3 right   = rotation * glm::vec3(1, 0,  0);
@@ -43,7 +43,7 @@ void ForceFieldNode::updateTransform() {
     Transform::updateTransform();
 
     // Sync arrow model transform with this transform
-    model->setTransform(transform);
+    // model->setTransform(transform);
 
     // Update cuda force field
     glm::vec3 right   = rotation * glm::vec3(1, 0,  0);

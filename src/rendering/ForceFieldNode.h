@@ -8,7 +8,7 @@
 #include "Model.h"
 #include "simulation/FluidSimulation.h"
 
-class ForceFieldNode : public Transform, public IRenderable, public SceneNode {
+class ForceFieldNode : public Transform, public SceneNode {
 public:
     ForceFieldNode(const std::string& name);
 
