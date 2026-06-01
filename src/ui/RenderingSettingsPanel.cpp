@@ -37,9 +37,6 @@ void RenderingSettingsPanel::draw() {
         if (ImGui::DragFloat("##ps", &renderer->settings.particleSize, 0.0001f, 0.0)) {
             renderer->updateParticleSize();
         }
-        ImGui::Text("Color:");
-        if (ImGui::ColorEdit4("##scpCE", glm::value_ptr(renderer->settings.solidColorParticles)))
-            renderer->updateRenderingSettings();
         ImGui::PopID();
         break;
 

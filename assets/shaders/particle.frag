@@ -5,13 +5,12 @@
 flat in vec3 Velocity;
 flat in vec4 Properties;
 flat in vec4 Flags;
+flat in vec4 Color;
 
 uniform int selectedParticleID = -1;
 
 // --- Rendering modes ---
 uniform int mode = 0;
-
-uniform vec4 particleColor;
 
 uniform vec4 minVelColor;
 uniform float minVel;
@@ -87,7 +86,7 @@ void main() {
 
     // SOLID COLOR PARTICLES
     if (mode == 0) {
-        FragColor = particleColor;
+        FragColor = Color;
         return;
     }
 
@@ -109,7 +108,7 @@ void main() {
     // SURFACE PARTICLES
     if (mode == 3) {
         float t = clamp(Flags.x / maxSurfaceTension, 0.0, 1.0);
-        FragColor = mix(particleColor, vec4(1.0), t);
+        FragColor = mix(Color, vec4(1.0), t);
 //        if (Flags.x > 0.5) {
 //            FragColor = vec4(1.0);
 //        } else {

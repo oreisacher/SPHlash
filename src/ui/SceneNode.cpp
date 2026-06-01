@@ -4,6 +4,11 @@
 
 #include "SceneNode.h"
 
+SceneNode::SceneNode(const nlohmann::json j) {
+    this->name = j["name"];
+    this->visible = j["visible"];
+}
+
 const std::string& SceneNode::getName() const {
     return name;
 }
@@ -26,6 +31,28 @@ bool SceneNode::isSceneGraphVisible() const {
 
 void SceneNode::setSceneGraphVisible(bool visible) {
     this->sceneGraphVisible = visible;
+}
+
+bool SceneNode::isSavable() const {
+    return savable;
+}
+
+void SceneNode::setSavable(bool savable) {
+    this->savable = savable;
+}
+
+nlohmann::json SceneNode::toJson() const {
+    nlohmann::json j;
+
+    j["type"] = getTypeName();
+    j["name"] = name;
+    j["visible"] = visible;
+
+    return j;
+}
+
+std::string SceneNode::getTypeName() const {
+    return "SceneNode";
 }
 
 std::vector<SceneNode*> SceneNode::getChildren() const {

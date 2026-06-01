@@ -1,0 +1,110 @@
+{
+    "nodes": [
+        {
+            "color": [
+                1.0,
+                0.0,
+                0.0,
+                1.0
+            ],
+            "hasShape": false,
+            "name": "Particle Spawn",
+            "particleSpacing": 0.02500000037252903,
+            "position": [
+                -0.053206607699394226,
+                0.0,
+                0.0
+            ],
+            "restDensity": 1000.0,
+            "scale": [
+                0.8303536772727966,
+                1.0,
+                0.9999979138374329
+            ],
+            "type": "BoundingBoxParticleSpawnNode",
+            "visible": true
+        },
+        {
+            "boundary": true,
+            "name": "test",
+            "path": "assets/models/test.obj",
+            "position": [
+                1.6262543201446533,
+                -0.8464258909225464,
+                0.0
+            ],
+            "rotation": [
+                0.0,
+                -0.47537392377853394,
+                0.0,
+                0.8797838687896729
+            ],
+            "scale": [
+                0.2000000774860382,
+                0.20000004768371582,
+                0.2000000774860382
+            ],
+            "type": "ModelNode",
+            "visible": true
+        },
+        {
+            "active": true,
+            "name": "Force Field",
+            "position": [
+                1.6286238431930542,
+                -0.9135032296180725,
+                0.3534870445728302
+            ],
+            "rotation": [
+                0.001686680014245212,
+                0.9994987845420837,
+                -0.030884940177202225,
+                -0.006740121636539698
+            ],
+            "scale": [
+                0.41074034571647644,
+                0.6250894665718079,
+                0.7628746628761292
+            ],
+            "strength": 100.0,
+            "type": "ForceFieldNode",
+            "visible": true
+        },
+        {
+            "color": [
+                0.0,
+                1.0,
+                0.0,
+                1.0
+            ],
+            "hasShape": false,
+            "name": "Particle Spawn",
+            "particleSpacing": 0.02500000037252903,
+            "position": [
+                1.7202174663543701,
+                0.3278162479400635,
+                0.07316875457763672
+            ],
+            "restDensity": 1000.0,
+            "scale": [
+                0.6640905141830444,
+                1.0,
+                0.6374867558479309
+            ],
+            "type": "BoundingBoxParticleSpawnNode",
+            "visible": true
+        }
+    ],
+    "simulationDomain": {
+        "center": [
+            0.7602249979972839,
+            0.0,
+            0.0
+        ],
+        "size": [
+            2.952282667160034,
+            2.0,
+            1.3225200176239014
+        ]
+    }
+}

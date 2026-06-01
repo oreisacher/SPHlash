@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include "glm/vec3.hpp"
+#include "glm/vec4.hpp"
 
 struct Property {
     virtual ~Property() = default;
@@ -50,6 +51,19 @@ struct Vec3Property : Property {
 
     void draw() override;
 };
+
+struct ColorProperty : Property {
+    ColorProperty(const std::string& name, std::function<glm::vec4()> get, std::function<void (glm::vec4)> set)
+        : name(name), get(std::move(get)), set(std::move(set))
+    {}
+
+    std::string                     name;
+    std::function<glm::vec4()>      get;
+    std::function<void (glm::vec4)> set;
+
+    void draw() override;
+};
+
 
 struct Section {
     std::string name;

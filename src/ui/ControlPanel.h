@@ -11,13 +11,14 @@
 
 class ControlPanel : public UIPanel {
 public:
-    explicit ControlPanel(FluidSimulation* simulation, FluidSurfaceMesher* mesher);
+    explicit ControlPanel(FluidSimulation* simulation, FluidRenderer* renderer, FluidSurfaceMesher* mesher);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
     FluidSimulation* simulation;
+    FluidRenderer* renderer;
     FluidSurfaceMesher* mesher;
 
     float timeStep = 0.0;

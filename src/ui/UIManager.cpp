@@ -199,10 +199,8 @@ void UIManager::draw() const {
         ImGui::DockBuilderDockWindow("Particles", dock_right_2);
         ImGui::DockBuilderDockWindow("Statistics", dock_right_3);
         ImGui::DockBuilderDockWindow("Controls", dock_left_1);
-        ImGui::DockBuilderDockWindow("Init Settings", dock_left_2);
         ImGui::DockBuilderDockWindow("Scene", dock_left_2);
         ImGui::DockBuilderDockWindow("Properties", dock_left_3);
-        ImGui::DockBuilderDockWindow("Boundaries", dock_left_2);
 
         ImGui::DockBuilderFinish(dockspace_id);
     }

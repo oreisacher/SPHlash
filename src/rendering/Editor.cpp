@@ -6,42 +6,20 @@
 #include <memory>
 
 #include "BoundingBoxNode.h"
+#include "BoundingBoxParticleSpawnNode.h"
 #include "simulation/BoundaryBuilder.h"
 #include "ui/SimulationPanel.h"
 
 Editor::Editor(Scene& scene, FluidSimulation* sim)
     : scene(&scene), simulation(sim)
-{
-    // Setup basic editor objects
-    auto spawnArea = std::make_unique<BoundingBoxNode>("Spawn Area", glm::vec3(1.0f, 0.3f, 0.3f));
-    spawnArea->setDeletable(false);
-    scene.addSceneNode(std::move(spawnArea));
-
-    // DEBUG Suzanne model
-    auto model = std::make_shared<Model>("assets/models/suzanne.obj");
-    auto modelNode = std::make_unique<ModelNode>("Suzanne", model);
-    scene.addSceneNode(std::move(modelNode));
-}
+{ }
 
 Scene* Editor::getScene() const {
     return scene;
 }
 
-// void Editor::updateSpawnAreaTransform() {
-//     if (!spawnAreaModel)
-//         return;
-//
-//     spawnAreaModel->setTransform(calculateModelMatrix(
-//         simulation->initSettings.spawnArea.center, simulation->initSettings.spawnArea.size
-//     ));
-// }
-
-void Editor::addParticleSpawn(std::unique_ptr<ParticleSpawnNode> model) const {
-    auto particleSpawn = std::make_unique<CudaParticleSpawn>();
-}
-
 void Editor::addForceField() const {
-    auto forceFieldNode = std::make_unique<ForceFieldNode>("Force Field");
+    auto forceFieldNode = std::make_unique<ForceFieldNode>(std::string("Force Field"));
     scene->addSceneNode(std::move(forceFieldNode));
     simulation->rebuildForceFieldBuffer();
 }
@@ -49,6 +27,12 @@ void Editor::addForceField() const {
 void Editor::removeForceField(const ForceFieldNode* forceFieldNode) const {
     scene->removeSceneNode(forceFieldNode);
     simulation->rebuildForceFieldBuffer();
+}
+
+void Editor::addParticleSpawn(const std::string& path) const {
+    if (path.empty()) {
+        scene->addSceneNode(std::make_unique<BoundingBoxParticleSpawnNode>(std::string("Particle Spawn")));
+    }
 }
 
 void Editor::addBoundary(std::unique_ptr<ModelNode> boundaryNode) const {

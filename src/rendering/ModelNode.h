@@ -14,6 +14,7 @@
 class ModelNode : public Transform, public SceneNode, public IBounded {
 public:
     ModelNode(const std::string& name, const std::shared_ptr<Model>& model);
+    ModelNode(const nlohmann::json json);
 
     Model* getModel() const;
     std::vector<Triangle> getWorldSpaceTriangles() const;
@@ -31,6 +32,9 @@ public:
     void draw(const glm::mat4& view, const glm::mat4& projection) const override;
 
     Properties buildProperties() override;
+
+    nlohmann::json toJson() const override;
+    std::string getTypeName() const override;
 
 private:
     std::shared_ptr<Model> model;

@@ -49,6 +49,7 @@ FluidSurfaceMesher::FluidSurfaceMesher(Scene& scene, FluidSimulation* simulation
     // Default state invisible
     modelNode->setVisible(false);
     modelNode->setSceneGraphVisible(false);
+    modelNode->setSavable(false);
     modelNode->setBoundary(false);
 
     scene.addSceneNode(std::move(modelNode));

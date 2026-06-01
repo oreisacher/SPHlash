@@ -101,6 +101,7 @@ void FluidRenderer::setupParticles(Scene& scene) {
 
     particleModelNode->setVisible(false);
     particleModelNode->setSceneGraphVisible(false);
+    particleModelNode->setSavable(false);
     particleModelNode->setBoundary(false);
 
     scene.addSceneNode(std::move(particleModelNode));
@@ -127,14 +128,23 @@ void FluidRenderer::setupParticles(Scene& scene) {
     glEnableVertexAttribArray(5);
     glVertexAttribDivisor(5, 1);
 
+    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(RendererParticle), (void*)offsetof(RendererParticle, color));
+    glEnableVertexAttribArray(6);
+    glVertexAttribDivisor(6, 1);
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void FluidRenderer::updateParticleData() const {
     glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(RendererParticle) * simulation->particleCount, nullptr, GL_DYNAMIC_DRAW);
+
+    if (simulation->getParticleCount() > 0)
+        glBufferData(GL_ARRAY_BUFFER, sizeof(RendererParticle) * simulation->getParticleCount(), nullptr, GL_DYNAMIC_DRAW);
+    else
+        glBufferData(GL_ARRAY_BUFFER, 1, nullptr, GL_DYNAMIC_DRAW);
+
     simulation->setRendererVBO(particleVBO);
-    particleModelNode->getModel()->setInstanceCount(simulation->particleCount);
+    particleModelNode->getModel()->setInstanceCount(simulation->getParticleCount());
     particleModelNode->setVisible(settings.mode != MARCHING_CUBES);
 }
 
@@ -144,8 +154,6 @@ void FluidRenderer::updateRenderingSettings() const {
 
     particleShader->setInt("mode", settings.mode);
     particleShader->setFloat("size", settings.particleSize);
-
-    particleShader->setVec4("particleColor", settings.solidColorParticles);
 
     particleShader->setVec4("minVelColor", settings.minVelColor);
     particleShader->setVec4("maxVelColor", settings.maxVelColor);

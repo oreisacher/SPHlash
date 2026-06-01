@@ -106,7 +106,11 @@ void ScenePanel::draw() {
         ImGuiFileDialog::Instance()->Close();
     }
 
-    if (ImGui::Button("Add Boundary Model", ImVec2(totalWidth, 0))) {
+    if (ImGui::Button("Add Particle Spawn Cube", ImVec2(totalWidth, 0))) {
+        editor->addParticleSpawn("");
+    }
+
+    if (ImGui::Button("Add Model", ImVec2(totalWidth, 0))) {
         IGFD::FileDialogConfig config;
         config.path = ".";
         ImGuiFileDialog::Instance()->OpenDialog("LoadModel", "Choose Model", ".obj", config);
@@ -114,6 +118,38 @@ void ScenePanel::draw() {
 
     if (ImGui::Button("Add Force Field", ImVec2(totalWidth, 0))) {
         editor->addForceField();
+    }
+
+    ImGui::SeparatorText("");
+
+    if (ImGui::Button("Save Scene", ImVec2(totalWidth, 0))) {
+        IGFD::FileDialogConfig config;
+        config.path = ".";
+        ImGuiFileDialog::Instance()->OpenDialog("SaveScene", "Choose location", ".json", config);
+    }
+
+    if (ImGuiFileDialog::Instance()->Display("SaveScene")) {
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+            scene->saveScene(filePathName);
+        }
+
+        ImGuiFileDialog::Instance()->Close();
+    }
+
+    if (ImGui::Button("Load Scene", ImVec2(totalWidth, 0))) {
+        IGFD::FileDialogConfig config;
+        config.path = ".";
+        ImGuiFileDialog::Instance()->OpenDialog("LoadScene", "Choose location", ".json", config);
+    }
+
+    if (ImGuiFileDialog::Instance()->Display("LoadScene")) {
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+            scene->loadScene(filePathName);
+        }
+
+        ImGuiFileDialog::Instance()->Close();
     }
 
     ImGui::End();

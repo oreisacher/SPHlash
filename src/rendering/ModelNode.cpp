@@ -4,6 +4,8 @@
 
 #include "ModelNode.h"
 
+#include "Scene.h"
+
 ModelNode::ModelNode(const std::string& name, const std::shared_ptr<Model>& model) {
     this->name = name;
     this->model = model;
@@ -16,6 +18,39 @@ ModelNode::ModelNode(const std::string& name, const std::shared_ptr<Model>& mode
     boundingBox->setTarget(this);
     boundingBox->setVisible(false);
     children.push_back(std::move(bbNode));
+}
+
+ModelNode::ModelNode(const nlohmann::json json) : SceneNode(json) {
+    // Transform
+    position = {
+        json["position"][0].get<float>(),
+        json["position"][1].get<float>(),
+        json["position"][2].get<float>()
+    };
+    rotation = {
+        json["rotation"][3].get<float>(),
+        json["rotation"][0].get<float>(),
+        json["rotation"][1].get<float>(),
+        json["rotation"][2].get<float>()
+    };
+    scale = {
+        json["scale"][0].get<float>(),
+        json["scale"][1].get<float>(),
+        json["scale"][2].get<float>()
+    };
+
+    // ModelNode
+    boundary = json["boundary"];
+    model = std::make_shared<Model>(json["path"]);
+
+    // Add bounding box node as child
+    auto bbNode = std::make_unique<BoundingBoxNode>("Bounding Box", glm::vec3(1.0f));
+    boundingBox = bbNode.get();
+    boundingBox->setTarget(this);
+    boundingBox->setVisible(false);
+    children.push_back(std::move(bbNode));
+
+    ModelNode::updateTransform();
 }
 
 Model* ModelNode::getModel() const {
@@ -98,4 +133,23 @@ Properties ModelNode::buildProperties() {
     ));
 
     return properties;
+}
+
+nlohmann::json ModelNode::toJson() const {
+    nlohmann::json j = SceneNode::toJson();
+
+    // Transform
+    j["position"] = { position.x, position.y, position.z };
+    j["rotation"] = { rotation.x, rotation.y, rotation.z, rotation.w };
+    j["scale"] = { scale.x, scale.y, scale.z };
+
+    // Model
+    j["boundary"] = boundary;
+    j["path"] = model->getPath();
+
+    return j;
+}
+
+std::string ModelNode::getTypeName() const {
+    return "ModelNode";
 }

@@ -106,12 +106,16 @@ void launchRenderPrepareKernel(
 );
 
 void launchInitParticlesKernel(
-    const int numParticles,
+    CudaParticleSpawn spawn,
     ParticleGPU* particles,
-    const int3 gridCount,
-    const float4 startPosition,
-    const float particleSpacing,
-    const float mass
+    int* particleCount,
+    const int3 gridCount
+);
+
+void launchUpdateParticleMassKernel(
+    int numParticles,
+    ParticleGPU* particles,
+    float mass
 );
 
 void launchResetParticlesKernel(

@@ -11,6 +11,7 @@
 class ForceFieldNode : public Transform, public SceneNode {
 public:
     ForceFieldNode(const std::string& name);
+    explicit ForceFieldNode(const nlohmann::json json);
 
     CudaForceField getForceField() const;
 
@@ -20,6 +21,9 @@ public:
     void updateTransform() override;
 
     Properties buildProperties() override;
+
+    nlohmann::json toJson() const override;
+    std::string getTypeName() const override;
 
 private:
     std::unique_ptr<Model> model;

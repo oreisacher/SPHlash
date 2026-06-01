@@ -34,6 +34,15 @@ void Vec3Property::draw() {
         set(v);
 }
 
+void ColorProperty::draw() {
+    ImGui::Text("%s:", name.c_str());
+    std::string id = "##" + name;
+
+    glm::vec4 v = get();
+    if (ImGui::ColorEdit4(id.c_str(), glm::value_ptr(v)))
+        set(v);
+}
+
 void Properties::addSection(const std::string& section) {
     sections.push_back({ section, static_cast<int>(properties.size()) });
 }

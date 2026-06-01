@@ -695,6 +695,9 @@ __global__ void updateParticlesKernel(
 
     // Check force fields
     for (int f = 0 ; f < numForceFields; f++) {
+        if (!forceFields[f].active)
+            continue;
+
         if (isInsideField(make_float3(particle->position.x, particle->position.y, particle->position.z), forceFields[f])) {
             acceleration += toWorldForce({ forceFields[f].strength, 0.0, 0.0, 0.0 }, forceFields[f]);
         }
@@ -771,6 +774,7 @@ __global__ void renderPrepareKernel(
     rendererParticles[id].velocity = particles[id].velocity;
     rendererParticles[id].properties = particles[id].properties;
     rendererParticles[id].flags = particles[id].flags;
+    rendererParticles[id].color = particles[id].color;
 }
 
 void launchRenderPrepareKernel(
@@ -787,16 +791,14 @@ void launchRenderPrepareKernel(
 }
 
 __global__ void initParticlesKernel(
-    const int numParticles,
+    CudaParticleSpawn spawn,
     ParticleGPU* particles,
-    const int3 gridCount,
-    const float4 startPosition,
-    const float particleSpacing,
-    const float mass
+    int* particleCount,
+    const int3 gridCount
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
 
-    if (id >= numParticles)
+    if (id >= gridCount.x * gridCount.y * gridCount.z)
         return;
 
     // Map id to 3d position
@@ -804,34 +806,66 @@ __global__ void initParticlesKernel(
     const int gy = (id / gridCount.x) % gridCount.y;
     const int gz = id / (gridCount.x * gridCount.y);
 
-    float posX = startPosition.x + gx * particleSpacing;
-    float posY = startPosition.y + gy * particleSpacing;
-    float posZ = startPosition.z + gz * particleSpacing;
+    float posX = spawn.area.min.x + gx * spawn.particleSpacing;
+    float posY = spawn.area.min.y + gy * spawn.particleSpacing;
+    float posZ = spawn.area.min.z + gz * spawn.particleSpacing;
 
-    ParticleGPU* particle = &particles[id];
-    particle->position = { posX, posY, posZ, 0.0 };
-    particle->startPosition = particle->position;
-    particle->velocity = { 0.0, 0.0, 0.0, 0.0 };
-    particle->properties = { mass, 0.0, 0.0, static_cast<float>(id) };
-    particle->flags = { 0.0, 0.0, 0.0, 0.0 };
-    particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    particle->surfaceTensionForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    if (spawn.hasShape) {
+
+    } else {
+        int slot = atomicAdd(particleCount, 1);
+
+        ParticleGPU* particle = &particles[slot];
+        particle->position = { posX, posY, posZ, 0.0 };
+        particle->startPosition = particle->position;
+        particle->velocity = { 0.0, 0.0, 0.0, 0.0 };
+        particle->properties = { spawn.restDensity, 0.0, 0.0, static_cast<float>(slot) };
+        particle->flags = { 0.0, 0.0, 0.0, 0.0 };
+        particle->color = spawn.color;
+        particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        particle->surfaceTensionForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    }
 }
 
 void launchInitParticlesKernel(
-    const int numParticles,
+    CudaParticleSpawn spawn,
     ParticleGPU* particles,
-    const int3 gridCount,
-    const float4 startPosition,
-    const float particleSpacing,
-    const float mass
+    int* particleCount,
+    const int3 gridCount
+) {
+    int threadsPerBlock = 256;
+    int blocks = (gridCount.x * gridCount.y * gridCount.z + threadsPerBlock - 1) / threadsPerBlock;
+
+    initParticlesKernel<<<blocks, threadsPerBlock>>>(
+        spawn, particles, particleCount, gridCount
+    );
+}
+
+__global__ void updateParticleMassKernel(
+    int numParticles,
+    ParticleGPU* particles,
+    float mass
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (id >= numParticles)
+        return;
+
+    ParticleGPU* particle = &particles[id];
+    particle->properties.x = mass;
+}
+
+void launchUpdateParticleMassKernel(
+    int numParticles,
+    ParticleGPU* particles,
+    float mass
 ) {
     int threadsPerBlock = 256;
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
-    initParticlesKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, gridCount, startPosition, particleSpacing, mass
+    updateParticleMassKernel<<<blocks, threadsPerBlock>>>(
+        numParticles, particles, mass
     );
 }
 

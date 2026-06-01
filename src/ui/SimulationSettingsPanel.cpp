@@ -8,12 +8,15 @@
 
 #include "imgui.h"
 #include "ImGuiFileDialog.h"
+#include "UIManager.h"
 #include "glm/gtc/type_ptr.inl"
 #include "simulation/FluidSimulation.h"
 
 SimulationSettingsPanel::SimulationSettingsPanel(Editor* editor, FluidSimulation* simulation, FluidRenderer* renderer)
     : UIPanel("Simulation Settings"), editor(editor), simulation(simulation), renderer(renderer)
-{ }
+{
+    boundaryBuilder = editor->getBoundaryBuilder();
+}
 
 void SimulationSettingsPanel::update(double deltaTime) { }
 
@@ -65,6 +68,48 @@ void SimulationSettingsPanel::draw() {
 
         ImGui::Text("Safety Factor:");
         ImGui::DragFloat("##cflSF", &simulation->settings.safetyFactor, 0.01);
+    }
+
+    if (ImGui::CollapsingHeader("Boundary Settings")) {
+        ImGui::Text("Resolution:");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Resolution of signed distance field and volume map used for boundaries");
+        ImGui::DragInt3("##bbres", glm::value_ptr(boundaryBuilder->settings.resolution), 1, 2, 1024, "%d", ImGuiSliderFlags_AlwaysClamp);
+
+        ImGui::Spacing();
+
+        Hex32Field boundaryField = editor->getBoundaryDensityMap();
+
+        if (ImGui::Button(boundaryField.d_cells ? "Rebuild Boundary Map" : "Build Boundary Map", ImVec2(totalWidth, 0.0f))) {
+            if (volumeMapPreview)
+                volumeMapPreview->close();
+
+            editor->buildBoundaryDensityMap();
+        }
+
+        if (boundaryField.d_cells) {
+            if (ImGui::Button("Clear Boundary Map", ImVec2(totalWidth, 0.0f))) {
+                if (volumeMapPreview)
+                    volumeMapPreview->close();
+
+                editor->clearBoundaryDensityMap();
+            }
+
+            if (ImGui::Button(volumeMapPreview ? "Hide Boundary Map" : "Show Boundary Map", ImVec2(totalWidth, 0.0f))) {
+                // Show density map preview
+                if (volumeMapPreview == nullptr) {
+                    volumeMapPreview = new Texture3DPanel("Volume Map", boundaryField.texture, boundaryField.resolution.x, boundaryField.resolution.y, boundaryField.resolution.z);
+                    manager->addPanel(volumeMapPreview);
+
+                    volumeMapPreview->addOnCloseListener([this] () {
+                        volumeMapPreview = nullptr;
+                    });
+                } else {
+                    volumeMapPreview->close();
+                    volumeMapPreview = nullptr;
+                }
+            }
+        }
     }
 
     ImGui::Spacing();

@@ -21,19 +21,14 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 
 #define WINDOW_SIZE_X 1200
-#define WINDOW_SIZE_Y 800
+#define WINDOW_SIZE_Y 900
 #define SIM_UNITS_PER_PIXEL (1.0 / 600)
 
 #include "tiny_obj_loader.h"
-#include "rendering/ForceFieldNode.h"
-#include "rendering/Mesh.h"
-#include "ui/BoundariesPanel.h"
 #include "ui/ControlPanel.h"
-#include "ui/InitPanel.h"
 #include "ui/PropertiesPanel.h"
 #include "ui/ScenePanel.h"
 #include "ui/RenderingSettingsPanel.h"
-#include "ui/Texture3DPanel.h"
 
 Application::Application() {
     // Window creation
@@ -60,13 +55,11 @@ Application::Application() {
     // Setup UI
     ui = new UIManager(window->getNativeWindow());
     ui->addPanel(new SimulationPanel            (editor, renderer->getTextureId()));
-    ui->addPanel(new ControlPanel               (simulation, surfaceMesher));
+    ui->addPanel(new ControlPanel               (simulation, renderer, surfaceMesher));
     ui->addPanel(new StatisticsPanel            (simulation));
-    ui->addPanel(new InitPanel                  (editor, simulation, renderer, surfaceMesher));
     ui->addPanel(new SimulationSettingsPanel    (editor, simulation, renderer));
     ui->addPanel(new RenderingSettingsPanel     (renderer, surfaceMesher));
     ui->addPanel(new ParticlesPanel             (simulation, renderer));
-    ui->addPanel(new BoundariesPanel            (editor));
     ui->addPanel(new PropertiesPanel            (editor));
     ui->addPanel(new ScenePanel                 (scene, editor, renderer));
 

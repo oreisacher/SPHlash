@@ -31,9 +31,6 @@ struct RenderingSettings {
 
     RenderMode mode = SOLID_COLOR_PARTICLES;
 
-    // SOLID_COLOR_PARTICLES
-    glm::vec4 solidColorParticles = glm::vec4(1.0, 0.0, 0.0, 1.0);
-
     // VELOCITY_PARTICLES
     glm::vec4 minVelColor = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
     glm::vec4 maxVelColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
@@ -55,6 +52,7 @@ struct RendererParticle {
     float4 velocity;
     float4 properties;
     float4 flags;
+    float4 color;
 };
 
 class FluidRenderer {

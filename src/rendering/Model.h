@@ -22,6 +22,7 @@ public:
     Model(const std::string& name, std::vector<std::unique_ptr<Mesh>> meshes);
 
     std::string getName() const;
+    std::string getPath() const;
 
     void draw(const glm::mat4& view, const glm::mat4& projection, const glm::mat4& transform) const;
 
@@ -38,7 +39,9 @@ public:
     void setInstanceCount(int c);
 
 protected:
-    std::string name;
+    std::string name = "Undefined";
+    std::string path = "";
+
     AABB localBounds;
 
     std::vector<std::unique_ptr<Mesh>> meshes   = {};

@@ -10,11 +10,15 @@
 
 class BoundingBoxParticleSpawnNode : public BoundingBoxNode, public IParticleSpawn {
 public:
-    BoundingBoxParticleSpawnNode(const std::string& name, const glm::vec3& color);
+    BoundingBoxParticleSpawnNode(const std::string& name);
+    explicit BoundingBoxParticleSpawnNode(const nlohmann::json json);
 
     CudaParticleSpawn getParticleSpawn() override;
 
     Properties buildProperties() override;
+
+    nlohmann::json toJson() const override;
+    std::string getTypeName() const override;
 
 private:
     CudaParticleSpawn particleSpawn;

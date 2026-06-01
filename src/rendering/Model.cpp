@@ -17,11 +17,14 @@
 
 Model::Model(const std::string& path, bool shaded) {
     name = std::filesystem::path(path).stem().string();
+    this->path = path;
 
     // Load model from disk
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
+
+    std::string baseDir = std::filesystem::path(path).parent_path().string();
 
     bool success = tinyobj::LoadObj(
         &attrib,
@@ -30,7 +33,7 @@ Model::Model(const std::string& path, bool shaded) {
         nullptr,
         nullptr,
         path.c_str(),
-        "assets/models"
+        baseDir.c_str()
     );
 
     if (!success) {
@@ -132,6 +135,10 @@ Model::Model(const std::string& name, std::vector<std::unique_ptr<Mesh>> meshes)
 
 std::string Model::getName() const {
     return name;
+}
+
+std::string Model::getPath() const {
+    return path;
 }
 
 void Model::draw(const glm::mat4& view, const glm::mat4& projection, const glm::mat4& transform) const {

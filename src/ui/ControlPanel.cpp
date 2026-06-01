@@ -6,8 +6,8 @@
 #include "imgui.h"
 #include <iostream>
 
-ControlPanel::ControlPanel(FluidSimulation* simulation, FluidSurfaceMesher* mesher)
-    : UIPanel("Controls"), simulation(simulation), mesher(mesher) {
+ControlPanel::ControlPanel(FluidSimulation* simulation, FluidRenderer* renderer, FluidSurfaceMesher* mesher)
+    : UIPanel("Controls"), simulation(simulation), renderer(renderer), mesher(mesher) {
 }
 
 void ControlPanel::update(double deltaTime) { }
@@ -20,6 +20,12 @@ void ControlPanel::draw() {
 
     ImGui::PushItemWidth(-FLT_MIN);
     float totalWidth = ImGui::GetContentRegionAvail().x;
+
+    if (ImGui::Button("Init Simulation", ImVec2(totalWidth, 0))) {
+        simulation->initParticles();
+        renderer->updateParticleData();
+        mesher->generateMesh(true);
+    }
 
     ImGui::BeginDisabled(simulation->state == UNINITIALIZED);
 

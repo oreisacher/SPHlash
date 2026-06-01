@@ -6,10 +6,8 @@
 #define SPHLASH_SCENE_H
 
 #include <memory>
-
 #include "BoundingBoxNode.h"
 #include "ForceFieldNode.h"
-#include "Model.h"
 #include "simulation/FluidSimulation.h"
 #include "simulation/IParticleSpawn.h"
 #include "utils/Camera.h"
@@ -23,45 +21,28 @@ public:
     void addSceneNode(std::unique_ptr<SceneNode> node);
     void removeSceneNode(const SceneNode* node);
 
-    // // --- Models ---
-    // void addModel(std::unique_ptr<Model> model);
-    // void removeModel(const Model* model);
-    // void removeModel(int index);
-    // void removeModel(const std::string& name);
-    // std::vector<Model*> getModels() const;
-    //
-    // // --- Boundary ---
-    // void addBoundary(std::unique_ptr<Model> boundary);
-    // void removeBoundary(const Model* boundary);
     std::vector<ModelNode*> getModels() const;
-    //
-    // // --- Bounding Boxes ---
-    // void addBoundingBox(std::unique_ptr<BoundingBoxNode> boundingBox);
-    // void removeBoundingBox(const BoundingBoxNode* model);
     std::vector<BoundingBoxNode*> getBoundingBoxes() const;
-    //
-    // // --- Force Fields ---
-    // void addForceField(std::unique_ptr<ForceFieldNode> forceField);
-    // void removeForceField(const ForceFieldNode* forceField);
     std::vector<ForceFieldNode*> getForceFields() const;
-
-    // // --- Particle Spawns ---
-    // void addParticleSpawn(std::unique_ptr<IParticleSpawn> particleSpawn);
-    // void removeParticleSpawn(const IParticleSpawn* particleSpawn);
     std::vector<IParticleSpawn*> getParticleSpawns() const;
-
     std::vector<SceneNode*> getSceneNodes() const;
 
+    void saveScene(const std::string& path) const;
+    void loadScene(const std::string& path);
+
 private:
-    std::unique_ptr<Camera> camera                                  = nullptr;
+    std::unique_ptr<Camera> camera                      = nullptr;
 
-    std::vector<std::unique_ptr<SceneNode>> sceneNodes                 = {};
+    // --- Scene Nodes ---
+    std::vector<std::unique_ptr<SceneNode>> sceneNodes  = {};
 
-    // std::vector<std::unique_ptr<Model>>             models              = {};
+    // --- Node Cache ---
     std::vector<ModelNode*>         models              = {};
     std::vector<BoundingBoxNode*>   boundingBoxes       = {};
     std::vector<ForceFieldNode*>    forceFields         = {};
     std::vector<IParticleSpawn*>    particleSpawns      = {};
+
+    std::unique_ptr<SceneNode> nodeFromJson(const nlohmann::json& j);
 };
 
 #endif //SPHLASH_SCENE_H

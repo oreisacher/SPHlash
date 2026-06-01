@@ -27,7 +27,7 @@ void StatisticsPanel::update(double deltaTime) {
         fpsTimesOffset = (fpsTimesOffset + 1) % FPS_TIMES_COUNT;
 
         // Update cfl
-        cflTimes[cflTimesOffset] = simulation->cfl;
+        cflTimes[cflTimesOffset] = simulation->getCFL();
         cflTimesOffset = (cflTimesOffset + 1) % CFL_COUNT;
     }
 }

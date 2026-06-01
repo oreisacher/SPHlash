@@ -25,6 +25,7 @@ struct ParticleGPU {
     float4 velocity                 = { 0.0f, 0.0f, 0.0f, 0.0f };
     float4 properties               = { -1.0f, -1.0f, -1.0f, -1.0f };   // x: mass, y: density, z: pressure, w: id
     float4 flags                    = { 0.0f, 0.0f, 0.0f, 0.0f };       // x: surface, y: undefined, z: undefined, w: undefined
+    float4 color                    = { 0.0f, 0.0f, 0.0f, 1.0f };
 
     // SPH Forces
     float4 pressureForce            = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -43,23 +44,14 @@ struct CudaForceField {
     float3 up           = { 0.0f, 1.0f, 0.0f };
     float3 forward      = { 0.0f, 0.0f, 1.0f };
 
+    bool active         = true;
     float strength      = 5.0f;
 };
 
-struct InitSettings {
-    float totalMass = 1000.0f;
-    float particleSpacing = 0.025f;
-
-    // Spawn area
-    AABB spawnArea = {
-        { 0.0f, 0.0f, 0.0f },
-        { 1.0f, 1.0f, 1.0f }
-    };
-};
-
 struct CudaParticleSpawn {
-    float totalMass         = 1000.0f;
+    float restDensity       = 1000.0f;
     float particleSpacing   = 0.025f;
+    float4 color            = { 1.0f, 0.0f, 0.0f, 1.0f };
 
     CudaAABB area = {
         { 0.0f, 0.0f, 0.0f },
@@ -112,9 +104,12 @@ public:
     void pause();
     void reset();
 
-    void initParticles();
+    bool initParticles();
 
     void setRendererVBO(GLuint vbo);
+
+    float getCFL() const;
+    int getParticleCount() const;
 
     BoundingBoxNode* getDomain() const;
 
@@ -130,10 +125,6 @@ public:
 
     ParticleGPU getParticle(int id) const;
 
-    float cfl = 0;
-    int particleCount = 0;
-
-    InitSettings initSettings;
     SimulationSettings settings;
 
     // --- Simulation State ---
@@ -141,6 +132,9 @@ public:
 private:
     Scene* scene;
     BoundingBoxNode* domain;
+
+    float cfl = 0;
+    int particleCount = 0;
 
     // --- Particles ---
     ParticleGPU* d_particles            = nullptr;

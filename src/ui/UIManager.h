@@ -20,7 +20,6 @@ public:
     void closePanel(UIPanel *panel);
     void closePanel(const std::string& name);
 
-
     void update(double deltaTime);
     void draw() const;
 

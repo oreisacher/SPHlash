@@ -6,10 +6,14 @@
 #define SPHLASH_SCENENODE_H
 
 #include "ISelectable.h"
+#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
 #include "rendering/IRenderable.h"
 
 class SceneNode : public ISelectable, public IRenderable {
 public:
+    SceneNode() = default;
+    SceneNode(const nlohmann::json j);
     ~SceneNode() override = default;
 
     // --- Name ---
@@ -26,6 +30,13 @@ public:
     bool isSceneGraphVisible() const;
     void setSceneGraphVisible(bool visible);
 
+    // --- Save / Load ---
+    bool isSavable() const;
+    void setSavable(bool savable);
+
+    virtual nlohmann::json toJson() const;
+    virtual std::string getTypeName() const;
+
     std::vector<SceneNode*> getChildren() const;
 
 protected:
@@ -35,6 +46,7 @@ protected:
     bool deletable = true;
 
     bool sceneGraphVisible = true;
+    bool savable = true;
 
     std::vector<std::unique_ptr<SceneNode>> children;
 };
