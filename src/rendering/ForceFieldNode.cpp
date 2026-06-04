@@ -21,10 +21,10 @@ ForceFieldNode::ForceFieldNode(const nlohmann::json json) : SceneNode(json) {
         json["position"][2].get<float>()
     };
     rotation = {
+        json["rotation"][3].get<float>(),
         json["rotation"][0].get<float>(),
         json["rotation"][1].get<float>(),
-        json["rotation"][2].get<float>(),
-        json["rotation"][3].get<float>()
+        json["rotation"][2].get<float>()
     };
     scale = {
         json["scale"][0].get<float>(),

@@ -9,6 +9,7 @@
 #include "nlohmann/json.hpp"
 #include "nlohmann/json_fwd.hpp"
 #include "rendering/IRenderable.h"
+#include <unordered_set>
 
 class SceneNode : public ISelectable, public IRenderable {
 public:
@@ -30,6 +31,12 @@ public:
     bool isSceneGraphVisible() const;
     void setSceneGraphVisible(bool visible);
 
+    // --- Tags ---
+    void addTag(const std::string& tag);
+    void removeTag(const std::string& tag);
+    bool hasTag(const std::string& tag) const;
+    const std::unordered_set<std::string>& getTags() const;
+
     // --- Save / Load ---
     bool isSavable() const;
     void setSavable(bool savable);
@@ -47,6 +54,8 @@ protected:
 
     bool sceneGraphVisible = true;
     bool savable = true;
+
+    std::unordered_set<std::string> tags = {};
 
     std::vector<std::unique_ptr<SceneNode>> children;
 };

@@ -21,6 +21,8 @@ public:
     void addSceneNode(std::unique_ptr<SceneNode> node);
     void removeSceneNode(const SceneNode* node);
 
+    void setSimulationDomain(BoundingBoxNode* domain);
+
     std::vector<ModelNode*> getModels() const;
     std::vector<BoundingBoxNode*> getBoundingBoxes() const;
     std::vector<ForceFieldNode*> getForceFields() const;
@@ -29,6 +31,7 @@ public:
 
     void saveScene(const std::string& path) const;
     void loadScene(const std::string& path);
+    void resetScene();
 
 private:
     std::unique_ptr<Camera> camera                      = nullptr;
@@ -37,6 +40,7 @@ private:
     std::vector<std::unique_ptr<SceneNode>> sceneNodes  = {};
 
     // --- Node Cache ---
+    BoundingBoxNode*                simulationDomain    = nullptr;
     std::vector<ModelNode*>         models              = {};
     std::vector<BoundingBoxNode*>   boundingBoxes       = {};
     std::vector<ForceFieldNode*>    forceFields         = {};

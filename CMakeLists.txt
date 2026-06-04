@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.22)
 
 project(SPHlash LANGUAGES CXX C CUDA)
 
+option(ENABLE_CUDA_DEBUG "Enable Cuda debug checks for kernel calls" OFF)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_ARCHITECTURES 61)
@@ -47,6 +49,7 @@ add_executable(SPHlash
         src/rendering/ModelNode.cpp
         src/rendering/ModelNode.h
         src/rendering/IBounded.h
+        src/utils/CudaUtils.h
 )
 
 add_library(imgui
@@ -100,6 +103,10 @@ set_target_properties(SPHlash PROPERTIES
     CUDA_STANDARD 17
     CUDA_STANDARD_REQUIRED ON
 )
+
+if (ENABLE_CUDA_DEBUG)
+    target_compile_definitions(SPHlash PRIVATE DEBUG_CUDA)
+endif()
 
 # --- Copy assets to build directory ---
 add_custom_command(

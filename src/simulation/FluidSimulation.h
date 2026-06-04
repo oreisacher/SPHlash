@@ -100,9 +100,11 @@ public:
 
     void step(float deltaTime);
 
+    void init();
     void start();
     void pause();
     void reset();
+    SimulationState getState() const;
 
     bool initParticles();
 
@@ -127,14 +129,17 @@ public:
 
     SimulationSettings settings;
 
-    // --- Simulation State ---
-    SimulationState state = UNINITIALIZED;
+    inline static const char* SimulationDomainTag = "simulation_domain";
+
 private:
     Scene* scene;
     BoundingBoxNode* domain;
 
     float cfl = 0;
     int particleCount = 0;
+
+    // --- Simulation State ---
+    SimulationState state = UNINITIALIZED;
 
     // --- Particles ---
     ParticleGPU* d_particles            = nullptr;
@@ -163,8 +168,6 @@ private:
     // --- Rendering ---
     cudaGraphicsResource* rendererResource = nullptr;
     RendererParticle* d_rendererParticles  = nullptr;
-
-    void calculateDensityMap();
 };
 
 #endif //FLUIDSIMSPH_FLUIDSIMULATIONGPU_H

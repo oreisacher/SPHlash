@@ -5,7 +5,7 @@
 #include "BoundingBoxParticleSpawnNode.h"
 
 BoundingBoxParticleSpawnNode::BoundingBoxParticleSpawnNode(const std::string& name)
-    : BoundingBoxNode(name, glm::vec3(1.0f, 0.0, 0.0))
+    : BoundingBoxNode(name, glm::vec4(1.0f, 0.0, 0.0, 1.0))
 {
     // Init particle spawn
     particleSpawn.hasShape = false;
@@ -23,6 +23,15 @@ BoundingBoxParticleSpawnNode::BoundingBoxParticleSpawnNode(const nlohmann::json 
         json["color"][2].get<float>(),
         json["color"][3].get<float>()
     );
+
+    // Update shader color variable
+    material->bind();
+    material->setVec4("color", {
+        json["color"][0].get<float>(),
+        json["color"][1].get<float>(),
+        json["color"][2].get<float>(),
+        json["color"][3].get<float>()
+    });
 }
 
 CudaParticleSpawn BoundingBoxParticleSpawnNode::getParticleSpawn() {
@@ -49,7 +58,13 @@ Properties BoundingBoxParticleSpawnNode::buildProperties() {
     properties.addProperty(std::make_unique<ColorProperty>(
         "Particle Color",
         [this] () { return glm::vec4(particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z, particleSpawn.color.w); },
-        [this] (glm::vec4 color) { particleSpawn.color = { color.x, color.y, color.z, color.w }; }
+        [this] (glm::vec4 color)
+        {
+            particleSpawn.color = { color.x, color.y, color.z, color.w };
+
+            material->bind();
+            material->setVec4("color", color);
+        }
     ));
 
     return properties;

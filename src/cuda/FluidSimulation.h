@@ -9,7 +9,7 @@
 
 struct ParticleGPU;
 
-void launchHashParticles(
+void launchHashParticlesKernel(
     const int numParticles,
     const ParticleGPU* particles,
     int* particleHashValue,

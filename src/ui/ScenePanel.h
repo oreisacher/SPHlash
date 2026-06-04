@@ -11,7 +11,7 @@
 
 class ScenePanel : public UIPanel {
 public:
-    explicit ScenePanel(Scene& scene, Editor* editor, FluidRenderer* renderer);
+    explicit ScenePanel(Editor* editor, FluidRenderer* renderer);
 
     void update(double deltaTime) override;
     void draw() override;
@@ -19,9 +19,6 @@ public:
 private:
     Editor* editor;
     FluidRenderer* renderer;
-    Scene* scene;
-
-    int selected = -1;
 };
 
 #endif //SPHLASH_MODELSPANEL_H

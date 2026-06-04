@@ -6,6 +6,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include "rendering/FluidRenderer.h"
+
+#include <iostream>
 #include <glad/gl.h>
 #include "../simulation/FluidSimulation.h"
 #include "utils/Logger.h"
@@ -138,12 +140,13 @@ void FluidRenderer::setupParticles(Scene& scene) {
 void FluidRenderer::updateParticleData() const {
     glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
 
-    if (simulation->getParticleCount() > 0)
+    if (simulation->getParticleCount() > 0) {
         glBufferData(GL_ARRAY_BUFFER, sizeof(RendererParticle) * simulation->getParticleCount(), nullptr, GL_DYNAMIC_DRAW);
-    else
+        simulation->setRendererVBO(particleVBO);
+    } else {
         glBufferData(GL_ARRAY_BUFFER, 1, nullptr, GL_DYNAMIC_DRAW);
+    }
 
-    simulation->setRendererVBO(particleVBO);
     particleModelNode->getModel()->setInstanceCount(simulation->getParticleCount());
     particleModelNode->setVisible(settings.mode != MARCHING_CUBES);
 }
@@ -168,7 +171,7 @@ void FluidRenderer::updateRenderingSettings() const {
     particleShader->setFloat("maxSurfaceTension", settings.maxSurfaceTension);
 
     // Update particle visibility
-    if (simulation->state != UNINITIALIZED) {
+    if (simulation->getState() != UNINITIALIZED) {
         particleModelNode->setVisible(settings.mode != MARCHING_CUBES);
     }
 }

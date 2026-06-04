@@ -10,13 +10,14 @@
 #include "utils/Hex32Field.h"
 
 struct BoundarySettings {
-    glm::ivec3 resolution = { 32, 32, 32 };
+    bool buildOnInit        = true;
+    glm::ivec3 resolution   = { 32, 32, 32 };
 };
 
 class BoundaryBuilder {
 public:
-    Hex32Field constructSDFMap(const Scene* scene, CudaAABB domain, float h) const;
-    Hex32Field constructVolumeMap(Hex32Field sdfMap, CudaAABB domain, float h) const;
+    bool constructSDFMap(const Scene* scene, CudaAABB domain, float h, Hex32Field& sdfMap) const;
+    bool constructVolumeMap(Hex32Field sdfHexField, CudaAABB domain, float h, Hex32Field& volumeMap) const;
 
     BoundarySettings settings;
 };

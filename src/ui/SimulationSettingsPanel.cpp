@@ -71,6 +71,10 @@ void SimulationSettingsPanel::draw() {
     }
 
     if (ImGui::CollapsingHeader("Boundary Settings")) {
+        ImGui::Checkbox("Build on Init##bbInitBuild", &boundaryBuilder->settings.buildOnInit);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Build volume map on simulation init");
+
         ImGui::Text("Resolution:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Resolution of signed distance field and volume map used for boundaries");

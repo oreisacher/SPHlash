@@ -22,8 +22,7 @@ public:
     void removeSceneNode(SceneNode* node) const;
 
     // --- Boundary ---
-    void addBoundary(std::unique_ptr<ModelNode> boundary) const;
-    void addBoundary(const std::string& path) const;
+    void addBoundary(const std::string& path);
     void removeBoundary(const ModelNode* boundaryNode) const;
 
     BoundaryBuilder* getBoundaryBuilder();
@@ -33,11 +32,11 @@ public:
     Hex32Field getBoundaryDensityMap() const;
 
     // --- Force Fields ---
-    void addForceField() const;
+    void addForceField();
     void removeForceField(const ForceFieldNode* forceFieldNode) const;
 
     // --- Particle Spawns ---
-    void addParticleSpawn(const std::string& path) const;
+    void addParticleSpawn(const std::string& path);
 private:
     Scene* scene;
     FluidSimulation* simulation;

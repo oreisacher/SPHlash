@@ -61,7 +61,7 @@ FluidSurfaceMesher::~FluidSurfaceMesher() {
 }
 
 void FluidSurfaceMesher::generateMesh(bool force) const {
-    if (!force && (!surfaceModelNode->isVisible() || simulation->state == PAUSED))
+    if (!force && (!surfaceModelNode->isVisible() || simulation->getState() == PAUSED))
         return;
 
     if (!simulation->computeVoxelField(voxelField))

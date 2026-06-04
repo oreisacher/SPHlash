@@ -44,6 +44,10 @@ void Scene::removeSceneNode(const SceneNode* node) {
     std::erase_if(sceneNodes, [&](const std::unique_ptr<SceneNode>& n) { return n.get() == node; });
 }
 
+void Scene::setSimulationDomain(BoundingBoxNode* domain) {
+    simulationDomain = domain;
+}
+
 std::vector<ModelNode*> Scene::getModels() const {
     return models;
 }
@@ -73,46 +77,80 @@ void Scene::saveScene(const std::string& path) const {
     Config config;
 
     // Simulation domain
-    // Note: Domain is always the first element in list. Therefore, scene does not need to know about simulation itself.
-    nlohmann::json simulationDomain;
-    AABB simulationBoundingBox = boundingBoxes[0]->getWorldBoundingBox();
-    simulationDomain["center"] = { simulationBoundingBox.center.x, simulationBoundingBox.center.y, simulationBoundingBox.center.z };
-    simulationDomain["size"] = { simulationBoundingBox.size.x, simulationBoundingBox.size.y, simulationBoundingBox.size.z };
-    config.set<nlohmann::json>("simulationDomain", simulationDomain);
+    nlohmann::json domain;
+    domain["position"] = {
+        simulationDomain->getPosition().x,
+        simulationDomain->getPosition().y,
+        simulationDomain->getPosition().z
+    };
 
-    // Nodes
+    domain["scale"] = {
+        simulationDomain->getScale().x,
+        simulationDomain->getScale().y,
+        simulationDomain->getScale().z
+    };
+
+    config.set<nlohmann::json>("simulationDomain", domain);
+
+    // Scene Nodes
     nlohmann::json nodes = nlohmann::json::array();
-    for (int i = 1 ; i < sceneNodes.size(); i++) {
+    for (int i = 0 ; i < sceneNodes.size(); i++) {
         if (!sceneNodes[i]->isSavable())
+            continue;
+
+        // Skip simulation domain as saved separately
+        if (sceneNodes[i]->hasTag(FluidSimulation::SimulationDomainTag))
             continue;
 
         nodes.push_back(sceneNodes[i]->toJson());
     }
 
     config.set<nlohmann::json>("nodes", nodes);
-    config.save("./scene.json");
+    config.save(path);
 }
 
 void Scene::loadScene(const std::string& path) {
     Config config;
 
     if (config.load(path)) {
-        // Simulation domain
-        auto simulationDomain = config.get<nlohmann::json>("simulationDomain", {});
-        boundingBoxes[0]->setPosition(glm::vec3(
-            simulationDomain["center"][0].get<float>(),
-            simulationDomain["center"][1].get<float>(),
-            simulationDomain["center"][2].get<float>()
+        // Set simulation domain
+        auto domain = config.get<nlohmann::json>("simulationDomain", {});
+        simulationDomain->setPosition(glm::vec3(
+            domain["position"][0].get<float>(),
+            domain["position"][1].get<float>(),
+            domain["position"][2].get<float>()
         ));
-        boundingBoxes[0]->setScale(glm::vec3(
-            simulationDomain["size"][0].get<float>(),
-            simulationDomain["size"][1].get<float>(),
-            simulationDomain["size"][2].get<float>()
+        simulationDomain->setScale(glm::vec3(
+            domain["scale"][0].get<float>(),
+            domain["scale"][1].get<float>(),
+            domain["scale"][2].get<float>()
         ));
 
-        for (auto &node : config.get<nlohmann::json>("nodes", {}))
-            addSceneNode(nodeFromJson(node));
+        // Load scene nodes
+        for (auto &node : config.get<nlohmann::json>("nodes", {})) {
+            auto sceneNode = nodeFromJson(node);
+            addSceneNode(std::move(sceneNode));
+        }
     }
+}
+
+void Scene::resetScene() {
+    // Reset simulation domain
+    simulationDomain->setPosition({ 0.0, 0.0, 0.0 });
+    simulationDomain->setScale({ 2.0, 2.0, 2.0 });
+
+    // Remove all user added SceneNodes
+    std::vector<SceneNode*> toRemove;
+
+    for (int i = 3 ; i < sceneNodes.size(); i++) {
+        if (!sceneNodes[i]->isDeletable())
+            continue;
+
+        toRemove.push_back(sceneNodes[i].get());
+    }
+
+    for (auto* node : toRemove)
+        removeSceneNode(node);
 }
 
 std::unique_ptr<SceneNode> Scene::nodeFromJson(const nlohmann::json& j) {

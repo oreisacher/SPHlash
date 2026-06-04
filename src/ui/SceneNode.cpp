@@ -7,6 +7,7 @@
 SceneNode::SceneNode(const nlohmann::json j) {
     this->name = j["name"];
     this->visible = j["visible"];
+    this->tags = j["tags"];
 }
 
 const std::string& SceneNode::getName() const {
@@ -33,6 +34,22 @@ void SceneNode::setSceneGraphVisible(bool visible) {
     this->sceneGraphVisible = visible;
 }
 
+void SceneNode::addTag(const std::string& tag) {
+    tags.insert(tag);
+}
+
+void SceneNode::removeTag(const std::string& tag) {
+    tags.erase(tag);
+}
+
+bool SceneNode::hasTag(const std::string& tag) const {
+    return tags.contains(tag);
+}
+
+const std::unordered_set<std::string>& SceneNode::getTags() const {
+    return tags;
+}
+
 bool SceneNode::isSavable() const {
     return savable;
 }
@@ -47,6 +64,7 @@ nlohmann::json SceneNode::toJson() const {
     j["type"] = getTypeName();
     j["name"] = name;
     j["visible"] = visible;
+    j["tags"] = tags;
 
     return j;
 }

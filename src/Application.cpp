@@ -54,14 +54,14 @@ Application::Application() {
 
     // Setup UI
     ui = new UIManager(window->getNativeWindow());
-    ui->addPanel(new SimulationPanel            (editor, renderer->getTextureId()));
-    ui->addPanel(new ControlPanel               (simulation, renderer, surfaceMesher));
+    ui->addPanel(new SimulationPanel            (editor, renderer));
+    ui->addPanel(new ControlPanel               (editor, simulation, renderer, surfaceMesher));
     ui->addPanel(new StatisticsPanel            (simulation));
     ui->addPanel(new SimulationSettingsPanel    (editor, simulation, renderer));
     ui->addPanel(new RenderingSettingsPanel     (renderer, surfaceMesher));
     ui->addPanel(new ParticlesPanel             (simulation, renderer));
     ui->addPanel(new PropertiesPanel            (editor));
-    ui->addPanel(new ScenePanel                 (scene, editor, renderer));
+    ui->addPanel(new ScenePanel                 (editor, renderer));
 
     // Setup scene
     scene.setCamera(std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 1.0f)));

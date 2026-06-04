@@ -73,7 +73,7 @@ __device__ uint hashCell(int cellX, int cellY, int cellZ, int hashTableSize) {
     return (localCell.x + blockSize * (localCell.y + blockSize * localCell.z) + blockHash) % hashTableSize;
 }
 
-__global__ void hashParticles(
+__global__ void hashParticlesKernel(
     const int numParticles,
     const ParticleGPU* particles,
     int* particleHashValue,
@@ -96,7 +96,7 @@ __global__ void hashParticles(
     particleIndex[id] = id;
 }
 
-void launchHashParticles(
+void launchHashParticlesKernel(
     const int numParticles,
     const ParticleGPU* particles,
     int* particleHashValue,
@@ -106,7 +106,7 @@ void launchHashParticles(
     int threadsPerBlock = 256;
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
-    hashParticles<<<blocks, threadsPerBlock>>>(
+    hashParticlesKernel<<<blocks, threadsPerBlock>>>(
         numParticles, particles, particleHashValue, particleIndex, h
     );
 }

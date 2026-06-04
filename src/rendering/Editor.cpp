@@ -18,8 +18,10 @@ Scene* Editor::getScene() const {
     return scene;
 }
 
-void Editor::addForceField() const {
+void Editor::addForceField() {
     auto forceFieldNode = std::make_unique<ForceFieldNode>(std::string("Force Field"));
+
+    selectedNode = forceFieldNode.get();
     scene->addSceneNode(std::move(forceFieldNode));
     simulation->rebuildForceFieldBuffer();
 }
@@ -29,19 +31,20 @@ void Editor::removeForceField(const ForceFieldNode* forceFieldNode) const {
     simulation->rebuildForceFieldBuffer();
 }
 
-void Editor::addParticleSpawn(const std::string& path) const {
+void Editor::addParticleSpawn(const std::string& path) {
     if (path.empty()) {
-        scene->addSceneNode(std::make_unique<BoundingBoxParticleSpawnNode>(std::string("Particle Spawn")));
+        auto bbParticleSpawnNode = std::make_unique<BoundingBoxParticleSpawnNode>(std::string("Particle Spawn"));
+
+        selectedNode = bbParticleSpawnNode.get();
+        scene->addSceneNode(std::move(bbParticleSpawnNode));
     }
 }
 
-void Editor::addBoundary(std::unique_ptr<ModelNode> boundaryNode) const {
-    scene->addSceneNode(std::move(boundaryNode));
-}
-
-void Editor::addBoundary(const std::string& path) const {
+void Editor::addBoundary(const std::string& path) {
     auto model = std::make_shared<Model>(path);
     auto modelNode = std::make_unique<ModelNode>(model->getName(), model);
+
+    selectedNode = modelNode.get();
     scene->addSceneNode(std::move(modelNode));
 }
 
@@ -66,17 +69,19 @@ BoundaryBuilder* Editor::getBoundaryBuilder() {
 }
 
 void Editor::buildBoundaryDensityMap() const {
-    auto sdfMap     = boundryBuilder.constructSDFMap(
-        scene,
-        simulation->getDomain()->getCudaAABB(),
-        simulation->settings.h
-    );
+    Hex32Field sdfMap;
+    if (!boundryBuilder.constructSDFMap(scene, simulation->getDomain()->getCudaAABB(), simulation->settings.h, sdfMap)) {
+        // No Models are present > Clear current boundaries of simulation
+        simulation->clearBoundaryField();
+        return;
+    }
 
-    auto volumeMap  = boundryBuilder.constructVolumeMap(
-        sdfMap,
-        simulation->getDomain()->getCudaAABB(),
-        simulation->settings.h
-    );
+    Hex32Field volumeMap;
+    if (!boundryBuilder.constructVolumeMap(sdfMap, simulation->getDomain()->getCudaAABB(), simulation->settings.h, volumeMap)) {
+        // Clear current boundaries of simulation if error occurred during construction
+        simulation->clearBoundaryField();
+        return;
+    }
 
     simulation->clearBoundaryField();
     simulation->setBoundaryMaps(sdfMap, volumeMap);

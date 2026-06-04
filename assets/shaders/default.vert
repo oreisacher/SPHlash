@@ -14,7 +14,7 @@ out vec3 Normal;
 out vec2 TexCoord;
 
 void main() {
-    Normal = aNormal;
+    Normal = transpose(inverse(mat3(model))) * aNormal;
     TexCoord = aTexCoord;
 
     gl_Position = projection * view * model * vec4(aPosition, 1.0);

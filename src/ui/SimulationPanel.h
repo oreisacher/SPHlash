@@ -23,7 +23,7 @@ struct PanelEvent {
 
 class SimulationPanel : public UIPanel {
 public:
-    explicit SimulationPanel(Editor* editor, GLuint textureId);
+    explicit SimulationPanel(Editor* editor, const FluidRenderer* renderer);
 
     void update(double deltaTime) override;
     void draw() override;
@@ -33,8 +33,8 @@ public:
     static inline Camera* camera = nullptr;
 
 private:
-    GLuint texture;
     Editor* editor;
+    GLuint texture;
 
     std::vector<PanelEvent> events;
 

@@ -8,8 +8,8 @@
 #include "../rendering/FluidRenderer.h"
 #include "glm/gtc/type_ptr.hpp"
 
-SimulationPanel::SimulationPanel(Editor* editor, GLuint textureId)
-    : UIPanel("Simulation"), texture(textureId), editor(editor)
+SimulationPanel::SimulationPanel(Editor* editor, const FluidRenderer* renderer)
+    : UIPanel("Simulation"), editor(editor), texture(renderer->getTextureId())
 { }
 
 void SimulationPanel::update(double deltaTime) {

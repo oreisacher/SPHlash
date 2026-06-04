@@ -13,7 +13,7 @@ ModelNode::ModelNode(const std::string& name, const std::shared_ptr<Model>& mode
     ModelNode::updateTransform();
 
     // Add bounding box node as child
-    auto bbNode = std::make_unique<BoundingBoxNode>("Bounding Box", glm::vec3(1.0f));
+    auto bbNode = std::make_unique<BoundingBoxNode>("Bounding Box", glm::vec4(1.0f));
     boundingBox = bbNode.get();
     boundingBox->setTarget(this);
     boundingBox->setVisible(false);
@@ -44,7 +44,7 @@ ModelNode::ModelNode(const nlohmann::json json) : SceneNode(json) {
     model = std::make_shared<Model>(json["path"]);
 
     // Add bounding box node as child
-    auto bbNode = std::make_unique<BoundingBoxNode>("Bounding Box", glm::vec3(1.0f));
+    auto bbNode = std::make_unique<BoundingBoxNode>("Bounding Box", glm::vec4(1.0f));
     boundingBox = bbNode.get();
     boundingBox->setTarget(this);
     boundingBox->setVisible(false);

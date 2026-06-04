@@ -14,15 +14,18 @@
 #include "imgui.h"
 #include "glad/gl.h"
 #include "rendering/Scene.h"
+#include "utils/CudaUtils.h"
 
 FluidSimulation::FluidSimulation(Scene& scene) : scene(&scene) {
     cudaSetDevice(0);
 
     // Setup domain bounding box
-    auto domainBB = std::make_unique<BoundingBoxNode>("Simulation Domain", glm::vec3(0.2f, 0.6f, 1.0f));
+    auto domainBB = std::make_unique<BoundingBoxNode>("Simulation Domain", glm::vec4(0.2f, 0.6f, 1.0f, 1.0f));
     domain = domainBB.get();
     domain->setScale({ 2.0f, 2.0f, 2.0f });
     domain->setDeletable(false);
+    domain->addTag(SimulationDomainTag);
+    scene.setSimulationDomain(domain);
     scene.addSceneNode(std::move(domainBB));
 }
 
@@ -44,16 +47,24 @@ void FluidSimulation::updateParticles() {
     if (state == UNINITIALIZED)
         return;
 
+#ifdef DEBUG_CUDA
+    cudaGetLastError();
+#endif
+
     // Reset old data
     cudaMemset(d_offsets,   -1, particleCount * sizeof(int));
 
-    launchHashParticles(
+    launchHashParticlesKernel(
         particleCount,
         d_particles,
         d_particleHashes,
         d_particleIndices,
         settings.h
     );
+
+#ifdef DEBUG_CUDA
+    CUDA_KERNEL_CHECK("HashParticlesKernel");
+#endif
 
     sortParticlesByHash(
         particleCount,
@@ -65,11 +76,19 @@ void FluidSimulation::updateParticles() {
         d_sortedParticleIndices
     );
 
+#ifdef DEBUG_CUDA
+    CUDA_KERNEL_CHECK("SortParticlesByHash");
+#endif
+
     launchBuildOffsetsKernel(
         particleCount,
         d_sortedParticleHashes,
         d_offsets
     );
+
+#ifdef DEBUG_CUDA
+    CUDA_KERNEL_CHECK("BuildOffsetsKernel");
+#endif
 
     launchReorderParticlesKernel(
         particleCount,
@@ -77,6 +96,10 @@ void FluidSimulation::updateParticles() {
         d_sortedParticleIndices,
         d_sortedParticles
     );
+
+#ifdef DEBUG_CUDA
+    CUDA_KERNEL_CHECK("ReorderParticlesKernel");
+#endif
 
     launchDensityPressureKernel(
         particleCount,
@@ -91,6 +114,10 @@ void FluidSimulation::updateParticles() {
         settings.speedSound,
         settings.p_0
     );
+
+#ifdef DEBUG_CUDA
+    CUDA_KERNEL_CHECK("DensityPressureKernel");
+#endif
 
     launchSphForcesKernel(
         particleCount,
@@ -107,6 +134,10 @@ void FluidSimulation::updateParticles() {
         settings.surfaceTension,
         settings.p_0
     );
+
+#ifdef DEBUG_CUDA
+    CUDA_KERNEL_CHECK("SphForcesKernel");
+#endif
 
     std::swap(d_particles, d_sortedParticles);
 }
@@ -143,6 +174,10 @@ void FluidSimulation::update(const float deltaTime) {
         settings.enableGravity ? settings.gravity : 0.0f
     );
 
+#ifdef DEBUG_CUDA
+    CUDA_KERNEL_CHECK("UpdateParticlesKernel");
+#endif
+
     // Prepare particles for rendering
     size_t numBytes;
     cudaGraphicsMapResources(1, &rendererResource);
@@ -154,6 +189,10 @@ void FluidSimulation::update(const float deltaTime) {
         d_rendererParticles
     );
 
+#ifdef DEBUG_CUDA
+    CUDA_KERNEL_CHECK("RenderPrepareKernel");
+#endif
+
     cudaGraphicsUnmapResources(1, &rendererResource);
 }
 
@@ -164,6 +203,14 @@ void FluidSimulation::step(float deltaTime) {
     state = RUNNING;
     update(deltaTime);
     state = PAUSED;
+}
+
+void FluidSimulation::init() {
+    // Init particle spawns
+    initParticles();
+
+    // Rebuild forcefield buffer
+    rebuildForceFieldBuffer();
 }
 
 void FluidSimulation::start() {
@@ -181,26 +228,42 @@ void FluidSimulation::reset() {
 
     updateParticles();
 
+#ifdef DEBUG_CUDA
+    cudaGetLastError();
+#endif
+
     // Copy reset data to renderer vbo
     launchRenderPrepareKernel(
         particleCount,
         d_particles,
         d_rendererParticles
     );
+
+#ifdef DEBUG_CUDA
+    CUDA_KERNEL_CHECK("RenderPrepareKernel");
+#endif
+}
+
+SimulationState FluidSimulation::getState() const {
+    return state;
 }
 
 void FluidSimulation::setRendererVBO(const GLuint vbo) {
     if (rendererResource) cudaGraphicsUnregisterResource(rendererResource);
 
-    cudaGraphicsGLRegisterBuffer(
+#ifdef DEBUG_CUDA
+    cudaGetLastError();
+#endif
+
+    CUDA_CHECK(cudaGraphicsGLRegisterBuffer(
         &rendererResource,
         vbo,
         cudaGraphicsRegisterFlagsWriteDiscard
-    );
+    ));
 
     size_t numBytes;
-    cudaGraphicsMapResources(1, &rendererResource);
-    cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_rendererParticles), &numBytes, rendererResource);
+    CUDA_CHECK(cudaGraphicsMapResources(1, &rendererResource));
+    CUDA_CHECK(cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_rendererParticles), &numBytes, rendererResource));
 
     launchRenderPrepareKernel(
         particleCount,
@@ -208,7 +271,11 @@ void FluidSimulation::setRendererVBO(const GLuint vbo) {
         d_rendererParticles
     );
 
-    cudaGraphicsUnmapResources(1, &rendererResource);
+#ifdef DEBUG_CUDA
+    CUDA_KERNEL_CHECK("RenderPrepareKernel");
+#endif
+
+    CUDA_CHECK(cudaGraphicsUnmapResources(1, &rendererResource));
 }
 
 float FluidSimulation::getCFL() const {
@@ -247,10 +314,6 @@ void FluidSimulation::setBoundaryMaps(const Hex32Field& sdfMap, const Hex32Field
     this->volumeMap = volumeMap;
 }
 
-// void FluidSimulation::setBoundaryMaps(const Hex32Field& field) {
-//     boundaryField = field;
-// }
-
 void FluidSimulation::clearBoundaryField() {
     if (sdfMap.d_cells != nullptr) {
         cudaFree(sdfMap.d_cells);
@@ -273,6 +336,10 @@ bool FluidSimulation::computeVoxelField(const VoxelField& field) const {
     if (particleCount == 0 || state == UNINITIALIZED)
         return false;
 
+#ifdef DEBUG_CUDA
+    cudaGetLastError();
+#endif
+
     launchVoxelFieldKernel(
         field,
         domain->getCudaAABB(),
@@ -282,6 +349,10 @@ bool FluidSimulation::computeVoxelField(const VoxelField& field) const {
         d_offsets,
         settings.h
     );
+
+#ifdef DEBUG_CUDA
+    CUDA_KERNEL_CHECK("VoxelFieldKernel");
+#endif
 
     return true;
 }
@@ -300,6 +371,10 @@ ParticleGPU FluidSimulation::getParticle(const int id) const {
 }
 
 bool FluidSimulation::initParticles() {
+#ifdef DEBUG_CUDA
+    cudaGetLastError();
+#endif
+
     // Delete old particle data
     particleCount = 0;
 
@@ -336,6 +411,12 @@ bool FluidSimulation::initParticles() {
             { countX, countY, countZ }
         );
 
+#ifdef DEBUG_CUDA
+        CUDA_KERNEL_CHECK("InitParticlesKernel");
+#endif
+
+        cudaDeviceSynchronize();
+
         int spawnParticleCount;
         cudaMemcpy(&spawnParticleCount, d_spawnParticleCount, sizeof(int), cudaMemcpyDeviceToHost);
         cudaFree(d_spawnParticleCount);
@@ -356,6 +437,12 @@ bool FluidSimulation::initParticles() {
             d_spawnParticles,
             mass
         );
+
+#ifdef DEBUG_CUDA
+        CUDA_KERNEL_CHECK("UpdateParticlesMassKernel");
+#endif
+
+        cudaDeviceSynchronize();
 
         // Copy spawn particles back to host and append
         std::vector<ParticleGPU> spawnParticles(spawnParticleCount);
@@ -390,6 +477,10 @@ bool FluidSimulation::initParticles() {
         d_particleIndices,
         d_sortedParticleIndices
     );
+
+#ifdef DEBUG_CUDA
+    CUDA_KERNEL_CHECK("QueryRequiredSortingStorage");
+#endif
 
     cudaMalloc(&d_sortTempStorage, sortTempStorageBytes);
 

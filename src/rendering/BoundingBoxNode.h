@@ -13,7 +13,7 @@
 
 class BoundingBoxNode : public Transform, public SceneNode, public IBounded {
 public:
-    BoundingBoxNode(const std::string& name, glm::vec3 color);
+    BoundingBoxNode(const std::string& name, glm::vec4 color);
     BoundingBoxNode(const nlohmann::json json);
 
     void draw(const glm::mat4& view, const glm::mat4& projection) const override;
@@ -32,11 +32,11 @@ public:
     nlohmann::json toJson() const override;
     std::string getTypeName() const override;
 
-private:
+protected:
     std::unique_ptr<Mesh> mesh;
     std::unique_ptr<Material> material;
 
-    glm::vec3 color;
+    glm::vec4 color;
 
     IBounded* target = nullptr;
 };

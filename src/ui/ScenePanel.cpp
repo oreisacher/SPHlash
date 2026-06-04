@@ -7,13 +7,12 @@
 #include "imgui.h"
 #include "ImGuiFileDialog.h"
 #include "PropertiesPanel.h"
-#include "rendering/BoundingBoxNode.h"
 #include "rendering/Editor.h"
 #include "rendering/Scene.h"
 
-ScenePanel::ScenePanel(Scene& scene, Editor* editor, FluidRenderer* renderer)
-    : UIPanel("Scene"), editor(editor), renderer(renderer), scene(&scene) {
-}
+ScenePanel::ScenePanel(Editor* editor, FluidRenderer* renderer)
+    : UIPanel("Scene"), editor(editor), renderer(renderer)
+{ }
 
 void ScenePanel::update(double deltaTime) { }
 
@@ -28,7 +27,7 @@ void ScenePanel::draw() {
     // --- Scene ---
     ImGui::SeparatorText("Scene Graph");
 
-    std::vector<SceneNode*> sceneNodes = scene->getSceneNodes();
+    std::vector<SceneNode*> sceneNodes = editor->getScene()->getSceneNodes();
 
     if (ImGui::BeginTable("##sceneNodes", 3, ImGuiTableFlags_SizingStretchProp)) {
         ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch);
@@ -53,12 +52,10 @@ void ScenePanel::draw() {
             }
 
             if (ImGui::Button(sceneNodes[i]->getName().c_str(), ImVec2(-FLT_MIN, 19))) {
-                if (selected != i) {
-                    selected = i;
-                    editor->setSelected(sceneNodes[i]);
-                } else {
-                    selected = -1;
+                if (isSelected) {
                     editor->setSelected(nullptr);
+                } else {
+                    editor->setSelected(sceneNodes[i]);
                 }
             }
 
@@ -67,7 +64,6 @@ void ScenePanel::draw() {
 
             if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                 if (isSelected) {
-                    selected = -1;
                     editor->setSelected(nullptr);
                 }
             }
@@ -83,7 +79,6 @@ void ScenePanel::draw() {
             if (sceneNodes[i]->isDeletable()) {
                 if (ImGui::Button(" - ", ImVec2(0, 19))) {
                     if (isSelected) {
-                        selected = -1;
                         editor->setSelected(nullptr);
                     }
 
@@ -131,7 +126,7 @@ void ScenePanel::draw() {
     if (ImGuiFileDialog::Instance()->Display("SaveScene")) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-            scene->saveScene(filePathName);
+            editor->getScene()->saveScene(filePathName);
         }
 
         ImGuiFileDialog::Instance()->Close();
@@ -146,10 +141,15 @@ void ScenePanel::draw() {
     if (ImGuiFileDialog::Instance()->Display("LoadScene")) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-            scene->loadScene(filePathName);
+            editor->getScene()->loadScene(filePathName);
         }
 
         ImGuiFileDialog::Instance()->Close();
+    }
+
+    if (ImGui::Button("Reset Scene", ImVec2(totalWidth, 0))) {
+        editor->setSelected(nullptr);
+        editor->getScene()->resetScene();
     }
 
     ImGui::End();

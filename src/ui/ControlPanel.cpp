@@ -6,8 +6,8 @@
 #include "imgui.h"
 #include <iostream>
 
-ControlPanel::ControlPanel(FluidSimulation* simulation, FluidRenderer* renderer, FluidSurfaceMesher* mesher)
-    : UIPanel("Controls"), simulation(simulation), renderer(renderer), mesher(mesher) {
+ControlPanel::ControlPanel(Editor* editor, FluidSimulation* simulation, FluidRenderer* renderer, FluidSurfaceMesher* mesher)
+    : UIPanel("Controls"), editor(editor), simulation(simulation), renderer(renderer), mesher(mesher) {
 }
 
 void ControlPanel::update(double deltaTime) { }
@@ -22,25 +22,34 @@ void ControlPanel::draw() {
     float totalWidth = ImGui::GetContentRegionAvail().x;
 
     if (ImGui::Button("Init Simulation", ImVec2(totalWidth, 0))) {
-        simulation->initParticles();
+        // Build boundary map
+        if (editor->getBoundaryBuilder()->settings.buildOnInit)
+            editor->buildBoundaryDensityMap();
+
+        // Init simulation
+        simulation->init();
+
+        // Setup renderer
         renderer->updateParticleData();
         mesher->generateMesh(true);
     }
 
-    ImGui::BeginDisabled(simulation->state == UNINITIALIZED);
+    const SimulationState simulationState = simulation->getState();
 
-    if (ImGui::Button(simulation->state == RUNNING ? "Stop Simulation" : "Start Simulation", ImVec2(totalWidth, 0)))
-        simulation->state == PAUSED ? simulation->start() : simulation->pause();
+    ImGui::BeginDisabled(simulationState == UNINITIALIZED);
 
-    if (ImGui::IsKeyPressed(ImGuiKey_Space) && simulation->state != UNINITIALIZED)
-        simulation->state == PAUSED ? simulation->start() : simulation->pause();
+    if (ImGui::Button(simulationState == RUNNING ? "Stop Simulation" : "Start Simulation", ImVec2(totalWidth, 0)))
+        simulationState == PAUSED ? simulation->start() : simulation->pause();
+
+    if (ImGui::IsKeyPressed(ImGuiKey_Space) && simulationState != UNINITIALIZED)
+        simulationState == PAUSED ? simulation->start() : simulation->pause();
 
     if (ImGui::Button("Reset Simulation", ImVec2(totalWidth, 0))) {
         simulation->reset();
         mesher->generateMesh(true);
     }
 
-    if (ImGui::IsKeyPressed(ImGuiKey_R) && simulation->state != UNINITIALIZED) {
+    if (ImGui::IsKeyPressed(ImGuiKey_R) && simulationState != UNINITIALIZED) {
         simulation->reset();
         mesher->generateMesh(true);
     }
@@ -52,7 +61,7 @@ void ControlPanel::draw() {
     if (ImGui::Button("Step Single Frame", ImVec2(totalWidth, 0)))
         simulation->step(stepSize / 1000.0f);
 
-    if (ImGui::IsKeyPressed(ImGuiKey_RightArrow) && simulation->state != UNINITIALIZED)
+    if (ImGui::IsKeyPressed(ImGuiKey_RightArrow) && simulation->getState() != UNINITIALIZED)
         simulation->step(stepSize / 1000.0f);
 
 

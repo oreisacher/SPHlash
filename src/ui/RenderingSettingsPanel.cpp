@@ -34,17 +34,15 @@ void RenderingSettingsPanel::draw() {
     case SOLID_COLOR_PARTICLES:
         ImGui::PushID(SOLID_COLOR_PARTICLES);
         ImGui::Text("Size:");
-        if (ImGui::DragFloat("##ps", &renderer->settings.particleSize, 0.0001f, 0.0)) {
+        if (ImGui::DragFloat("##ps", &renderer->settings.particleSize, 0.0001f, 0.0))
             renderer->updateParticleSize();
-        }
         ImGui::PopID();
         break;
 
     case VELOCITY_PARTICLES:
         ImGui::Text("Size:");
-        if (ImGui::DragFloat("##ps", &renderer->settings.particleSize, 0.0001f, 0.0)) {
+        if (ImGui::DragFloat("##ps", &renderer->settings.particleSize, 0.0001f, 0.0))
             renderer->updateParticleSize();
-        }
 
         ImGui::Text("Minimum Velocity:");
         if (ImGui::DragFloat("##vpMinV", &renderer->settings.velocityMin, 0.01f))

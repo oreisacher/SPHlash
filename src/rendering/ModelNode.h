@@ -39,7 +39,7 @@ public:
 private:
     std::shared_ptr<Model> model;
 
-    bool boundary = false;
+    bool boundary = true;
     AABB worldBoundingBox;
 
     BoundingBoxNode* boundingBox;

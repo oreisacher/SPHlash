@@ -6,13 +6,13 @@
 
 #include "Scene.h"
 
-BoundingBoxNode::BoundingBoxNode(const std::string& name, glm::vec3 color) {
+BoundingBoxNode::BoundingBoxNode(const std::string& name, glm::vec4 color) {
     this->name = name;
     this->color = color;
 
     mesh = Mesh::createWireframeBox(name);
     material = std::make_unique<Material>("Wireframe", Shader::createBox());
-    material->setVec3("color", color);
+    material->setVec4("color", color);
 }
 
 BoundingBoxNode::BoundingBoxNode(const nlohmann::json json) : SceneNode(json) {
