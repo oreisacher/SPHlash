@@ -190,6 +190,15 @@ std::unique_ptr<Mesh> Mesh::createBox(const std::string& name) {
     );
 }
 
+std::unique_ptr<Mesh> Mesh::createQuad(const std::string& name) {
+    return std::make_unique<Mesh>(
+        name,
+        Primitives::QuadGeometry::GetVertices(),
+        Primitives::QuadGeometry::GetIndices(),
+        GL_TRIANGLES
+    );
+}
+
 std::unique_ptr<Mesh> Mesh::createWireframeBox(const std::string& name) {
     return std::make_unique<Mesh>(
         name,

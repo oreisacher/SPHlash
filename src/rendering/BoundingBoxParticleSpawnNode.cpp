@@ -3,6 +3,8 @@
 //
 
 #include "BoundingBoxParticleSpawnNode.h"
+#include <vector_functions.h>
+#include "Material.h"
 
 BoundingBoxParticleSpawnNode::BoundingBoxParticleSpawnNode(const std::string& name)
     : BoundingBoxNode(name, glm::vec4(1.0f, 0.0, 0.0, 1.0))

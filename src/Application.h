@@ -6,7 +6,7 @@
 #define FLUIDSIMSPH_APPLICATION_H
 
 #include "rendering/Editor.h"
-#include "rendering/FluidRenderer.h"
+#include "rendering/Renderer.h"
 #include "rendering/FluidSurfaceMesher.h"
 #include "rendering/Scene.h"
 #include "rendering/Window.h"
@@ -25,9 +25,7 @@ public:
 private:
     Editor* editor;
     FluidSimulation* simulation;
-    FluidRenderer* renderer;
-
-    FluidSurfaceMesher* surfaceMesher;
+    Renderer* renderer;
 
     UIManager* ui;
     Window* window;

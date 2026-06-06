@@ -12,7 +12,7 @@
 
 class ControlPanel : public UIPanel {
 public:
-    explicit ControlPanel(Editor* editor, FluidSimulation* simulation, FluidRenderer* renderer, FluidSurfaceMesher* mesher);
+    explicit ControlPanel(Editor* editor, FluidSimulation* simulation, Renderer* renderer);
 
     void update(double deltaTime) override;
     void draw() override;
@@ -20,8 +20,7 @@ public:
 private:
     Editor* editor;
     FluidSimulation* simulation;
-    FluidRenderer* renderer;
-    FluidSurfaceMesher* mesher;
+    Renderer* renderer;
 
     float timeStep = 0.0;
     float stepSize = 16.666667;

@@ -4,6 +4,8 @@
 
 #include "ModelNode.h"
 
+#include "BoundingBoxNode.h"
+#include "Model.h"
 #include "Scene.h"
 
 ModelNode::ModelNode(const std::string& name, const std::shared_ptr<Model>& model) {

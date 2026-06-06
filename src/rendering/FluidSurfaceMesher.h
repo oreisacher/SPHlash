@@ -5,9 +5,16 @@
 #ifndef SPHLASH_FLUIDSURFACEMESHER_H
 #define SPHLASH_FLUIDSURFACEMESHER_H
 
-#include "ModelNode.h"
-#include "rendering/FluidRenderer.h"
-#include "simulation/FluidSimulation.h"
+#include <memory>
+#include "Model.h"
+#include "glm/glm.hpp"
+#include "utils/VoxelField.h"
+
+class Mesh;
+class ModelNode;
+class Scene;
+class Renderer;
+class FluidSimulation;
 
 struct MesherSettings {
     glm::ivec3 resolution = { 128, 128, 128 };
@@ -19,21 +26,22 @@ struct MesherSettings {
 
 class FluidSurfaceMesher {
 public:
-    FluidSurfaceMesher(Scene& scene, FluidSimulation* simulation, FluidRenderer* renderer);
+    FluidSurfaceMesher(FluidSimulation* simulation);
     ~FluidSurfaceMesher();
 
-    void generateMesh(bool force = false) const;
+    void updateMesh() const;
     void updateVoxelFieldSize();
+
+    Model* getSurfaceModel() const;
 
     void updateSettings() const;
 
     MesherSettings settings;
 private:
-    FluidRenderer* renderer;
     FluidSimulation* simulation;
 
-    ModelNode* surfaceModelNode;
     Mesh* surfaceMesh;
+    std::shared_ptr<Model> surfaceModel;
 
     VoxelField voxelField;
 

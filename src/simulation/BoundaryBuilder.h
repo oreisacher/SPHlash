@@ -7,6 +7,7 @@
 
 #include "glm/vec3.hpp"
 #include "rendering/Scene.h"
+#include "utils/AABB.h"
 #include "utils/Hex32Field.h"
 
 struct BoundarySettings {

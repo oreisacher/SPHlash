@@ -4,6 +4,8 @@
 
 #include "Material.h"
 
+#include <ranges>
+
 Material::Material(const std::string& name, const std::shared_ptr<Shader>& shader)
     : name(name), shader(shader)
 { }
@@ -20,6 +22,15 @@ void Material::bind() const {
         shader->setVec3(param, value);
     for (auto& [param, value] : vec4Params)
         shader->setVec4(param, value);
+
+    // Bind textures
+    int c = 0;
+    for (const auto& value : textures | std::views::values) {
+        glActiveTexture(GL_TEXTURE0 + c);
+        shader->setInt("param", c);
+        value->bind();
+        c++;
+    }
 }
 
 std::string Material::getName() {
@@ -40,6 +51,10 @@ void Material::setVec3(const std::string& name, glm::vec3 value) {
 
 void Material::setVec4(const std::string& name, glm::vec4 value) {
     vec4Params[name] = value;
+}
+
+void Material::setTexture(const std::string& name, std::shared_ptr<Texture> tex) {
+    textures[name] = tex;
 }
 
 bool Material::isTransparent() {

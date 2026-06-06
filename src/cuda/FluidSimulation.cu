@@ -11,7 +11,9 @@
 #include <cub/cub.cuh>
 
 #include "Hex32.cuh"
-#include "rendering/FluidRenderer.h"
+#include "rendering/Renderer.h"
+#include "rendering/ForceFieldNode.h"
+#include "utils/VoxelField.h"
 
 void queryRequiredSortingStorage(
     const int numParticles,

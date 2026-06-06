@@ -3,15 +3,16 @@
 //
 
 #include "FluidSurfaceMesher.h"
-#include "cuda/MarchingCubes.h"
-#include <cuda_gl_interop.h>
-#include <iostream>
-
+#include <cuda_runtime.h>
+#include "BoundingBoxNode.h"
+#include "Model.h"
 #include "ModelNode.h"
 #include "Scene.h"
+#include "cuda/MarchingCubes.h"
+#include "simulation/FluidSimulation.h"
 
-FluidSurfaceMesher::FluidSurfaceMesher(Scene& scene, FluidSimulation* simulation, FluidRenderer* renderer)
-    : renderer(renderer), simulation(simulation)
+FluidSurfaceMesher::FluidSurfaceMesher(FluidSimulation* simulation)
+    : simulation(simulation)
 {
     // Init voxel field
     updateVoxelFieldSize();
@@ -34,7 +35,7 @@ FluidSurfaceMesher::FluidSurfaceMesher(Scene& scene, FluidSimulation* simulation
     auto surfaceMesh = std::make_unique<Mesh>("Surface Mesh", maxVertices, maxIndices);
     this->surfaceMesh = surfaceMesh.get();
 
-    auto surfaceModel = std::make_shared<Model>(
+    surfaceModel = std::make_shared<Model>(
         "Surface",
         std::move(surfaceMesh)
     );
@@ -43,16 +44,7 @@ FluidSurfaceMesher::FluidSurfaceMesher(Scene& scene, FluidSimulation* simulation
     surfaceMaterial.setVec3("albedo", glm::vec3(0.2f, 0.6f, 1.0f));
     surfaceModel->addMaterial(surfaceMaterial);
 
-    std::unique_ptr<ModelNode> modelNode = std::make_unique<ModelNode>("Surface", surfaceModel);
-    this->surfaceModelNode = modelNode.get();
-
-    // Default state invisible
-    modelNode->setVisible(false);
-    modelNode->setSceneGraphVisible(false);
-    modelNode->setSavable(false);
-    modelNode->setBoundary(false);
-
-    scene.addSceneNode(std::move(modelNode));
+    updateSettings();
 }
 
 FluidSurfaceMesher::~FluidSurfaceMesher() {
@@ -60,10 +52,7 @@ FluidSurfaceMesher::~FluidSurfaceMesher() {
     cudaFree(d_triangleCount);
 }
 
-void FluidSurfaceMesher::generateMesh(bool force) const {
-    if (!force && (!surfaceModelNode->isVisible() || simulation->getState() == PAUSED))
-        return;
-
+void FluidSurfaceMesher::updateMesh() const {
     if (!simulation->computeVoxelField(voxelField))
         return;
 
@@ -133,17 +122,13 @@ void FluidSurfaceMesher::updateVoxelFieldSize() {
     cudaMalloc(&voxelField.d_color, sampleCount * sizeof(float));
     cudaMalloc(&voxelField.d_normal, sampleCount * sizeof(float3));
 
-    generateMesh(true);
+    updateMesh();
+}
+
+Model* FluidSurfaceMesher::getSurfaceModel() const {
+    return surfaceModel.get();
 }
 
 void FluidSurfaceMesher::updateSettings() const {
-    if (renderer->settings.mode != MARCHING_CUBES) {
-        surfaceModelNode->setVisible(false);
-    } else {
-        surfaceModelNode->setVisible(true);
-        surfaceModelNode->getModel()->getMaterial(0).setVec4("albedo", settings.color);
-
-        // Force generate new surface mesh after switching mode to avoid mesh based on old particle data
-        generateMesh(true);
-    }
+    surfaceModel->getMaterial(0).setVec4("albedo", settings.color);
 }

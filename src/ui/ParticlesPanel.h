@@ -6,21 +6,22 @@
 #define FLUIDSIMSPH_PARTICLESPANEL_H
 
 #include "UIPanel.h"
-#include "glad/gl.h"
-#include "rendering/FluidRenderer.h"
-#include "rendering/Shader.h"
 #include "simulation/FluidSimulation.h"
+
+class Shader;
+class Renderer;
+class FluidSimulation;
 
 class ParticlesPanel : public UIPanel {
 public:
-    explicit ParticlesPanel(FluidSimulation* simulation, FluidRenderer* renderer);
+    explicit ParticlesPanel(FluidSimulation* simulation, ParticlesNode* particles);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
     FluidSimulation* simulation;
-    FluidRenderer* renderer;
+    Shader* particlesShader;
 
     ParticleGPU particle;
 

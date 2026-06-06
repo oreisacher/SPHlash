@@ -6,26 +6,28 @@
 #define FLUIDSIMSPH_RENDERINGSETTINGSPANEL_H
 
 #include "UIPanel.h"
-#include "rendering/FluidRenderer.h"
+#include "rendering/Renderer.h"
 #include "rendering/FluidSurfaceMesher.h"
 
 class RenderingSettingsPanel : public UIPanel {
 public:
-    explicit RenderingSettingsPanel(FluidRenderer* renderer, FluidSurfaceMesher* surfaceMesher);
+    explicit RenderingSettingsPanel(ParticlesNode* particles);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
-    FluidRenderer* renderer;
     FluidSurfaceMesher* surfaceMesher;
+
+    ParticlesNode* particles;
 
     static inline const char* renderModes[] {
         "Particles - Solid Color",
         "Particles - Velocity",
         "Particles - Pressure",
         "Particles - Surface",
-        "Marching Cubes Surface"
+        "Marching Cubes Surface",
+        "Screen Space Surface"
     };
 };
 

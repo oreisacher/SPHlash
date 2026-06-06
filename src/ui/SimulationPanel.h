@@ -6,7 +6,7 @@
 #define FLUIDSIMSPH_VIEWPORTPANEL_H
 
 #include "UIPanel.h"
-#include "../rendering/FluidRenderer.h"
+#include "../rendering/Renderer.h"
 #include "rendering/Editor.h"
 #include "utils/Hex32Field.h"
 
@@ -23,7 +23,7 @@ struct PanelEvent {
 
 class SimulationPanel : public UIPanel {
 public:
-    explicit SimulationPanel(Editor* editor, const FluidRenderer* renderer);
+    explicit SimulationPanel(Editor* editor, const Renderer* renderer);
 
     void update(double deltaTime) override;
     void draw() override;

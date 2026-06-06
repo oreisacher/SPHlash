@@ -6,10 +6,10 @@
 #define SPHLASH_AREAMODEL_H
 
 #include "IBounded.h"
-#include "Model.h"
-#include "ui/ISelectable.h"
+#include "Material.h"
+#include "Mesh.h"
+#include "Transform.h"
 #include "ui/SceneNode.h"
-#include "utils/AABB.h"
 
 class BoundingBoxNode : public Transform, public SceneNode, public IBounded {
 public:

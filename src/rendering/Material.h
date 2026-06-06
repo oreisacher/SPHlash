@@ -8,6 +8,7 @@
 #include "Shader.h"
 #include <memory>
 #include <glm/glm.hpp>
+#include "Texture.h"
 
 class Material {
 public:
@@ -22,6 +23,8 @@ public:
     void setVec3(const std::string& name, glm::vec3 value);
     void setVec4(const std::string& name, glm::vec4 value);
 
+    void setTexture(const std::string& name, std::shared_ptr<Texture> tex);
+
     bool isTransparent();
 
 private:
@@ -31,6 +34,7 @@ private:
     std::unordered_map<std::string, float> floatParams;
     std::unordered_map<std::string, glm::vec3> vec3Params;
     std::unordered_map<std::string, glm::vec4> vec4Params;
+    std::unordered_map<std::string, std::shared_ptr<Texture>> textures;
 };
 
 #endif //SPHLASH_MATERIAL_H

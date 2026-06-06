@@ -3,9 +3,12 @@
 //
 
 #include "BoundaryBuilder.h"
+#include <cuda_runtime.h>
 #include <iostream>
+#include <vector_functions.h>
 #include "imgui_internal.h"
 #include "cuda/Boundaries.h"
+#include "rendering/ModelNode.h"
 #include "utils/CudaUtils.h"
 
 bool BoundaryBuilder::constructSDFMap(const Scene* scene, CudaAABB domain, float h, Hex32Field& sdfMap) const {

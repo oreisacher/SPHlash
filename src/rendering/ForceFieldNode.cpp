@@ -4,6 +4,8 @@
 
 #include "ForceFieldNode.h"
 
+#include "Model.h"
+
 ForceFieldNode::ForceFieldNode(const std::string& name) {
     this->name = name;
 

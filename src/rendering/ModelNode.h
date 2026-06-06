@@ -5,11 +5,13 @@
 #ifndef SPHLASH_MODELNODE_H
 #define SPHLASH_MODELNODE_H
 
-#include "BoundingBoxNode.h"
 #include "IBounded.h"
-#include "Model.h"
 #include "Transform.h"
 #include "ui/SceneNode.h"
+
+class BoundingBoxNode;
+struct Triangle;
+class Model;
 
 class ModelNode : public Transform, public SceneNode, public IBounded {
 public:

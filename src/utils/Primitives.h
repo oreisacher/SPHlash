@@ -51,6 +51,23 @@ namespace Primitives {
             };
         }
     };
+
+    struct QuadGeometry {
+        static std::vector<Vertex> GetVertices() {
+            return {
+                { { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f } }, // 0
+                { {  1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f } }, // 1
+                { {  1.0f,  1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f } }, // 2
+                { { -1.0f,  1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f } }, // 3
+            };
+        }
+
+        static std::vector<unsigned int> GetIndices() {
+            return {
+                0, 1, 2, 0, 2, 3
+            };
+        }
+    };
 }
 
 #endif //SPHLASH_PRIMITIVES_H

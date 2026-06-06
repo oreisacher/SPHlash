@@ -9,7 +9,7 @@
 #include <filesystem>
 #include <format>
 #include <iostream>
-#include "FluidRenderer.h"
+#include "Renderer.h"
 #include "tiny_obj_loader.h"
 #include "glm/gtc/quaternion.hpp"
 #include <glm/gtx/matrix_decompose.hpp>

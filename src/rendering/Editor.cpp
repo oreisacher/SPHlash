@@ -40,6 +40,11 @@ void Editor::addParticleSpawn(const std::string& path) {
     }
 }
 
+void Editor::updateRenderingSize(int width, int height) const {
+    for (auto* node : scene->getSceneNodes())
+        node->updateSize(width, height);
+}
+
 void Editor::addBoundary(const std::string& path) {
     auto model = std::make_shared<Model>(path);
     auto modelNode = std::make_unique<ModelNode>(model->getName(), model);

@@ -4,7 +4,10 @@
 
 #include "BoundingBoxNode.h"
 
+#include "Material.h"
+#include "Mesh.h"
 #include "Scene.h"
+#include "Shader.h"
 
 BoundingBoxNode::BoundingBoxNode(const std::string& name, glm::vec4 color) {
     this->name = name;

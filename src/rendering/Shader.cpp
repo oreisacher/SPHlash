@@ -6,8 +6,6 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
-#include <GL/glext.h>
-
 #include "glm/gtc/type_ptr.hpp"
 #include "utils/Logger.h"
 
@@ -103,7 +101,7 @@ int Shader::compile() {
         if (!success) {
             char infoLog[512];
             glGetShaderInfoLog(source, 512, nullptr, infoLog);
-            LOG_ERROR(infoLog)
+            LOG_ERROR("\n\n" + content + "\n\n" + infoLog)
 
             // Cleanup
             glDeleteProgram(shader);
@@ -232,13 +230,104 @@ std::shared_ptr<Shader> Shader::createParticle() {
     return shader;
 }
 
+std::shared_ptr<Shader> Shader::createScreenSpaceParticle() {
+    auto shader = std::make_shared<Shader>(
+        std::initializer_list<std::pair<std::string, Type>>({
+            { "assets/shaders/billboard.vert", VERTEX },
+            { "assets/shaders/billboard.frag", FRAGMENT }
+        })
+    );
+
+    shader->compile();
+
+    return shader;
+}
+
 std::shared_ptr<Shader> Shader::createTexture3DSlice() {
     auto shader = std::make_shared<Shader>(
     std::initializer_list<std::pair<std::string, Type>>({
-        { "assets/shaders/fullscreen.vert", VERTEX },
-        { "assets/shaders/texture3DSlice.frag", FRAGMENT }
-    })
-);
+            { "assets/shaders/fullscreen.vert", VERTEX },
+            { "assets/shaders/texture3DSlice.frag", FRAGMENT }
+        })
+    );
+
+    shader->compile();
+
+    return shader;
+}
+
+std::shared_ptr<Shader> Shader::createDepth() {
+    auto shader = std::make_shared<Shader>(
+        std::initializer_list<std::pair<std::string, Type>>({
+            { "assets/shaders/fullscreen.vert", VERTEX },
+            { "assets/shaders/depth.frag", FRAGMENT }
+        })
+    );
+
+    shader->compile();
+
+    return shader;
+}
+
+std::shared_ptr<Shader> Shader::createBlur() {
+    auto shader = std::make_shared<Shader>(
+        std::initializer_list<std::pair<std::string, Type>>({
+            { "assets/shaders/fullscreen.vert", VERTEX },
+            { "assets/shaders/blur.frag", FRAGMENT }
+        })
+    );
+
+    shader->compile();
+
+    return shader;
+}
+
+std::shared_ptr<Shader> Shader::createNormal() {
+    auto shader = std::make_shared<Shader>(
+    std::initializer_list<std::pair<std::string, Type>>({
+            { "assets/shaders/fullscreen.vert", VERTEX },
+            { "assets/shaders/normal.frag", FRAGMENT }
+        })
+    );
+
+    shader->compile();
+
+    return shader;
+}
+
+std::shared_ptr<Shader> Shader::createComposition() {
+    auto shader = std::make_shared<Shader>(
+std::initializer_list<std::pair<std::string, Type>>({
+            { "assets/shaders/fullscreen.vert", VERTEX },
+            { "assets/shaders/composition.frag", FRAGMENT }
+        })
+    );
+
+    shader->compile();
+
+    return shader;
+}
+
+std::shared_ptr<Shader> Shader::createFullscreen() {
+    auto shader = std::make_shared<Shader>(
+std::initializer_list<std::pair<std::string, Type>>({
+            { "assets/shaders/fullscreen.vert", VERTEX },
+            { "assets/shaders/fullscreenTexture.frag", FRAGMENT }
+        })
+    );
+
+    shader->compile();
+
+    return shader;
+}
+
+std::shared_ptr<Shader> Shader::createSkybox() {
+    auto shader = std::make_shared<Shader>(
+    std::initializer_list<std::pair<std::string, Type>>({
+            { "assets/shaders/skybox.vert", VERTEX },
+            { "assets/shaders/skybox.frag", FRAGMENT }
+        })
+    );
 
     shader->compile();
 

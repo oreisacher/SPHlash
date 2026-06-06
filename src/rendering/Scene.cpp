@@ -4,17 +4,18 @@
 
 #include "Scene.h"
 #include <algorithm>
-#include <iostream>
-
 #include "BoundingBoxParticleSpawnNode.h"
+#include "ForceFieldNode.h"
+#include "ModelNode.h"
 #include "simulation/FluidSimulation.h"
-
-void Scene::setCamera(std::unique_ptr<Camera> camera) {
-    this->camera = std::move(camera);
-}
+#include "utils/Config.h"
 
 Camera* Scene::getCamera() const {
     return camera.get();
+}
+
+void Scene::setCamera(std::unique_ptr<Camera> camera) {
+    this->camera = std::move(camera);
 }
 
 void Scene::addSceneNode(std::unique_ptr<SceneNode> node) {
@@ -46,6 +47,18 @@ void Scene::removeSceneNode(const SceneNode* node) {
 
 void Scene::setSimulationDomain(BoundingBoxNode* domain) {
     simulationDomain = domain;
+}
+
+BoundingBoxNode* Scene::getSimulationDomain() const {
+    return simulationDomain;
+}
+
+void Scene::setParticleNode(ParticlesNode* particles) {
+    this->particles = particles;
+}
+
+ParticlesNode* Scene::getParticlesNode() const {
+    return this->particles;
 }
 
 std::vector<ModelNode*> Scene::getModels() const {

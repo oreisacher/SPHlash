@@ -6,8 +6,10 @@
 #include "imgui.h"
 #include <iostream>
 
-ControlPanel::ControlPanel(Editor* editor, FluidSimulation* simulation, FluidRenderer* renderer, FluidSurfaceMesher* mesher)
-    : UIPanel("Controls"), editor(editor), simulation(simulation), renderer(renderer), mesher(mesher) {
+#include "rendering/Renderer.h"
+
+ControlPanel::ControlPanel(Editor* editor, FluidSimulation* simulation, Renderer* renderer)
+    : UIPanel("Controls"), editor(editor), simulation(simulation), renderer(renderer) {
 }
 
 void ControlPanel::update(double deltaTime) { }
@@ -23,15 +25,15 @@ void ControlPanel::draw() {
 
     if (ImGui::Button("Init Simulation", ImVec2(totalWidth, 0))) {
         // Build boundary map
-        if (editor->getBoundaryBuilder()->settings.buildOnInit)
-            editor->buildBoundaryDensityMap();
+        // if (editor->getBoundaryBuilder()->settings.buildOnInit)
+            // editor->buildBoundaryDensityMap();
 
         // Init simulation
         simulation->init();
 
         // Setup renderer
-        renderer->updateParticleData();
-        mesher->generateMesh(true);
+        // renderer->getParticleNode()->updateParticleData();
+        // mesher->generateMesh(true);
     }
 
     const SimulationState simulationState = simulation->getState();
@@ -46,12 +48,12 @@ void ControlPanel::draw() {
 
     if (ImGui::Button("Reset Simulation", ImVec2(totalWidth, 0))) {
         simulation->reset();
-        mesher->generateMesh(true);
+        // mesher->updateMesh(true);
     }
 
     if (ImGui::IsKeyPressed(ImGuiKey_R) && simulationState != UNINITIALIZED) {
         simulation->reset();
-        mesher->generateMesh(true);
+        // mesher->updateMesh(true);
     }
 
     ImGui::Separator();

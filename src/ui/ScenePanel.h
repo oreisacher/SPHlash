@@ -7,18 +7,18 @@
 
 #include "UIPanel.h"
 #include "rendering/Editor.h"
-#include "rendering/FluidRenderer.h"
+#include "rendering/Renderer.h"
 
 class ScenePanel : public UIPanel {
 public:
-    explicit ScenePanel(Editor* editor, FluidRenderer* renderer);
+    explicit ScenePanel(Editor* editor, Renderer* renderer);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
     Editor* editor;
-    FluidRenderer* renderer;
+    Renderer* renderer;
 };
 
 #endif //SPHLASH_MODELSPANEL_H

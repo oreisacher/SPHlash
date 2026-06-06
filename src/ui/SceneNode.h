@@ -6,10 +6,9 @@
 #define SPHLASH_SCENENODE_H
 
 #include "ISelectable.h"
-#include "nlohmann/json.hpp"
-#include "nlohmann/json_fwd.hpp"
 #include "rendering/IRenderable.h"
 #include <unordered_set>
+#include <nlohmann/json.hpp>
 
 class SceneNode : public ISelectable, public IRenderable {
 public:

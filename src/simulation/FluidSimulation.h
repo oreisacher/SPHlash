@@ -5,18 +5,22 @@
 #ifndef FLUIDSIMSPH_FLUIDSIMULATIONGPU_H
 #define FLUIDSIMSPH_FLUIDSIMULATIONGPU_H
 
-#include "glm/glm.hpp"
-#include <cuda_runtime.h>
-#include "rendering/BoundingBoxNode.h"
-#include "rendering/FluidRenderer.h"
-#include "utils/AABB.h"
+#include <vector_types.h>
 #include "utils/Hex32Field.h"
-#include "utils/VoxelField.h"
+#include <cstddef>
+
+class ParticlesNode;
+class Scene;
+struct cudaGraphicsResource;
+struct VoxelField;
+class BoundingBoxNode;
+struct RendererParticle;
+struct CudaForceField;
 
 enum SimulationState {
-    UNINITIALIZED,
-    PAUSED,
-    RUNNING
+     UNINITIALIZED,
+     PAUSED,
+     RUNNING
 };
 
 struct ParticleGPU {
@@ -36,31 +40,31 @@ struct ParticleGPU {
     float4 debugging                = { 0.0f, 0.0f, 0.0f, 0.0f };
 };
 
-struct CudaForceField {
-    float3 position     = { 0.0f, 0.0f, 0.0f };
-    float3 halfExtents  = { 0.2f, 0.2f, 0.2f };
+// struct CudaForceField {
+//     float3 position     = { 0.0f, 0.0f, 0.0f };
+//     float3 halfExtents  = { 0.2f, 0.2f, 0.2f };
+//
+//     float3 right        = { 1.0f, 0.0f, 0.0f };
+//     float3 up           = { 0.0f, 1.0f, 0.0f };
+//     float3 forward      = { 0.0f, 0.0f, 1.0f };
+//
+//     bool active         = true;
+//     float strength      = 5.0f;
+// };
 
-    float3 right        = { 1.0f, 0.0f, 0.0f };
-    float3 up           = { 0.0f, 1.0f, 0.0f };
-    float3 forward      = { 0.0f, 0.0f, 1.0f };
-
-    bool active         = true;
-    float strength      = 5.0f;
-};
-
-struct CudaParticleSpawn {
-    float restDensity       = 1000.0f;
-    float particleSpacing   = 0.025f;
-    float4 color            = { 1.0f, 0.0f, 0.0f, 1.0f };
-
-    CudaAABB area = {
-        { 0.0f, 0.0f, 0.0f },
-        { 1.0f, 1.0f, 1.0f }
-    };
-
-    bool hasShape               = false;
-    Triangle* d_shapeTriangles  = nullptr;
-};
+// struct CudaParticleSpawn {
+//     float restDensity       = 1000.0f;
+//     float particleSpacing   = 0.025f;
+//     float4 color            = { 1.0f, 0.0f, 0.0f, 1.0f };
+//
+//     CudaAABB area = {
+//         { 0.0f, 0.0f, 0.0f },
+//         { 1.0f, 1.0f, 1.0f }
+//     };
+//
+//     bool hasShape               = false;
+//     Triangle* d_shapeTriangles  = nullptr;
+// };
 
 struct SimulationSettings {
     // Particles
@@ -82,7 +86,7 @@ struct SimulationSettings {
 
 class FluidSimulation {
 public:
-    FluidSimulation(Scene& scene);
+    FluidSimulation(Scene* scene, bool headless = false);
     ~FluidSimulation();
 
     /*
@@ -108,7 +112,7 @@ public:
 
     bool initParticles();
 
-    void setRendererVBO(GLuint vbo);
+    void setRendererVBO(unsigned int vbo);
 
     float getCFL() const;
     int getParticleCount() const;
@@ -137,6 +141,7 @@ private:
 
     float cfl = 0;
     int particleCount = 0;
+    bool headless = false;
 
     // --- Simulation State ---
     SimulationState state = UNINITIALIZED;
@@ -166,6 +171,7 @@ private:
     Hex32Field volumeMap;
 
     // --- Rendering ---
+    ParticlesNode* particles;
     cudaGraphicsResource* rendererResource = nullptr;
     RendererParticle* d_rendererParticles  = nullptr;
 };

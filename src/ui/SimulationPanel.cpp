@@ -5,10 +5,10 @@
 #include "ui/SimulationPanel.h"
 #include "imgui.h"
 #include "ImGuizmo.h"
-#include "../rendering/FluidRenderer.h"
+#include "../rendering/Renderer.h"
 #include "glm/gtc/type_ptr.hpp"
 
-SimulationPanel::SimulationPanel(Editor* editor, const FluidRenderer* renderer)
+SimulationPanel::SimulationPanel(Editor* editor, const Renderer* renderer)
     : UIPanel("Simulation"), editor(editor), texture(renderer->getTextureId())
 { }
 

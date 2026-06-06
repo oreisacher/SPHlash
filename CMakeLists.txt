@@ -46,10 +46,6 @@ add_executable(SPHlash
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
-        src/rendering/ModelNode.cpp
-        src/rendering/ModelNode.h
-        src/rendering/IBounded.h
-        src/utils/CudaUtils.h
 )
 
 add_library(imgui
@@ -86,6 +82,7 @@ target_include_directories(SPHlash PUBLIC
     external/ImGuiFileDialog
     external/tinyobjloader
     external/ImGuizmo/src
+    external/stb
 )
 
 target_link_libraries(SPHlash

@@ -10,7 +10,7 @@
 #include "rendering/Editor.h"
 #include "rendering/Scene.h"
 
-ScenePanel::ScenePanel(Editor* editor, FluidRenderer* renderer)
+ScenePanel::ScenePanel(Editor* editor, Renderer* renderer)
     : UIPanel("Scene"), editor(editor), renderer(renderer)
 { }
 

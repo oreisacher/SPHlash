@@ -5,11 +5,15 @@
 #include "ParticlesPanel.h"
 #include <format>
 #include "imgui.h"
+#include "rendering/ParticlesNode.h"
+#include "rendering/Shader.h"
 #include "simulation/FluidSimulation.h"
 
-ParticlesPanel::ParticlesPanel(FluidSimulation* simulation, FluidRenderer* renderer)
-    : UIPanel("Particles"), simulation(simulation), renderer(renderer)
-{ }
+ParticlesPanel::ParticlesPanel(FluidSimulation* simulation, ParticlesNode* particles)
+    : UIPanel("Particles"), simulation(simulation)
+{
+    particlesShader = particles->getParticleShader();
+}
 
 void ParticlesPanel::update(double deltaTime) {
     time += deltaTime;
@@ -48,8 +52,8 @@ void ParticlesPanel::draw() {
             ImGui::Text("Particle ID:");
             ImGui::DragInt("##id", &selectedParticle, 1, 0, particleCount - 1, "%d", ImGuiSliderFlags_AlwaysClamp);
 
-            renderer->getParticleShader()->bind();
-            renderer->getParticleShader()->setInt("selectedParticleID", selectedParticle);
+            particlesShader->bind();
+            particlesShader->setInt("selectedParticleID", selectedParticle);
 
             if (particle.properties.w != -1.0) {
                 float totalWidth = ImGui::GetContentRegionAvail().x;
@@ -99,8 +103,8 @@ void ParticlesPanel::draw() {
                 selectedParticle = 0;
             }
         } else {
-            renderer->getParticleShader()->bind();
-            renderer->getParticleShader()->setInt("selectedParticleID", -1);
+            particlesShader->bind();
+            particlesShader->setInt("selectedParticleID", -1);
         }
     }
 

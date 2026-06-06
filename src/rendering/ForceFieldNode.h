@@ -5,8 +5,23 @@
 #ifndef SPHLASH_FORCEMODEL_H
 #define SPHLASH_FORCEMODEL_H
 
+#include <vector_types.h>
+
 #include "Model.h"
-#include "simulation/FluidSimulation.h"
+#include "Transform.h"
+#include "ui/SceneNode.h"
+
+struct CudaForceField {
+    float3 position     = { 0.0f, 0.0f, 0.0f };
+    float3 halfExtents  = { 0.2f, 0.2f, 0.2f };
+
+    float3 right        = { 1.0f, 0.0f, 0.0f };
+    float3 up           = { 0.0f, 1.0f, 0.0f };
+    float3 forward      = { 0.0f, 0.0f, 1.0f };
+
+    bool active         = true;
+    float strength      = 5.0f;
+};
 
 class ForceFieldNode : public Transform, public SceneNode {
 public:

@@ -5,12 +5,16 @@
 #ifndef SPHLASH_SCENE_H
 #define SPHLASH_SCENE_H
 
-#include <memory>
-#include "BoundingBoxNode.h"
-#include "ForceFieldNode.h"
-#include "simulation/FluidSimulation.h"
-#include "simulation/IParticleSpawn.h"
+#include <vector>
+#include <nlohmann/json_fwd.hpp>
 #include "utils/Camera.h"
+
+class IParticleSpawn;
+class ForceFieldNode;
+class ModelNode;
+class ParticlesNode;
+class BoundingBoxNode;
+class SceneNode;
 
 class Scene {
 public:
@@ -22,6 +26,9 @@ public:
     void removeSceneNode(const SceneNode* node);
 
     void setSimulationDomain(BoundingBoxNode* domain);
+    BoundingBoxNode* getSimulationDomain() const;
+    void setParticleNode(ParticlesNode* particles);
+    ParticlesNode* getParticlesNode() const;
 
     std::vector<ModelNode*> getModels() const;
     std::vector<BoundingBoxNode*> getBoundingBoxes() const;
@@ -41,6 +48,7 @@ private:
 
     // --- Node Cache ---
     BoundingBoxNode*                simulationDomain    = nullptr;
+    ParticlesNode*                  particles           = nullptr;
     std::vector<ModelNode*>         models              = {};
     std::vector<BoundingBoxNode*>   boundingBoxes       = {};
     std::vector<ForceFieldNode*>    forceFields         = {};

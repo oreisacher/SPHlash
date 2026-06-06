@@ -12,7 +12,7 @@
 #include "glm/gtc/type_ptr.inl"
 #include "simulation/FluidSimulation.h"
 
-SimulationSettingsPanel::SimulationSettingsPanel(Editor* editor, FluidSimulation* simulation, FluidRenderer* renderer)
+SimulationSettingsPanel::SimulationSettingsPanel(Editor* editor, FluidSimulation* simulation, Renderer* renderer)
     : UIPanel("Simulation Settings"), editor(editor), simulation(simulation), renderer(renderer)
 {
     boundaryBuilder = editor->getBoundaryBuilder();

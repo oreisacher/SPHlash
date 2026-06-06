@@ -6,12 +6,8 @@
 #define SPHLASH_MODEL_H
 
 #include <string>
-
-#include "IRenderable.h"
 #include "Material.h"
 #include "Mesh.h"
-#include "Transform.h"
-#include "ui/ISelectable.h"
 #include "ui/SceneNode.h"
 #include "utils/AABB.h"
 

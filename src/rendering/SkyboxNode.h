@@ -1,0 +1,27 @@
+//
+// Created by ruut on 6/6/26.
+//
+
+#ifndef SPHLASH_SKYBOXNODE_H
+#define SPHLASH_SKYBOXNODE_H
+
+#include "Model.h"
+#include "Texture.h"
+#include "ui/SceneNode.h"
+
+class SkyboxNode : public SceneNode {
+public:
+    SkyboxNode();
+
+    Properties buildProperties() override;
+    void draw(const glm::mat4& view, const glm::mat4& projection) const override;
+
+    int getRenderPriority() const override;
+
+private:
+    std::shared_ptr<Model> skyboxModel;
+    Shader* skyboxShader;
+    std::shared_ptr<Texture> skyboxTexture;
+};
+
+#endif //SPHLASH_SKYBOXNODE_H

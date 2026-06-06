@@ -4,19 +4,22 @@
 
 #include "FluidSimulation.h"
 #include <algorithm>
-#include <cuda_runtime_api.h>
-#include <cuda_gl_interop.h>
+#include <cuda_runtime.h>
 #include <iostream>
 #include <random>
 #include <nvtx3/nvToolsExt.h>
 #include "cuda/Boundaries.h"
 #include "cuda/FluidSimulation.h"
+#include <cuda_gl_interop.h>
+#include <thrust/system/cuda/detail/par.h>
+
 #include "imgui.h"
-#include "glad/gl.h"
+#include "rendering/BoundingBoxNode.h"
+#include "rendering/ForceFieldNode.h"
 #include "rendering/Scene.h"
 #include "utils/CudaUtils.h"
 
-FluidSimulation::FluidSimulation(Scene& scene) : scene(&scene) {
+FluidSimulation::FluidSimulation(Scene* scene, bool headless) : scene(scene), headless(headless) {
     cudaSetDevice(0);
 
     // Setup domain bounding box
@@ -25,8 +28,17 @@ FluidSimulation::FluidSimulation(Scene& scene) : scene(&scene) {
     domain->setScale({ 2.0f, 2.0f, 2.0f });
     domain->setDeletable(false);
     domain->addTag(SimulationDomainTag);
-    scene.setSimulationDomain(domain);
-    scene.addSceneNode(std::move(domainBB));
+    scene->setSimulationDomain(domain);
+    scene->addSceneNode(std::move(domainBB));
+
+    // Setup particles node for rendering
+    if (!headless) {
+        auto particlesNode = std::make_unique<ParticlesNode>(this);
+        particlesNode->addTag("fluid");
+        particles = particlesNode.get();
+        scene->setParticleNode(particles);
+        scene->addSceneNode(std::move(particlesNode));
+    }
 }
 
 FluidSimulation::~FluidSimulation() {
@@ -40,7 +52,8 @@ FluidSimulation::~FluidSimulation() {
     cudaFree(d_sortTempStorage);
     cudaFree(d_forceFields);
 
-    cudaGraphicsUnmapResources(1, &rendererResource, nullptr);
+    if (!headless)
+        cudaGraphicsUnmapResources(1, &rendererResource, nullptr);
 }
 
 void FluidSimulation::updateParticles() {
@@ -178,22 +191,24 @@ void FluidSimulation::update(const float deltaTime) {
     CUDA_KERNEL_CHECK("UpdateParticlesKernel");
 #endif
 
-    // Prepare particles for rendering
-    size_t numBytes;
-    cudaGraphicsMapResources(1, &rendererResource);
-    cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_rendererParticles), &numBytes, rendererResource);
+    if (!headless) {
+        // Prepare particles for rendering
+        size_t numBytes;
+        cudaGraphicsMapResources(1, &rendererResource);
+        cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_rendererParticles), &numBytes, rendererResource);
 
-    launchRenderPrepareKernel(
-        particleCount,
-        d_particles,
-        d_rendererParticles
-    );
+        launchRenderPrepareKernel(
+            particleCount,
+            d_particles,
+            d_rendererParticles
+        );
 
 #ifdef DEBUG_CUDA
-    CUDA_KERNEL_CHECK("RenderPrepareKernel");
+        CUDA_KERNEL_CHECK("RenderPrepareKernel");
 #endif
 
-    cudaGraphicsUnmapResources(1, &rendererResource);
+        cudaGraphicsUnmapResources(1, &rendererResource);
+    }
 }
 
 void FluidSimulation::step(float deltaTime) {
@@ -207,7 +222,20 @@ void FluidSimulation::step(float deltaTime) {
 
 void FluidSimulation::init() {
     // Init particle spawns
-    initParticles();
+    bool success = initParticles();
+
+    if (!headless) {
+        if (!success) {
+            particles->setVisible(false);
+            return;
+        }
+
+        particles->setVisible(true);
+        particles->updateParticlesSize(particleCount);
+
+        // Update particle rendering
+        setRendererVBO(particles->getParticleVBO());
+    }
 
     // Rebuild forcefield buffer
     rebuildForceFieldBuffer();
@@ -378,13 +406,14 @@ bool FluidSimulation::initParticles() {
     // Delete old particle data
     particleCount = 0;
 
-    if (d_particleHashes)           cudaFree(d_particleHashes);
-    if (d_sortedParticleHashes)     cudaFree(d_sortedParticleHashes);
-    if (d_sortedParticles)          cudaFree(d_sortedParticles);
-    if (d_particleIndices)          cudaFree(d_particleIndices);
-    if (d_sortedParticleIndices)    cudaFree(d_sortedParticleIndices);
-    if (d_offsets)                  cudaFree(d_offsets);
-    if (d_sortTempStorage)          cudaFree(d_sortTempStorage);
+    if (d_particleHashes)           cudaFree(d_particleHashes);         d_particleHashes = nullptr;
+    if (d_sortedParticleHashes)     cudaFree(d_sortedParticleHashes);   d_sortedParticleHashes = nullptr;
+    if (d_particles)                cudaFree(d_particles);              d_particles = nullptr;
+    if (d_sortedParticles)          cudaFree(d_sortedParticles);        d_sortedParticles = nullptr;
+    if (d_particleIndices)          cudaFree(d_particleIndices);        d_particleIndices = nullptr;
+    if (d_sortedParticleIndices)    cudaFree(d_sortedParticleIndices);  d_sortedParticleIndices = nullptr;
+    if (d_offsets)                  cudaFree(d_offsets);                d_offsets = nullptr;
+    if (d_sortTempStorage)          cudaFree(d_sortTempStorage);        d_sortTempStorage = nullptr;
 
     std::vector<ParticleGPU> allParticles;
 

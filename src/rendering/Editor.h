@@ -37,6 +37,9 @@ public:
 
     // --- Particle Spawns ---
     void addParticleSpawn(const std::string& path);
+
+    // --- Window Resizes ---
+    void updateRenderingSize(int width, int height) const;
 private:
     Scene* scene;
     FluidSimulation* simulation;

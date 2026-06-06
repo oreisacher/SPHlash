@@ -5,7 +5,7 @@
 #include "Application.h"
 #include "Version.h"
 
-#include "rendering/FluidRenderer.h"
+#include "rendering/Renderer.h"
 #include "rendering/Window.h"
 #include "ui/StatisticsPanel.h"
 #include "ui/ParticlesPanel.h"
@@ -43,23 +43,21 @@ Application::Application() {
     }
 
     // Simulation
-    simulation = new FluidSimulation(scene);
+    simulation = new FluidSimulation(&scene);
 
     // Rendering
-    renderer = new FluidRenderer(scene, simulation);
-
-    surfaceMesher = new FluidSurfaceMesher(scene, simulation, renderer);
+    renderer = new Renderer(&scene);
 
     editor = new Editor(scene, simulation);
 
     // Setup UI
     ui = new UIManager(window->getNativeWindow());
     ui->addPanel(new SimulationPanel            (editor, renderer));
-    ui->addPanel(new ControlPanel               (editor, simulation, renderer, surfaceMesher));
+    ui->addPanel(new ControlPanel               (editor, simulation, renderer));
     ui->addPanel(new StatisticsPanel            (simulation));
     ui->addPanel(new SimulationSettingsPanel    (editor, simulation, renderer));
-    ui->addPanel(new RenderingSettingsPanel     (renderer, surfaceMesher));
-    ui->addPanel(new ParticlesPanel             (simulation, renderer));
+    ui->addPanel(new RenderingSettingsPanel     (scene.getParticlesNode()));
+    ui->addPanel(new ParticlesPanel             (simulation, scene.getParticlesNode()));
     ui->addPanel(new PropertiesPanel            (editor));
     ui->addPanel(new ScenePanel                 (editor, renderer));
 
@@ -70,7 +68,6 @@ Application::Application() {
 
 Application::~Application() {
     delete simulation;
-    delete surfaceMesher;
     delete ui;
     delete window;
     delete editor;
@@ -86,9 +83,6 @@ void Application::run() const {
 
         // Simulation
         simulation->update(deltaTime);
-
-        // Build fluid surface if necessary
-        surfaceMesher->generateMesh();
 
         // Render simulation into texture
         renderer->render(scene);
@@ -111,6 +105,9 @@ void Application::processEvents() const {
         case PanelEvent::RESIZE:
             // Update framebuffer
             renderer->setSize(e.resize.size.x, e.resize.size.y);
+
+            // Update nodes via editor
+            editor->updateRenderingSize(e.resize.size.x, e.resize.size.y);
 
             // Update camera aspect ratio
             scene.getCamera()->setAspectRatio(e.resize.size.x / e.resize.size.y);
