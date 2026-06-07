@@ -1,7 +1,7 @@
 #version 330 core
 const float PI = 3.14159265359;
 
-in vec3 direction;
+in vec3 Direction;
 
 out vec4 FragColor;
 
@@ -15,6 +15,6 @@ vec2 projectLongLat(vec3 direction) {
 
 void main() {
     vec4 skyColor = vec4(1.0f);
-    skyColor *= textureLod(skybox, projectLongLat(normalize(direction)), 0.0);
+    skyColor *= textureLod(skybox, projectLongLat(normalize(Direction)), 0.0);
     FragColor = skyColor;
 }

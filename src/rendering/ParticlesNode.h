@@ -8,6 +8,7 @@
 #include <vector_types.h>
 
 #include "FluidSurfaceMesher.h"
+#include "FluidSurfaceScreenSpace.h"
 #include "Framebuffer.h"
 #include "glm/vec4.hpp"
 #include "ui/SceneNode.h"
@@ -31,22 +32,19 @@ struct RenderingSettings {
     RenderMode mode = SOLID_COLOR_PARTICLES;
 
     // VELOCITY_PARTICLES
-    glm::vec4 minVelColor = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
-    glm::vec4 maxVelColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    glm::vec3 minVelColor = glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::vec3 maxVelColor = glm::vec3(1.0f, 0.0f, 0.0f);
     float velocityMin = 0.0f;
     float velocityMax = 1.0f;
 
     // PRESSURE_PARTICLES
-    glm::vec4 minPresColor = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
-    glm::vec4 maxPresColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    glm::vec3 minPresColor = glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::vec3 maxPresColor = glm::vec3(1.0f, 0.0f, 0.0f);
     float pressureMin = 0.0f;
     float pressureMax = 1.0f;
 
     // SURFACE_PARTICLES
     float maxSurfaceTension = 100.0f;
-
-    // SCREEN_SPACE
-    float billboardSize = 0.01f;
 };
 
 struct RendererParticle {
@@ -57,6 +55,12 @@ struct RendererParticle {
     float4 color;
 };
 
+/*
+    This node is responsible for drawing the simulations particles.
+    Simple particle rendering is done within this node while more complex rendering e.g.
+    generating the surface via Marching Cubes algorithm or Screen Space method is delegated to
+    the respective class.
+*/
 class ParticlesNode : public SceneNode {
 public:
     ParticlesNode(FluidSimulation* simulation);
@@ -71,38 +75,26 @@ public:
     void updateParticlesSize(int count) const;
 
     FluidSurfaceMesher* getSurfaceMesher();
+    FluidSurfaceScreenSpace* getSurfaceScreenSpace();
+
     int getRenderPriority() const override;
+    void updateSize(int width, int height) override;
 
     RenderingSettings settings;
 
 private:
     void setupInstancing();
-    void updateSize(int width, int height) override;
 
     FluidSimulation* simulation;
+
     FluidSurfaceMesher mesher;
+    FluidSurfaceScreenSpace screenSpace;
 
     std::shared_ptr<Model> particleModel;
-    std::shared_ptr<Model> billboardParticleModel;
+
     Model* surfaceModel;
 
     Shader* particleShader;
-    Shader* billboardParticleShader;
-
-    unsigned int emptyVAO;
-
-    std::unique_ptr<Framebuffer> sceneDepthBuffer;
-    std::unique_ptr<Framebuffer> depthBuffer;
-    std::unique_ptr<Framebuffer> smoothBuffer1;
-    std::unique_ptr<Framebuffer> smoothBuffer2;
-    std::unique_ptr<Framebuffer> normalBuffer;
-    std::unique_ptr<Framebuffer> compositionBuffer;
-
-    std::shared_ptr<Shader> depthShader;
-    std::shared_ptr<Shader> blurShader;
-    std::shared_ptr<Shader> normalShader;
-    std::shared_ptr<Shader> compositionShader;
-    std::shared_ptr<Shader> fullscreenShader;
 
     unsigned int particleVBO;
 };

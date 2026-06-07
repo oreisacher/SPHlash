@@ -130,5 +130,9 @@ Model* FluidSurfaceMesher::getSurfaceModel() const {
 }
 
 void FluidSurfaceMesher::updateSettings() const {
-    surfaceModel->getMaterial(0).setVec4("albedo", settings.color);
+    auto& mat = surfaceModel->getMaterial(0);
+    mat.setVec3("albedo", settings.fluidColor);
+    mat.setFloat("ambientStrength", settings.ambientStrength);
+    mat.setFloat("specularStrength", settings.specularStrength);
+    mat.setFloat("fresnelStrength", settings.fresnelStrength);
 }

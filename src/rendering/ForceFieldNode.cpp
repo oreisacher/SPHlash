@@ -12,6 +12,13 @@ ForceFieldNode::ForceFieldNode(const std::string& name) {
     // Setup Force Field Arrow Model
     model = std::make_unique<Model>("assets/models/forceField.obj", false);
 
+    // Setup Wireframe Box Model
+    wireframeModel = std::make_unique<Model>("Wireframe Model", Mesh::createWireframeBox("Wireframe Mesh"));
+
+    Material wireframeMat("Wireframe", Shader::createBox());
+    wireframeMat.setVec3("color", glm::vec3(0.2f, 0.9f, 0.2f));
+    wireframeModel->addMaterial(wireframeMat);
+
     ForceFieldNode::setScale({ 0.25, 0.25, 0.25 });
 }
 
@@ -41,6 +48,13 @@ ForceFieldNode::ForceFieldNode(const nlohmann::json json) : SceneNode(json) {
     forceField.strength = json["strength"];
 
     model = std::make_unique<Model>("assets/models/forceField.obj", false);
+
+    // Setup Wireframe Box Model
+    wireframeModel = std::make_unique<Model>("Wireframe Model", Mesh::createWireframeBox("Wireframe Mesh"));
+
+    Material wireframeMat("Wireframe", Shader::createBox());
+    wireframeMat.setVec3("color", glm::vec3(0.2f, 0.9f, 0.2f));
+    wireframeModel->addMaterial(wireframeMat);
 }
 
 CudaForceField ForceFieldNode::getForceField() const {
@@ -48,7 +62,15 @@ CudaForceField ForceFieldNode::getForceField() const {
 }
 
 void ForceFieldNode::draw(const glm::mat4& view, const glm::mat4& projection) const {
-    model->draw(view, projection, transform);
+    wireframeModel->draw(view, projection, transform);
+
+    // Draw arrow of force field with removed scaling transform
+    glm::mat4 result = transform;
+    result[0] = glm::normalize(result[0]);
+    result[1] = glm::normalize(result[1]);
+    result[2] = glm::normalize(result[2]);
+
+    model->draw(view, projection, result);
 }
 
 void ForceFieldNode::setTransform(glm::mat4 transform) {

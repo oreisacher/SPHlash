@@ -12,14 +12,14 @@ uniform int selectedParticleID = -1;
 // --- Rendering modes ---
 uniform int mode = 0;
 
-uniform vec4 minVelColor;
+uniform vec3 minVelColor;
 uniform float minVel;
-uniform vec4 maxVelColor;
+uniform vec3 maxVelColor;
 uniform float maxVel;
 
-uniform vec4 minPresColor;
+uniform vec3 minPresColor;
 uniform float minPres;
-uniform vec4 maxPresColor;
+uniform vec3 maxPresColor;
 uniform float maxPres;
 
 uniform float maxSurfaceTension;
@@ -44,14 +44,14 @@ void main() {
     if (mode == 1) {
         float speed = length(Velocity);
         float t = (speed - minVel) / (maxVel - minVel + 1e-6f);
-        FragColor = mix(minVelColor, maxVelColor, t);
+        FragColor = vec4(mix(minVelColor, maxVelColor, t), 1.0);
         return;
     }
 
     // PRESSURE PARTICLES
     if (mode == 2) {
         float t = (Properties.z - minPres) / (maxPres - minPres);
-        FragColor = mix(minPresColor, maxPresColor, t);
+        FragColor = vec4(mix(minPresColor, maxPresColor, t), 1.0);
         return;
     }
 

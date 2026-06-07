@@ -25,15 +25,11 @@ void ControlPanel::draw() {
 
     if (ImGui::Button("Init Simulation", ImVec2(totalWidth, 0))) {
         // Build boundary map
-        // if (editor->getBoundaryBuilder()->settings.buildOnInit)
-            // editor->buildBoundaryDensityMap();
+        if (editor->getBoundaryBuilder()->settings.buildOnInit)
+            editor->buildBoundaryDensityMap();
 
         // Init simulation
         simulation->init();
-
-        // Setup renderer
-        // renderer->getParticleNode()->updateParticleData();
-        // mesher->generateMesh(true);
     }
 
     const SimulationState simulationState = simulation->getState();

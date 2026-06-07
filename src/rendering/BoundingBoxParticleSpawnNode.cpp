@@ -7,7 +7,7 @@
 #include "Material.h"
 
 BoundingBoxParticleSpawnNode::BoundingBoxParticleSpawnNode(const std::string& name)
-    : BoundingBoxNode(name, glm::vec4(1.0f, 0.0, 0.0, 1.0))
+    : BoundingBoxNode(name, glm::vec3(1.0f, 0.0, 0.0))
 {
     // Init particle spawn
     particleSpawn.hasShape = false;
@@ -23,16 +23,15 @@ BoundingBoxParticleSpawnNode::BoundingBoxParticleSpawnNode(const nlohmann::json 
         json["color"][0].get<float>(),
         json["color"][1].get<float>(),
         json["color"][2].get<float>(),
-        json["color"][3].get<float>()
+        1.0f
     );
 
     // Update shader color variable
     material->bind();
-    material->setVec4("color", {
+    material->setVec3("color", {
         json["color"][0].get<float>(),
         json["color"][1].get<float>(),
-        json["color"][2].get<float>(),
-        json["color"][3].get<float>()
+        json["color"][2].get<float>()
     });
 }
 
@@ -59,13 +58,13 @@ Properties BoundingBoxParticleSpawnNode::buildProperties() {
     ));
     properties.addProperty(std::make_unique<ColorProperty>(
         "Particle Color",
-        [this] () { return glm::vec4(particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z, particleSpawn.color.w); },
-        [this] (glm::vec4 color)
+        [this] () { return glm::vec3(particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z); },
+        [this] (glm::vec3 color)
         {
-            particleSpawn.color = { color.x, color.y, color.z, color.w };
+            particleSpawn.color = { color.x, color.y, color.z, 1.0f };
 
             material->bind();
-            material->setVec4("color", color);
+            material->setVec3("color", color);
         }
     ));
 
@@ -77,7 +76,7 @@ nlohmann::json BoundingBoxParticleSpawnNode::toJson() const {
 
     j["restDensity"] = particleSpawn.restDensity;
     j["particleSpacing"] = particleSpawn.particleSpacing;
-    j["color"] = { particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z, particleSpawn.color.w };
+    j["color"] = { particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z };
     j["hasShape"] = particleSpawn.hasShape;
 
     return j;

@@ -21,7 +21,11 @@ struct MesherSettings {
     float isoLevel = 0.00f;
     bool smoothNormals = true;
 
-    glm::vec4 color = glm::vec4(0.2f, 0.2f, 0.9f, 1.0f);
+    // Rendering
+    glm::vec3 fluidColor    = glm::vec3(0.2f, 0.2f, 0.9f);
+    float ambientStrength   = 0.3f;
+    float specularStrength  = 1.0f;
+    float fresnelStrength   = 0.1f;
 };
 
 class FluidSurfaceMesher {

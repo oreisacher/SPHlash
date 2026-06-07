@@ -14,22 +14,24 @@ layout (location = 7) in vec4 aColor;
 uniform mat4 view;
 uniform mat4 projection;
 
-uniform float billboardSize = 1.0f;
+uniform float size = 0.015f;
 
 out vec3 Normal;
 out vec2 TexCoord;
 out vec4 ViewPos;
 out mat4 Projection;
-out float Radius;
+out float Size;
 
 void main() {
-    TexCoord = aTexCoord;
-    Radius = billboardSize;
-    Projection = projection;
-
     vec4 centerView = view * vec4(aPos.xyz, 1.0);
+
+    // Pass down data to frag
+    TexCoord = aTexCoord;
+    Size = size;
+    Projection = projection;
     ViewPos = centerView;
 
-    centerView.xy += aPosition.xy * billboardSize;
+    // Span camera facing quad with given size
+    centerView.xy += aPosition.xy * size;
     gl_Position = projection * centerView;
 }

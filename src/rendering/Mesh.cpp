@@ -72,6 +72,7 @@ Mesh::~Mesh() {
 
 void Mesh::draw() const {
     glBindVertexArray(vao);
+    glLineWidth(lineWidth);
     glDrawElements(primitiveMode, indexCount, GL_UNSIGNED_INT, nullptr);
 }
 
@@ -82,6 +83,10 @@ void Mesh::drawInstanced(int count) const {
 
 std::string Mesh::getName() const {
     return name;
+}
+
+void Mesh::setLineWidth(float lineWidth) {
+    this->lineWidth = lineWidth;
 }
 
 void Mesh::updateMeshData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {

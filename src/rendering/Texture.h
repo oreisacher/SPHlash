@@ -25,6 +25,7 @@ public:
     ~Texture();
 
     void bind() const;
+    unsigned int getId() const;
 
     const int& getWidth() const;
     void setWidth(const int& width);

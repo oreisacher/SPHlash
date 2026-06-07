@@ -233,8 +233,8 @@ std::shared_ptr<Shader> Shader::createParticle() {
 std::shared_ptr<Shader> Shader::createScreenSpaceParticle() {
     auto shader = std::make_shared<Shader>(
         std::initializer_list<std::pair<std::string, Type>>({
-            { "assets/shaders/billboard.vert", VERTEX },
-            { "assets/shaders/billboard.frag", FRAGMENT }
+            { "assets/shaders/particleQuad.vert", VERTEX },
+            { "assets/shaders/particleQuad.frag", FRAGMENT }
         })
     );
 
@@ -256,18 +256,6 @@ std::shared_ptr<Shader> Shader::createTexture3DSlice() {
     return shader;
 }
 
-std::shared_ptr<Shader> Shader::createDepth() {
-    auto shader = std::make_shared<Shader>(
-        std::initializer_list<std::pair<std::string, Type>>({
-            { "assets/shaders/fullscreen.vert", VERTEX },
-            { "assets/shaders/depth.frag", FRAGMENT }
-        })
-    );
-
-    shader->compile();
-
-    return shader;
-}
 
 std::shared_ptr<Shader> Shader::createBlur() {
     auto shader = std::make_shared<Shader>(
@@ -299,7 +287,7 @@ std::shared_ptr<Shader> Shader::createComposition() {
     auto shader = std::make_shared<Shader>(
 std::initializer_list<std::pair<std::string, Type>>({
             { "assets/shaders/fullscreen.vert", VERTEX },
-            { "assets/shaders/composition.frag", FRAGMENT }
+            { "assets/shaders/screenSpaceComposition.frag", FRAGMENT }
         })
     );
 

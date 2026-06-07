@@ -60,6 +60,10 @@ void Texture::bind() const {
     glBindTexture(GL_TEXTURE_2D, textureID);
 }
 
+unsigned int Texture::getId() const {
+    return textureID;
+}
+
 const int& Texture::getWidth() const { return width; }
 void Texture::setWidth(const int &width) { this->width = width; }
 

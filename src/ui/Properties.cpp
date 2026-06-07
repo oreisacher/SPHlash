@@ -5,6 +5,7 @@
 #include "Properties.h"
 
 #include "imgui.h"
+#include "ImGuiFileDialog.h"
 #include "glm/gtc/type_ptr.hpp"
 
 void FloatProperty::draw() {
@@ -12,7 +13,7 @@ void FloatProperty::draw() {
     std::string id = "##" + name;
 
     float v = get();
-    if (ImGui::DragFloat(id.c_str(), &v, 0.01f))
+    if (ImGui::DragFloat(id.c_str(), &v, 0.0001f))
         set(v);
 }
 
@@ -38,9 +39,41 @@ void ColorProperty::draw() {
     ImGui::Text("%s:", name.c_str());
     std::string id = "##" + name;
 
-    glm::vec4 v = get();
-    if (ImGui::ColorEdit4(id.c_str(), glm::value_ptr(v)))
+    glm::vec3 v = get();
+    if (ImGui::ColorEdit3(id.c_str(), glm::value_ptr(v)))
         set(v);
+}
+
+void TextureProperty::draw() {
+    ImGui::Text("%s:", name.c_str());
+    std::string id = "##" + name;
+
+    auto currentTexture = get();
+
+    float totalWidth = ImGui::GetContentRegionAvail().x;
+    float aspect = (float)currentTexture->getHeight() / (float)currentTexture->getWidth();
+    float height = totalWidth * aspect;
+
+    ImGui::Image(
+        (intptr_t)currentTexture->getId(),
+        ImVec2(totalWidth, height),
+        ImVec2(0, 1),
+        ImVec2(1,0 )
+    );
+
+    if (ImGuiFileDialog::Instance()->Display("LoadTexture")) {
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            set(std::make_shared<Texture>(ImGuiFileDialog::Instance()->GetFilePathName()));
+        }
+
+        ImGuiFileDialog::Instance()->Close();
+    }
+
+    if (ImGui::Button("Load Texture", ImVec2(totalWidth, 0))) {
+        IGFD::FileDialogConfig config;
+        config.path = ".";
+        ImGuiFileDialog::Instance()->OpenDialog("LoadTexture", "Choose location", ".png", config);
+    }
 }
 
 void Properties::addSection(const std::string& section) {

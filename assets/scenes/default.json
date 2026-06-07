@@ -28,8 +28,7 @@
             "color": [
                 1.0,
                 0.0,
-                0.0,
-                1.0
+                0.0
             ],
             "hasShape": false,
             "name": "Particle Spawn",
@@ -53,8 +52,7 @@
             "color": [
                 0.0,
                 0.0,
-                0.9607843160629272,
-                1.0
+                0.9607843160629272
             ],
             "hasShape": false,
             "name": "Particle Spawn",

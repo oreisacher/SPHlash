@@ -56,11 +56,3 @@ void Material::setVec4(const std::string& name, glm::vec4 value) {
 void Material::setTexture(const std::string& name, std::shared_ptr<Texture> tex) {
     textures[name] = tex;
 }
-
-bool Material::isTransparent() {
-    if (vec4Params.contains("albedo")) {
-        return vec4Params["albedo"].a < 1.0f;
-    }
-
-    return false;
-}

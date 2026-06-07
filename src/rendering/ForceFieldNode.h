@@ -42,6 +42,7 @@ public:
 
 private:
     std::unique_ptr<Model> model;
+    std::unique_ptr<Model> wireframeModel;
     CudaForceField forceField;
 };
 

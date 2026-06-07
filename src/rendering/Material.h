@@ -25,8 +25,6 @@ public:
 
     void setTexture(const std::string& name, std::shared_ptr<Texture> tex);
 
-    bool isTransparent();
-
 private:
     std::string name;
 

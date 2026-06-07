@@ -44,6 +44,8 @@ public:
 
     std::string getName() const;
 
+    void setLineWidth(float lineWidth);
+
     void updateMeshData(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
 
     void setMaterialIndex(int index);
@@ -80,18 +82,19 @@ private:
     std::string name;
     int materialIndex = 0;
 
-    std::vector<Vertex>         vertices = {};
-    std::vector<unsigned int>   indices  = {};
+    std::vector<Vertex>         vertices    = {};
+    std::vector<unsigned int>   indices     = {};
 
     GLuint vao, vbo, ebo;
-    GLenum primitiveMode                 = GL_TRIANGLES;
+    GLenum primitiveMode                    = GL_TRIANGLES;
+    float lineWidth                         = 2.0f;
 
     int maxVertices = 0, maxIndices = 0;
     int vertexCount = 0, indexCount = 0;
 
     // --- CUDA Interopt ---
-    cudaGraphicsResource* verticesResource = nullptr;
-    cudaGraphicsResource* indicesResource  = nullptr;
+    cudaGraphicsResource* verticesResource  = nullptr;
+    cudaGraphicsResource* indicesResource   = nullptr;
 };
 
 #endif //SPHLASH_MESH_H

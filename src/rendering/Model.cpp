@@ -101,7 +101,7 @@ Model::Model(const std::string& path, bool shaded) {
             // Create default material
             auto shader = shaded ? Shader::createDefaultShaded() : Shader::createDefaultUnshaded();
             Material material(mat.name, shader);
-            material.setVec4("albedo", {mat.diffuse[0], mat.diffuse[1], mat.diffuse[2], mat.dissolve });
+            material.setVec3("albedo", {mat.diffuse[0], mat.diffuse[1], mat.diffuse[2] });
 
             mesh->setMaterialIndex(this->materials.size());
             this->materials.push_back(material);
@@ -147,67 +147,34 @@ void Model::draw(const glm::mat4& view, const glm::mat4& projection, const glm::
         return;
     }
 
-    // --- PASS 1: Opaque ---
-    for (const auto& mesh : meshes) {
-        // Set material
-        int matIndex = mesh->getMaterialIndex();
-        if (matIndex != -1) {
-            // Bind material
-            auto material = materials[matIndex];
-
-            if (material.isTransparent())
-                continue;
-
-            material.bind();
-
-            // Update model matrix in materials shader
-            material.getShader()->setMat4("view", view);
-            material.getShader()->setMat4("projection", projection);
-            material.getShader()->setMat4("model", transform);
-
-            // Draw mesh
-            if (instanceCount > 0) {
-                mesh->drawInstanced(instanceCount);
-            } else {
-                mesh->draw();
-            }
-        } else {
-            std::cerr << "Mesh " << mesh->getName() << " does not have a material" << std::endl;
-        }
-    }
-
-    // --- PASS 2: TRANSPARENT ---
-    glDepthMask(GL_FALSE);
-
-    for (const auto& mesh : meshes) {
-        // Set material
-        int matIndex = mesh->getMaterialIndex();
-        if (matIndex != -1) {
-            // Bind material
-            auto material = materials[matIndex];
-
-            if (!material.isTransparent())
-                continue;
-
-            material.bind();
-
-            // Update model matrix in materials shader
-            material.getShader()->setMat4("view", view);
-            material.getShader()->setMat4("projection", projection);
-            material.getShader()->setMat4("model", transform);
-
-            // Draw mesh
-            if (instanceCount > 0) {
-                mesh->drawInstanced(instanceCount);
-            } else {
-                mesh->draw();
-            }
-        } else {
-            std::cerr << "Mesh " << mesh->getName() << " does not have a material" << std::endl;
-        }
-    }
+    glm::vec3 cameraPos = glm::vec3(glm::inverse(view)[3]);
 
     glDepthMask(GL_TRUE);
+
+    for (const auto& mesh : meshes) {
+        // Set material
+        int matIndex = mesh->getMaterialIndex();
+        if (matIndex != -1) {
+            // Bind material
+            auto material = materials[matIndex];
+
+            material.bind();
+
+            material.getShader()->setMat4("view", view);
+            material.getShader()->setVec3("viewPos", cameraPos);
+            material.getShader()->setMat4("projection", projection);
+            material.getShader()->setMat4("model", transform);
+
+            // Draw mesh
+            if (instanceCount > 0) {
+                mesh->drawInstanced(instanceCount);
+            } else {
+                mesh->draw();
+            }
+        } else {
+            std::cerr << "Mesh " << mesh->getName() << " does not have a material" << std::endl;
+        }
+    }
 }
 
 void Model::updateLocalBoundingBox() {

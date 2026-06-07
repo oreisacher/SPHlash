@@ -10,8 +10,11 @@
 #include "glm/gtc/type_ptr.hpp"
 
 RenderingSettingsPanel::RenderingSettingsPanel(ParticlesNode* particles)
-    : UIPanel("Rendering Settings"), surfaceMesher(particles->getSurfaceMesher()), particles(particles)
-{ }
+    : UIPanel("Rendering Settings"), particles(particles)
+{
+    surfaceMesher = particles->getSurfaceMesher();
+    surfaceScreenSpace = particles->getSurfaceScreenSpace();
+}
 
 void RenderingSettingsPanel::update(double deltaTime) { }
 
@@ -23,10 +26,8 @@ void RenderingSettingsPanel::draw() {
     ImGui::PushItemWidth(-FLT_MIN);
 
     ImGui::Text("Rendering Mode:");
-    if (ImGui::Combo("##rmode", reinterpret_cast<int*>(&particles->settings.mode), renderModes, IM_ARRAYSIZE(renderModes))) {
+    if (ImGui::Combo("##rmode", reinterpret_cast<int*>(&particles->settings.mode), renderModes, IM_ARRAYSIZE(renderModes)))
         particles->updateRenderingSettings();
-        // surfaceMesher->updateSettings();
-    }
 
     ImGui::Spacing();
     ImGui::Separator();
@@ -49,7 +50,7 @@ void RenderingSettingsPanel::draw() {
             particles->updateRenderingSettings();
 
         ImGui::Text("Minimum Velocity Color:");
-        if (ImGui::ColorEdit4("##vpMinVC", glm::value_ptr(particles->settings.minVelColor)))
+        if (ImGui::ColorEdit3("##vpMinVC", glm::value_ptr(particles->settings.minVelColor)))
             particles->updateRenderingSettings();
 
         ImGui::Text("Maximum Velocity:");
@@ -57,7 +58,7 @@ void RenderingSettingsPanel::draw() {
             particles->updateRenderingSettings();
 
         ImGui::Text("Maximum Velocity Color:");
-        if (ImGui::ColorEdit4("##vpMaxVC", glm::value_ptr(particles->settings.maxVelColor)))
+        if (ImGui::ColorEdit3("##vpMaxVC", glm::value_ptr(particles->settings.maxVelColor)))
             particles->updateRenderingSettings();
         break;
 
@@ -71,7 +72,7 @@ void RenderingSettingsPanel::draw() {
             particles->updateRenderingSettings();
 
         ImGui::Text("Minimum Pressure Color:");
-        if (ImGui::ColorEdit4("##vpMinPC", glm::value_ptr(particles->settings.minPresColor)))
+        if (ImGui::ColorEdit3("##vpMinPC", glm::value_ptr(particles->settings.minPresColor)))
             particles->updateRenderingSettings();
 
         ImGui::Text("Maximum Pressure:");
@@ -79,7 +80,7 @@ void RenderingSettingsPanel::draw() {
             particles->updateRenderingSettings();
 
         ImGui::Text("Maximum Pressure Color:");
-        if (ImGui::ColorEdit4("##vpMaxPC", glm::value_ptr(particles->settings.maxPresColor)))
+        if (ImGui::ColorEdit3("##vpMaxPC", glm::value_ptr(particles->settings.maxPresColor)))
             particles->updateRenderingSettings();
         break;
 
@@ -95,9 +96,6 @@ void RenderingSettingsPanel::draw() {
 
     case MARCHING_CUBES:
         ImGui::PushID(MARCHING_CUBES);
-        ImGui::Text("Color:");
-        if (ImGui::ColorEdit4("##mcColor", glm::value_ptr(surfaceMesher->settings.color)))
-            surfaceMesher->updateSettings();
 
         ImGui::Text("Resolution:");
         if (ImGui::DragInt3("##mcResolution", glm::value_ptr(surfaceMesher->settings.resolution), 1, 1, 1024, "%d", ImGuiSliderFlags_AlwaysClamp))
@@ -110,14 +108,58 @@ void RenderingSettingsPanel::draw() {
         if (ImGui::Checkbox("Smoooth Normals##mcSmoothNormals", &surfaceMesher->settings.smoothNormals))
             surfaceMesher->updateSettings();
 
+        ImGui::Text("Color:");
+        if (ImGui::ColorEdit3("##mcColor", glm::value_ptr(surfaceMesher->settings.fluidColor)))
+            surfaceMesher->updateSettings();
+
+        ImGui::Text("Ambient Strength:");
+        if (ImGui::DragFloat("##msAS", &surfaceMesher->settings.ambientStrength, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+            surfaceMesher->updateSettings();
+
+        ImGui::Text("Specular Strength:");
+        if (ImGui::DragFloat("##mcSS", &surfaceMesher->settings.specularStrength, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+            surfaceMesher->updateSettings();
+
+        ImGui::Text("Fresnel Strength:");
+        if (ImGui::DragFloat("##mcFS", &surfaceMesher->settings.fresnelStrength, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+            surfaceMesher->updateSettings();
+
         ImGui::PopID();
         break;
 
     case SCREEN_SPACE:
         ImGui::PushID(SCREEN_SPACE);
         ImGui::Text("Size:");
-        if (ImGui::DragFloat("##bs", &particles->settings.billboardSize, 0.0001f, 0.0))
-            particles->updateRenderingSettings();
+        if (ImGui::DragFloat("##bs", &surfaceScreenSpace->settings.particleSize, 0.0001f, 0.0))
+            surfaceScreenSpace->updateRenderingSettings();
+
+        ImGui::Text("Blur Size:");
+        if (ImGui::DragInt("##ssBs", &surfaceScreenSpace->settings.blurSize))
+            surfaceScreenSpace->updateRenderingSettings();
+
+        ImGui::Text("Depth Threshold:");
+        if (ImGui::DragFloat("##ssDt", &surfaceScreenSpace->settings.depthThreshold, 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp))
+            surfaceScreenSpace->updateRenderingSettings();
+
+        ImGui::Text("Color:");
+        if (ImGui::ColorEdit3("##sscolor", glm::value_ptr(surfaceScreenSpace->settings.fluidColor)))
+            surfaceScreenSpace->updateRenderingSettings();
+
+        ImGui::Text("Transparency:");
+        if (ImGui::DragFloat("##ssTrans", &surfaceScreenSpace->settings.transparency, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+            surfaceScreenSpace->updateRenderingSettings();
+
+        ImGui::Text("Ambient Strength:");
+        if (ImGui::DragFloat("##ssAS", &surfaceScreenSpace->settings.ambientStrength, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+            surfaceScreenSpace->updateRenderingSettings();
+
+        ImGui::Text("Specular Strength:");
+        if (ImGui::DragFloat("##ssSS", &surfaceScreenSpace->settings.specularStrength, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+            surfaceScreenSpace->updateRenderingSettings();
+
+        ImGui::Text("Fresnel Strength:");
+        if (ImGui::DragFloat("##ssFS", &surfaceScreenSpace->settings.fresnelStrength, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp))
+            surfaceScreenSpace->updateRenderingSettings();
 
         ImGui::PopID();
         break;

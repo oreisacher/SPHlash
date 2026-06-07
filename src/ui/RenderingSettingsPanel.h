@@ -18,6 +18,7 @@ public:
 
 private:
     FluidSurfaceMesher* surfaceMesher;
+    FluidSurfaceScreenSpace* surfaceScreenSpace;
 
     ParticlesNode* particles;
 

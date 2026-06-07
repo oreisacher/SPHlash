@@ -10,6 +10,7 @@
 #include <string>
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
+#include "rendering/Texture.h"
 
 struct Property {
     virtual ~Property() = default;
@@ -53,17 +54,28 @@ struct Vec3Property : Property {
 };
 
 struct ColorProperty : Property {
-    ColorProperty(const std::string& name, std::function<glm::vec4()> get, std::function<void (glm::vec4)> set)
+    ColorProperty(const std::string& name, std::function<glm::vec3()> get, std::function<void (glm::vec3)> set)
         : name(name), get(std::move(get)), set(std::move(set))
     {}
 
     std::string                     name;
-    std::function<glm::vec4()>      get;
-    std::function<void (glm::vec4)> set;
+    std::function<glm::vec3()>      get;
+    std::function<void (glm::vec3)> set;
 
     void draw() override;
 };
 
+struct TextureProperty : Property {
+    TextureProperty(const std::string& name, std::function<std::shared_ptr<Texture>()> get, std::function<void (std::shared_ptr<Texture>)> set)
+        : name(name), get(std::move(get)), set(std::move(set))
+    {}
+
+    std::string                                    name;
+    std::function<std::shared_ptr<Texture>()>      get;
+    std::function<void (std::shared_ptr<Texture>)> set;
+
+    void draw() override;
+};
 
 struct Section {
     std::string name;

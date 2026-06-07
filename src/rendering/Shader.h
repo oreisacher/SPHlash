@@ -51,7 +51,6 @@ public:
     static std::shared_ptr<Shader> createParticle();
     static std::shared_ptr<Shader> createScreenSpaceParticle();
     static std::shared_ptr<Shader> createTexture3DSlice();
-    static std::shared_ptr<Shader> createDepth();
     static std::shared_ptr<Shader> createBlur();
     static std::shared_ptr<Shader> createNormal();
     static std::shared_ptr<Shader> createComposition();
