@@ -8,7 +8,9 @@
 #include <vector_types.h>
 #include "utils/Hex32Field.h"
 #include <cstddef>
+#include <vector>
 
+struct ParticlesGPU;
 class ParticlesNode;
 class Scene;
 struct cudaGraphicsResource;
@@ -23,24 +25,61 @@ enum SimulationState {
      RUNNING
 };
 
-struct ParticleGPU {
-    float4 position                 = { 0.0f, 0.0f, 0.0f, 0.0f };       // vec4 to avoid padding issues
-    float4 startPosition            = { 0.0f, 0.0f, 0.0f, 0.0f };
-    float4 velocity                 = { 0.0f, 0.0f, 0.0f, 0.0f };
-    float4 properties               = { -1.0f, -1.0f, -1.0f, -1.0f };   // x: mass, y: density, z: pressure, w: id
-    float4 flags                    = { 0.0f, 0.0f, 0.0f, 0.0f };       // x: surface, y: undefined, z: undefined, w: undefined
-    float4 color                    = { 0.0f, 0.0f, 0.0f, 1.0f };
+/*
+    Represents a single particle inside simulation. Can be queried via getParticle(id). Host only
+*/
+struct ParticleHost {
+    float4 position;
+    float4 startPosition;
+    float4 velocity;
+    float4 properties;
+    float4 flags;
+    float4 color;
+    float4 pressureForce;
+    float4 viscosityForce;
+    float4 surfaceTensionForce;
+};
 
-    // SPH Forces
-    float4 pressureForce            = { 0.0f, 0.0f, 0.0f, 0.0f };
-    float4 viscosityForce           = { 0.0f, 0.0f, 0.0f, 0.0f };
-    float4 surfaceTensionForce      = { 0.0f, 0.0f, 0.0f, 0.0f };
+struct ParticlesHost {
+    std::vector<float4> position;
+    std::vector<float4> startPosition;
+    std::vector<float4> velocity;
+    std::vector<float4> properties;
+    std::vector<float4> flags;
+    std::vector<float4> color;
+    std::vector<float4> pressureForce;
+    std::vector<float4> viscosityForce;
+    std::vector<float4> surfaceTensionForce;
 
-    // Debugging
-    float4 debugging                = { 0.0f, 0.0f, 0.0f, 0.0f };
+    void resize(size_t count);
+    void append(ParticlesHost& particles);
+    void copyToDevice(const ParticlesGPU& device, size_t count) const;
+};
+
+/*
+    Represents all particles of simulation as SoA. Contains device pointers. Used during simulation.
+*/
+struct ParticlesGPU {
+    float4* d_position              = nullptr;
+    float4* d_startPosition         = nullptr;
+    float4* d_velocity              = nullptr;
+    float4* d_properties            = nullptr;  //  x: mass,     y: density,     z: pressure,    w: id
+    float4* d_flags                 = nullptr;  //  x: surface,  y: undefined,   z: undefined,   w: undefined
+    float4* d_color                 = nullptr;
+    float4* d_pressureForce         = nullptr;
+    float4* d_viscosityForce        = nullptr;
+    float4* d_surfaceTensionForce   = nullptr;
+
+    void allocate(size_t count);
+    void free();
+    void copyToHost(ParticlesHost& host, size_t count) const;
+    void copyToHost(ParticleHost& host, int id) const;
 };
 
 struct SimulationSettings {
+    // Simulation
+    int simulationSteps = 1;
+
     // Particles
     float h = 0.05f;
     float p_0 = 1000.0f;
@@ -55,7 +94,7 @@ struct SimulationSettings {
 
     // Time
     bool useFixedTimeStep = false;
-    float fixedTimeStep = 16;
+    float fixedTimeStep = 0.5f;
 
     // CFL
     bool useCFL = true;
@@ -107,7 +146,7 @@ public:
     // --- VoxelField ---
     bool computeVoxelField(const VoxelField& field) const;
 
-    ParticleGPU getParticle(int id) const;
+    ParticleHost getParticle(int id) const;
 
     SimulationSettings settings;
 
@@ -125,8 +164,8 @@ private:
     SimulationState state = UNINITIALIZED;
 
     // --- Particles ---
-    ParticleGPU* d_particles            = nullptr;
-    ParticleGPU* d_sortedParticles      = nullptr;
+    ParticlesGPU particles;
+    ParticlesGPU sortedParticles;
 
     // --- Spatial Hashing ---
     int* d_particleHashes               = nullptr;
@@ -149,7 +188,7 @@ private:
     Hex32Field volumeMap;
 
     // --- Rendering ---
-    ParticlesNode* particles;
+    ParticlesNode* particlesNode;
     cudaGraphicsResource* rendererResource = nullptr;
     RendererParticle* d_rendererParticles  = nullptr;
 };

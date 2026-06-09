@@ -32,57 +32,63 @@ void SimulationSettingsPanel::draw() {
         ImGui::Text("H:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Size of Kernel");
-        ImGui::DragFloat("##H", &simulation->settings.h, 0.0001, 0.0001);
+        ImGui::DragFloat("##H", &simulation->settings.h, 0.0001, 0.0001, 1.0, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
         ImGui::Text("P_0:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Rest Density");
-        ImGui::DragFloat("##P_0", &simulation->settings.p_0, 0.001f);
+        ImGui::DragFloat("##P_0", &simulation->settings.p_0, 1.0f, 1.0f, 10000.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
         ImGui::Text("Max Velocity:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Maximum velocity to expect. Estimate like sqrt(2gH) for example for dam break");
-        ImGui::DragFloat("##mv", &simulation->settings.maxVelocity, 0.001f);
+        ImGui::DragFloat("##mv", &simulation->settings.maxVelocity, 0.001f, 0.0f, 1024.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
         ImGui::Text("Alpha:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Viscosity Coefficient");
-        ImGui::DragFloat("##alpha", &simulation->settings.alpha, 0.001f);
-
+        ImGui::DragFloat("##alpha", &simulation->settings.alpha, 0.001f, 0.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
         ImGui::Text("Surface Tension:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Surface Tension Strength");
-        ImGui::DragFloat("##T", &simulation->settings.surfaceTension, 0.001f);
+        ImGui::DragFloat("##T", &simulation->settings.surfaceTension, 0.001f, 0.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
     }
 
     if (ImGui::CollapsingHeader("Gravity Settings")) {
         ImGui::Checkbox("Enable##g", &simulation->settings.enableGravity);
 
         ImGui::Text("Gravity:");
-        ImGui::DragFloat("##g", &simulation->settings.gravity, 0.01);
+        ImGui::DragFloat("##g", &simulation->settings.gravity, 0.01, -1024.f, 1024.f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
     }
 
-    if (ImGui::CollapsingHeader("Time Settings")) {
+    if (ImGui::CollapsingHeader("Simulation Settings")) {
+        ImGui::Text("Simulation Steps per Frame:");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("How many steps the simulation should move forward each frame");
+        ImGui::DragInt("##sspf", &simulation->settings.simulationSteps, 0.1, 1, 128, "%d", ImGuiSliderFlags_AlwaysClamp);
+
+        ImGui::Spacing();
+
         ImGui::Checkbox("Enable fixed Time Step##fixedTimeStep", &simulation->settings.useFixedTimeStep);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("If disabled, the actual frame time is used");
 
         ImGui::Text("Time Step (ms):");
-        ImGui::DragFloat("##fts", &simulation->settings.fixedTimeStep, 0.01);
+        ImGui::DragFloat("##fts", &simulation->settings.fixedTimeStep, 0.0001, 0.0f, 1000.f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
     }
 
     if (ImGui::CollapsingHeader("CFL Settings")) {
         ImGui::Checkbox("Enable CFL##cfl", &simulation->settings.useCFL);
 
         ImGui::Text("Safety Factor:");
-        ImGui::DragFloat("##cflSF", &simulation->settings.safetyFactor, 0.01);
+        ImGui::DragFloat("##cflSF", &simulation->settings.safetyFactor, 0.001, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
     }
 
     if (ImGui::CollapsingHeader("Boundary Settings")) {
         ImGui::Checkbox("Build on Init##bbInitBuild", &boundaryBuilder->settings.buildOnInit);
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Build volume map on simulation init");
+            ImGui::SetTooltip("Build volume map on simulation init. Must be rebuild after changing H!");
 
         ImGui::Text("Resolution:");
         if (ImGui::IsItemHovered())

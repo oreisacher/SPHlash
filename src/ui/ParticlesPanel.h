@@ -23,7 +23,7 @@ private:
     FluidSimulation* simulation;
     Shader* particlesShader;
 
-    ParticleGPU particle;
+    ParticleHost particle;
 
     double time = 0.0f;
 

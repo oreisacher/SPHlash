@@ -77,7 +77,7 @@ __device__ uint hashCell(int cellX, int cellY, int cellZ, int hashTableSize) {
 
 __global__ void hashParticlesKernel(
     const int numParticles,
-    const ParticleGPU* particles,
+    const float4* position,
     int* particleHashValue,
     int* particleIndex,
     const float h
@@ -88,9 +88,9 @@ __global__ void hashParticlesKernel(
         return;
 
     // Get cell of particle
-    int cellX = floor(particles[id].position.x / h);
-    int cellY = floor(particles[id].position.y / h);
-    int cellZ = floor(particles[id].position.z / h);
+    int cellX = floor(position[id].x / h);
+    int cellY = floor(position[id].y / h);
+    int cellZ = floor(position[id].z / h);
 
     uint hash = hashCell(cellX, cellY, cellZ, numParticles);
 
@@ -100,7 +100,7 @@ __global__ void hashParticlesKernel(
 
 void launchHashParticlesKernel(
     const int numParticles,
-    const ParticleGPU* particles,
+    const float4* position,
     int* particleHashValue,
     int* particleIndex,
     const float h
@@ -109,7 +109,7 @@ void launchHashParticlesKernel(
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     hashParticlesKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, particleHashValue, particleIndex, h
+        numParticles, position, particleHashValue, particleIndex, h
     );
 }
 
@@ -163,22 +163,30 @@ void launchBuildOffsetsKernel(
 
 __global__ void reorderParticlesKernel(
     const int numParticles,
-    const ParticleGPU* particles,
+    const ParticlesGPU particles,
     const int* particleIndices,
-    ParticleGPU* sortedParticles
+    ParticlesGPU sortedParticles
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
     if (id >= numParticles) return;
 
     // Move particle to its sorted index
-    sortedParticles[id] = particles[particleIndices[id]];
+    sortedParticles.d_position[id]              = particles.d_position[particleIndices[id]];
+    sortedParticles.d_startPosition[id]         = particles.d_startPosition[particleIndices[id]];
+    sortedParticles.d_velocity[id]              = particles.d_velocity[particleIndices[id]];
+    sortedParticles.d_properties[id]            = particles.d_properties[particleIndices[id]];
+    sortedParticles.d_flags[id]                 = particles.d_flags[particleIndices[id]];
+    sortedParticles.d_color[id]                 = particles.d_color[particleIndices[id]];
+    sortedParticles.d_pressureForce[id]         = particles.d_pressureForce[particleIndices[id]];
+    sortedParticles.d_viscosityForce[id]        = particles.d_viscosityForce[particleIndices[id]];
+    sortedParticles.d_surfaceTensionForce[id]   = particles.d_surfaceTensionForce[particleIndices[id]];
 }
 
 void launchReorderParticlesKernel(
     const int numParticles,
-    const ParticleGPU* particles,
+    const ParticlesGPU particles,
     const int* particleIndices,
-    ParticleGPU* sortedParticles
+    ParticlesGPU sortedParticles
 ) {
     int threadsPerBlock = 256;
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
@@ -188,39 +196,10 @@ void launchReorderParticlesKernel(
     );
 }
 
-__device__ float ggamma(float restDensity, float h, float x) {
-    if (x <= h)
-        return restDensity * (1 - x / h);
-    return 0;
-}
-
-__device__ float domainBoundaryDensity(float3 pos, CudaAABB domain, float restDensity, float h) {
-    float density = 0.0f;
-
-    // Distance to each face (positive = inside domain)
-    float dxMin = pos.x - domain.min.x;
-    float dxMax = domain.max.x - pos.x;
-    float dyMin = pos.y - domain.min.y;
-    float dyMax = domain.max.y - pos.y;
-    float dzMin = pos.z - domain.min.z;
-    float dzMax = domain.max.z - pos.z;
-
-    // For a planar boundary the density contribution has an analytic form
-    // gamma(phi) convolved with W along the half-space
-    // Approximated as the same gamma ramp you use for mesh boundaries
-    density += ggamma(restDensity, h, dxMin);
-    density += ggamma(restDensity, h, dxMax);
-    density += ggamma(restDensity, h, dyMin);
-    density += ggamma(restDensity, h, dyMax);
-    density += ggamma(restDensity, h, dzMin);
-    density += ggamma(restDensity, h, dzMax);
-
-    return density;
-}
-
 __global__ void densityPressureKernel(
     const int numParticles,
-    ParticleGPU* particles,
+    const float4* position,
+    float4* properties,
     const int* hashes,
     const int* offsets,
     const bool hasBoundary,
@@ -236,12 +215,10 @@ __global__ void densityPressureKernel(
     if (id >= numParticles)
         return;
 
-    float4 position = particles[id].position;
-
     // Get cell of particle
-    int cellX = floor(position.x / h);
-    int cellY = floor(position.y / h);
-    int cellZ = floor(position.z / h);
+    int cellX = floor(position[id].x / h);
+    int cellY = floor(position[id].y / h);
+    int cellZ = floor(position[id].z / h);
 
     float density = 0.0f;
     float h2 = h * h;
@@ -264,13 +241,13 @@ __global__ void densityPressureKernel(
                     if (neighborHash != hash)
                         break;
 
-                    const ParticleGPU other = particles[neighborIndex];
-                    const float4 diff = position - other.position;
+                    // const ParticleGPU other = particles[neighborIndex];
+                    const float4 diff = position[id] - position[neighborIndex];
 
                     // Check if within radius
                     float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
                     if (distSq < h2) {
-                        density += other.properties.x * poly6Kernel(diff, h);
+                        density += properties[neighborIndex].x * poly6Kernel(diff, h);
                     }
                 }
             }
@@ -286,9 +263,9 @@ __global__ void densityPressureKernel(
         );
 
         // Determine boundary cell coords and clamp to valid range
-        int boundaryCellX = max(0, min(static_cast<int>((position.x - domain.min.x) / boundaryCellSize.x), volumeMap.resolution.x - 1));
-        int boundaryCellY = max(0, min(static_cast<int>((position.y - domain.min.y) / boundaryCellSize.y), volumeMap.resolution.y - 1));
-        int boundaryCellZ = max(0, min(static_cast<int>((position.z - domain.min.z) / boundaryCellSize.z), volumeMap.resolution.z - 1));
+        int boundaryCellX = max(0, min(static_cast<int>((position[id].x - domain.min.x) / boundaryCellSize.x), volumeMap.resolution.x - 1));
+        int boundaryCellY = max(0, min(static_cast<int>((position[id].y - domain.min.y) / boundaryCellSize.y), volumeMap.resolution.y - 1));
+        int boundaryCellZ = max(0, min(static_cast<int>((position[id].z - domain.min.z) / boundaryCellSize.z), volumeMap.resolution.z - 1));
 
         int boundaryCellId = boundaryCellX
                         + boundaryCellY * volumeMap.resolution.x
@@ -311,7 +288,7 @@ __global__ void densityPressureKernel(
                 boundaryCellMin.z + boundaryCellSize.z
             );
 
-            float3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, make_float3(position.x, position.y, position.z));
+            float3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, make_float3(position[id].x, position[id].y, position[id].z));
             isoparametricCoords.x = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.x));
             isoparametricCoords.y = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.y));
             isoparametricCoords.z = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.z));
@@ -335,19 +312,20 @@ __global__ void densityPressureKernel(
     }
 
     // Assign density to particle
-    particles[id].properties.y = density;
+    properties[id].y = density;
 
     // Determine pressure based on Tait's Equation (7) of WCSPH paper
     const float B = (cs * cs * p_0) / 7.0f;
 
     // Clamp pressure to prevent tensile instability artifacts!
     // Not present in original WCSPH paper but other work does mention this
-    particles[id].properties.z = fmaxf(0.0f, B * (pow((density / p_0), 7) - 1.0f));
+    properties[id].z = fmaxf(0.0f, B * (pow((density / p_0), 7) - 1.0f));
 }
 
 void launchDensityPressureKernel(
     const int numParticles,
-    ParticleGPU* particles,
+    const float4* position,
+    float4* properties,
     const int* hashes,
     const int* offsets,
     const bool hasBoundary,
@@ -362,13 +340,19 @@ void launchDensityPressureKernel(
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     densityPressureKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, hashes, offsets, hasBoundary, sdfMap, volumeMap, domain, h, cs, p_0
+        numParticles, position, properties, hashes, offsets, hasBoundary, sdfMap, volumeMap, domain, h, cs, p_0
     );
 }
 
 __global__ void sphForcesKernel(
     const int numParticles,
-    ParticleGPU* particles,
+    const float4* position,
+    const float4* properties,
+    const float4* velocity,
+    float4* pressureForce,
+    float4* viscosityForce,
+    float4* surfaceTensionForce,
+    float4* flags,
     const int* hashes,
     const int* offsets,
     const bool hasBoundary,
@@ -386,18 +370,14 @@ __global__ void sphForcesKernel(
     if (id >= numParticles)
         return;
 
-    ParticleGPU* particle = &particles[id];
-
-    float4 position = particle->position;
-
     // Get cell of particle
-    int cellX = floor(position.x / h);
-    int cellY = floor(position.y / h);
-    int cellZ = floor(position.z / h);
+    int cellX = floor(position[id].x / h);
+    int cellY = floor(position[id].y / h);
+    int cellZ = floor(position[id].z / h);
 
-    particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    particle->surfaceTensionForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    pressureForce[id]       = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    viscosityForce[id]      = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    surfaceTensionForce[id] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
 
     float h2 = h * h;
 
@@ -423,23 +403,22 @@ __global__ void sphForcesKernel(
                     if (neighborIndex == id)
                         continue;
 
-                    const ParticleGPU* other = &particles[neighborIndex];
-                    const float4 diff = position - other->position;
+                    const float4 diff = position[id] - position[neighborIndex];
 
                     // Check if within radius
                     float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
                     if (distSq < h2) {
                         // Pressure
-                        particle->pressureForce +=
-                            other->properties.x *
+                        pressureForce[id] +=
+                            properties[neighborIndex].x *
                             (
-                                particle->properties.z / (particle->properties.y * particle->properties.y + 1e-6f) +
-                                other->properties.z    / (other->properties.y * other->properties.y + 1e-6f)
+                                properties[id].z / (properties[id].y * properties[id].y + 1e-6f) +
+                                properties[neighborIndex].z    / (properties[neighborIndex].y * properties[neighborIndex].y + 1e-6f)
                             ) *
                             spikyKernelGradient(diff, h);
 
                         // Viscosity
-                        float4 vab = particle->velocity - other->velocity;
+                        float4 vab = velocity[id] - velocity[neighborIndex];
 
                         float dotTerm = dot(vab, diff);
 
@@ -448,36 +427,30 @@ __global__ void sphForcesKernel(
 
                             const float nu =
                                 (2.0f * alpha * h * cs) /
-                                (particle->properties.y + other->properties.y + 1e-6f);
+                                (properties[id].y + properties[neighborIndex].y + 1e-6f);
 
                             const float pi_ab =
                                 -nu * (dotTerm / (distSq + eps * h2));
 
-                            particle->viscosityForce += other->properties.x * pi_ab * spikyKernelGradient(diff, h);
+                            viscosityForce[id] += properties[neighborIndex].x * pi_ab * spikyKernelGradient(diff, h);
                         }
 
                         // Surface Tension
-                        particle->surfaceTensionForce += other->properties.x * poly6Kernel(diff, h) * diff;
+                        surfaceTensionForce[id] += properties[neighborIndex].x * poly6Kernel(diff, h) * diff;
                     }
                 }
             }
         }
     }
 
-    particle->pressureForce = -1.0f * particle->pressureForce;
-    particle->viscosityForce = -1.0f * particle->viscosityForce;
-    particle->surfaceTensionForce = -1.0f * (tension / particle->properties.x) * particle->surfaceTensionForce;
+    pressureForce[id] = -1.0f * pressureForce[id];
+    viscosityForce[id] = -1.0f * viscosityForce[id];
+    surfaceTensionForce[id] = -1.0f * (tension / properties[id].x) * surfaceTensionForce[id];
 
-    particle->flags.x =
-        particle->surfaceTensionForce.x * particle->surfaceTensionForce.x +
-        particle->surfaceTensionForce.y * particle->surfaceTensionForce.y +
-        particle->surfaceTensionForce.z * particle->surfaceTensionForce.z;
-
-    // if (surfaceTensionMagnitude2 > 2) {
-    //     particle->flags.x = 1.0;
-    // } else {
-    //     particle->flags.x = 0.0;
-    // }
+    flags[id].x =
+        surfaceTensionForce[id].x * surfaceTensionForce[id].x +
+        surfaceTensionForce[id].y * surfaceTensionForce[id].y +
+        surfaceTensionForce[id].z * surfaceTensionForce[id].z;
 
     // Handle boundary force
     if (hasBoundary) {
@@ -488,9 +461,9 @@ __global__ void sphForcesKernel(
         );
 
         // Determine boundary cell coords and clamp to valid range
-        int boundaryCellX = max(0, min(static_cast<int>((position.x - domain.min.x) / boundaryCellSize.x), volumeMap.resolution.x - 1));
-        int boundaryCellY = max(0, min(static_cast<int>((position.y - domain.min.y) / boundaryCellSize.y), volumeMap.resolution.y - 1));
-        int boundaryCellZ = max(0, min(static_cast<int>((position.z - domain.min.z) / boundaryCellSize.z), volumeMap.resolution.z - 1));
+        int boundaryCellX = max(0, min(static_cast<int>((position[id].x - domain.min.x) / boundaryCellSize.x), volumeMap.resolution.x - 1));
+        int boundaryCellY = max(0, min(static_cast<int>((position[id].y - domain.min.y) / boundaryCellSize.y), volumeMap.resolution.y - 1));
+        int boundaryCellZ = max(0, min(static_cast<int>((position[id].z - domain.min.z) / boundaryCellSize.z), volumeMap.resolution.z - 1));
 
         int boundaryCellId = boundaryCellX
             + boundaryCellY * volumeMap.resolution.x
@@ -513,7 +486,7 @@ __global__ void sphForcesKernel(
                 boundaryCellMin.z + boundaryCellSize.z
             );
 
-            float3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, make_float3(position.x, position.y, position.z));
+            float3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, make_float3(position[id].x, position[id].y, position[id].z));
             isoparametricCoords.x = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.x));
             isoparametricCoords.y = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.y));
             isoparametricCoords.z = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.z));
@@ -541,16 +514,16 @@ __global__ void sphForcesKernel(
             float3 normal = make_float3(gradSDF.x / len, gradSDF.y / len, gradSDF.z / len);
 
             float4 nearest = make_float4(
-                position.x - normal.x * interpolatedSDF,
-                position.y - normal.y * interpolatedSDF,
-                position.z - normal.z * interpolatedSDF,
+                position[id].x - normal.x * interpolatedSDF,
+                position[id].y - normal.y * interpolatedSDF,
+                position[id].z - normal.z * interpolatedSDF,
                 0.0
             );
 
             float4 diff = make_float4(
-                position.x - nearest.x,
-                position.y - nearest.y,
-                position.z - nearest.z,
+                position[id].x - nearest.x,
+                position[id].y - nearest.y,
+                position[id].z - nearest.z,
                 0.0
             );
 
@@ -561,11 +534,11 @@ __global__ void sphForcesKernel(
                 volumeCell->nodes
             );
 
-            particle->pressureForce -=
-                interpolatedVolume * 1000.0f *
+            pressureForce[id] -=
+                interpolatedVolume * p_0 *
                 (
-                    (particle->properties.z / (particle->properties.y * particle->properties.y + 1e-6f)) +
-                    (particle->properties.z / (1000.0f * 1000.0f))
+                    (properties[id].z / (properties[id].y * properties[id].y + 1e-6f)) +
+                    (properties[id].z / (p_0 * p_0))
                 ) * spikyKernelGradient(diff, h);
         }
     }
@@ -573,7 +546,13 @@ __global__ void sphForcesKernel(
 
 void launchSphForcesKernel(
     const int numParticles,
-    ParticleGPU* particles,
+    const float4* position,
+    const float4* properties,
+    const float4* velocity,
+    float4* pressureForce,
+    float4* viscosityForce,
+    float4* surfaceTensionForce,
+    float4* flags,
     const int* hashes,
     const int* offsets,
     const bool hasBoundary,
@@ -590,57 +569,34 @@ void launchSphForcesKernel(
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     sphForcesKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, hashes, offsets, hasBoundary, sdfMap, volumeMap, domain, h, alpha, cs, tension, p_0
+        numParticles, position, properties, velocity, pressureForce, viscosityForce, surfaceTensionForce, flags, hashes, offsets, hasBoundary, sdfMap, volumeMap, domain, h, alpha, cs, tension, p_0
     );
-}
-
-struct VelocitySq {
-    __device__ float operator()(const ParticleGPU& p) const {
-        return p.velocity.x * p.velocity.x +
-               p.velocity.y * p.velocity.y +
-               p.velocity.z * p.velocity.z;
-    }
-};
-
-float getMaxVelocity(
-    const int numParticles,
-    ParticleGPU* particles
-) {
-    const thrust::device_ptr<ParticleGPU> begin(particles);
-    const thrust::device_ptr<ParticleGPU> end(particles + numParticles);
-
-    const float maxVal = thrust::transform_reduce(
-        begin,
-        end,
-        VelocitySq(),
-        0.0f,
-        thrust::maximum<float>()
-    );
-
-    return sqrtf(maxVal);
 }
 
 struct AccelerationSq {
-    __device__ float operator()(const ParticleGPU& p) const {
-        float totalAccelerationX = p.pressureForce.x + p.viscosityForce.x + p.surfaceTensionForce.x;
-        float totalAccelerationY = p.pressureForce.y + p.viscosityForce.y + p.surfaceTensionForce.y;
-        float totalAccelerationZ = p.pressureForce.z + p.viscosityForce.z + p.surfaceTensionForce.z;
+    const float4* pf;
+    const float4* vf;
+    const float4* stf;
 
-        return (totalAccelerationX * totalAccelerationX) + (totalAccelerationY * totalAccelerationY) + (totalAccelerationZ * totalAccelerationZ);
+    __device__ float operator()(int i) const {
+        float4 f = pf[i] + vf[i] + stf[i];
+        return f.x * f.x + f.y * f.y + f.z * f.z;
     }
 };
 
 float getMaxAcceleration(
     int numParticles,
-    ParticleGPU* particles
+    const float4* pressureForce,
+    const float4* viscosityForce,
+    const float4* surfaceTensionForce
 ) {
-    const thrust::device_ptr<ParticleGPU> begin(particles);
-    const thrust::device_ptr<ParticleGPU> end(particles + numParticles);
+    const thrust::counting_iterator<int> begin(0);
+    const thrust::counting_iterator<int> end(numParticles);
 
     const float maxAcc = thrust::transform_reduce(
         begin,
         end,
-        AccelerationSq(),
+        AccelerationSq{pressureForce, viscosityForce, surfaceTensionForce},
         0.0f,
         thrust::maximum<float>()
     );
@@ -676,7 +632,11 @@ __device__ float4 toWorldForce(float4 fLocal, const CudaForceField& f) {
 }
 
 __global__ void updateParticlesKernel(
-    ParticleGPU* particles,
+    const float4* pressureForce,
+    const float4* viscosityForce,
+    const float4* surfaceTensionForce,
+    float4* velocity,
+    float4* position,
     const int numParticles,
     const CudaForceField* forceFields,
     const int numForceFields,
@@ -689,10 +649,7 @@ __global__ void updateParticlesKernel(
     if (id >= numParticles)
         return;
 
-    ParticleGPU* particle = &particles[id];
-
-    // Update position
-    const float4 force = particle->pressureForce + particle->viscosityForce + particle->surfaceTensionForce;
+    const float4 force = pressureForce[id] + viscosityForce[id] + surfaceTensionForce[id];
     float4 acceleration = force + make_float4(0.0f, gravity, 0.0f, 0.0f);
 
     // Check force fields
@@ -700,53 +657,52 @@ __global__ void updateParticlesKernel(
         if (!forceFields[f].active)
             continue;
 
-        if (isInsideField(make_float3(particle->position.x, particle->position.y, particle->position.z), forceFields[f])) {
+        if (isInsideField(make_float3(position[id].x, position[id].y, position[id].z), forceFields[f])) {
             acceleration += toWorldForce({ forceFields[f].strength, 0.0, 0.0, 0.0 }, forceFields[f]);
         }
     }
 
-    particle->velocity += deltaTime * acceleration;
-    particle->position += deltaTime * particle->velocity;
+    velocity[id] += deltaTime * acceleration;
+    position[id] += deltaTime * velocity[id];
 
     // Domain boundaries
-    if (particle->position.x < domain.min.x) {
-        particle->position.x = domain.min.x;
-        particle->velocity.x *= -0.4f;
+    if (position[id].x < domain.min.x) {
+        position[id].x = domain.min.x;
+        velocity[id].x *= -0.4f;
     }
 
-    if (particle->position.x > domain.max.x) {
-        particle->position.x = domain.max.x;
-        particle->velocity.x *= -0.4f;
+    if (position[id].x > domain.max.x) {
+        position[id].x = domain.max.x;
+        velocity[id].x *= -0.4f;
     }
 
-    if (particle->position.y < domain.min.y) {
-        particle->position.y = domain.min.y;
-        particle->velocity.y *= -0.4f;
+    if (position[id].y < domain.min.y) {
+        position[id].y = domain.min.y;
+        velocity[id].y *= -0.4f;
     }
 
-    if (particle->position.y > domain.max.y) {
-        particle->position.y = domain.max.y;
-        particle->velocity.y *= -0.4f;
+    if (position[id].y > domain.max.y) {
+        position[id].y = domain.max.y;
+        velocity[id].y *= -0.4f;
     }
 
-    if (particle->position.z < domain.min.z) {
-        particle->position.z = domain.min.z;
-        particle->velocity.z *= -0.4f;
+    if (position[id].z < domain.min.z) {
+        position[id].z = domain.min.z;
+        velocity[id].z *= -0.4f;
     }
 
-    if (particle->position.z > domain.max.z) {
-        particle->position.z = domain.max.z;
-        particle->velocity.z *= -0.4f;
+    if (position[id].z > domain.max.z) {
+        position[id].z = domain.max.z;
+        velocity[id].z *= -0.4f;
     }
-
-    // TODO - Implement correctly
-    // particle->velocity += (0.5f * deltaTime) * acceleration;
-    // particle->position += deltaTime * particle->velocity;
-    // particle->velocity += (0.5f * deltaTime) * acceleration;
 }
 
 void launchUpdateParticlesKernel(
-    ParticleGPU* particles,
+    const float4* pressureForce,
+    const float4* viscosityForce,
+    const float4* surfaceTensionForce,
+    float4* velocity,
+    float4* position,
     const int numParticles,
     const CudaForceField* forceFields,
     const int numForceFields,
@@ -758,13 +714,17 @@ void launchUpdateParticlesKernel(
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     updateParticlesKernel<<<blocks, threadsPerBlock>>>(
-        particles, numParticles, forceFields, numForceFields, deltaTime, domain, gravity
+        pressureForce, viscosityForce, surfaceTensionForce, velocity, position, numParticles, forceFields, numForceFields, deltaTime, domain, gravity
     );
 }
 
 __global__ void renderPrepareKernel(
     const int numParticles,
-    const ParticleGPU* particles,
+    const float4* position,
+    const float4* velocity,
+    const float4* properties,
+    const float4* flags,
+    const float4* color,
     RendererParticle* rendererParticles
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -772,29 +732,33 @@ __global__ void renderPrepareKernel(
     if (id >= numParticles)
         return;
 
-    rendererParticles[id].position = particles[id].position;
-    rendererParticles[id].velocity = particles[id].velocity;
-    rendererParticles[id].properties = particles[id].properties;
-    rendererParticles[id].flags = particles[id].flags;
-    rendererParticles[id].color = particles[id].color;
+    rendererParticles[id].position      = position[id];
+    rendererParticles[id].velocity      = velocity[id];
+    rendererParticles[id].properties    = properties[id];
+    rendererParticles[id].flags         = flags[id];
+    rendererParticles[id].color         = color[id];
 }
 
 void launchRenderPrepareKernel(
     const int numParticles,
-    const ParticleGPU* particles,
+    const float4* position,
+    const float4* velocity,
+    const float4* properties,
+    const float4* flags,
+    const float4* color,
     RendererParticle* rendererParticles
 ) {
     int threadsPerBlock = 256;
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     renderPrepareKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, rendererParticles
+        numParticles, position, velocity, properties, flags, color, rendererParticles
     );
 }
 
 __global__ void initParticlesKernel(
     CudaParticleSpawn spawn,
-    ParticleGPU* particles,
+    ParticlesGPU particles,
     int* particleCount,
     const int3 gridCount
 ) {
@@ -817,22 +781,21 @@ __global__ void initParticlesKernel(
     } else {
         int slot = atomicAdd(particleCount, 1);
 
-        ParticleGPU* particle = &particles[slot];
-        particle->position = { posX, posY, posZ, 0.0 };
-        particle->startPosition = particle->position;
-        particle->velocity = { 0.0, 0.0, 0.0, 0.0 };
-        particle->properties = { spawn.restDensity, 0.0, 0.0, static_cast<float>(slot) };
-        particle->flags = { 0.0, 0.0, 0.0, 0.0 };
-        particle->color = spawn.color;
-        particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-        particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-        particle->surfaceTensionForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        particles.d_position[slot]              = make_float4(posX, posY, posZ, 0.0);
+        particles.d_startPosition[slot]         = particles.d_position[slot];
+        particles.d_velocity[slot]              = make_float4(0.0, 0.0, 0.0, 0.0);
+        particles.d_properties[slot]            = make_float4(spawn.restDensity, 0.0, 0.0, static_cast<float>(slot));
+        particles.d_flags[slot]                 = make_float4(0.0, 0.0, 0.0, 0.0);
+        particles.d_color[slot]                 = spawn.color;
+        particles.d_pressureForce[slot]         = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        particles.d_viscosityForce[slot]        = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        particles.d_surfaceTensionForce[slot]   = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     }
 }
 
 void launchInitParticlesKernel(
     CudaParticleSpawn spawn,
-    ParticleGPU* particles,
+    ParticlesGPU particles,
     int* particleCount,
     const int3 gridCount
 ) {
@@ -846,33 +809,38 @@ void launchInitParticlesKernel(
 
 __global__ void updateParticleMassKernel(
     int numParticles,
-    ParticleGPU* particles,
-    float mass
+    float4* properties,
+    const float mass
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
 
     if (id >= numParticles)
         return;
 
-    ParticleGPU* particle = &particles[id];
-    particle->properties.x = mass;
+    properties[id].x = mass;
 }
 
 void launchUpdateParticleMassKernel(
     int numParticles,
-    ParticleGPU* particles,
-    float mass
+    float4* properties,
+    const float mass
 ) {
     int threadsPerBlock = 256;
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     updateParticleMassKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, particles, mass
+        numParticles, properties, mass
     );
 }
 
 __global__ void resetParticlesKernel(
-    ParticleGPU* particles,
+    float4* position,
+    const float4* startPosition,
+    float4* velocity,
+    float4* properties,
+    float4* pressureForce,
+    float4* viscosityForce,
+    float4* surfaceTensionForce,
     const int numParticles
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -880,25 +848,30 @@ __global__ void resetParticlesKernel(
     if (id >= numParticles)
         return;
 
-    ParticleGPU* particle = &particles[id];
-    particle->position = particle->startPosition;
-    particle->velocity = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    particle->properties.y = 0.0f;
-    particle->properties.z = 0.0f;
-    particle->pressureForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    particle->viscosityForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    particle->surfaceTensionForce = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    position[id] = startPosition[id];
+    velocity[id] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    properties[id].y = 0.0f;
+    properties[id].z = 0.0f;
+    pressureForce[id] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    viscosityForce[id] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    surfaceTensionForce[id] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 void launchResetParticlesKernel(
-    ParticleGPU* particles,
+    float4* position,
+    const float4* startPosition,
+    float4* velocity,
+    float4* properties,
+    float4* pressureForce,
+    float4* viscosityForce,
+    float4* surfaceTensionForce,
     const int numParticles
 ) {
     int threadsPerBlock = 256;
     int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
 
     resetParticlesKernel<<<blocks, threadsPerBlock>>>(
-        particles, numParticles
+        position, startPosition, velocity, properties, pressureForce, viscosityForce, surfaceTensionForce, numParticles
     );
 }
 
@@ -906,7 +879,8 @@ __global__ void voxelFieldKernel(
     const VoxelField field,
     const CudaAABB domain,
     const int numParticles,
-    const ParticleGPU* particles,
+    const float4* position,
+    const float4* properties,
     const int* hashes,
     const int* offsets,
     const float h
@@ -942,7 +916,6 @@ __global__ void voxelFieldKernel(
 
     float4 n = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     float c = 0.0f;
-    // float h2 = field.smoothingRadius * field.smoothingRadius;
     float h2 = h * h;
 
     // Find neighbors
@@ -963,17 +936,16 @@ __global__ void voxelFieldKernel(
                     if (neighborHash != hash)
                         break;
 
-                    const ParticleGPU particle = particles[neighborIndex];
-                    const float4 diff = samplePosition - particle.position;
+                    const float4 diff = samplePosition - position[neighborIndex];
 
                     // Check if within radius
                     float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
                     if (distSq < h2) {
-                        float invDensity = 1.0f / (particle.properties.y + 1e-6f);
+                        float invDensity = 1.0f / (properties[neighborIndex].y + 1e-6f);
 
                         // Color field
-                        n += particle.properties.x * invDensity * poly6KernelGradient(diff, h);
-                        c += particle.properties.x * invDensity * poly6Kernel(diff, h);
+                        n += properties[neighborIndex].x * invDensity * poly6KernelGradient(diff, h);
+                        c += properties[neighborIndex].x * invDensity * poly6Kernel(diff, h);
                     }
                 }
             }
@@ -988,7 +960,8 @@ void launchVoxelFieldKernel(
     const VoxelField& field,
     const CudaAABB& domain,
     const int numParticles,
-    const ParticleGPU* particles,
+    const float4* position,
+    const float4* properties,
     const int* hashes,
     const int* offsets,
     const float h
@@ -998,6 +971,6 @@ void launchVoxelFieldKernel(
     int blocks = (cells + threadsPerBlock - 1) / threadsPerBlock;
 
     voxelFieldKernel<<<blocks, threadsPerBlock>>>(
-        field, domain, numParticles, particles, hashes, offsets, h
+        field, domain, numParticles, position, properties, hashes, offsets, h
     );
 }

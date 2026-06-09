@@ -18,7 +18,7 @@ ParticlesPanel::ParticlesPanel(FluidSimulation* simulation, ParticlesNode* parti
 void ParticlesPanel::update(double deltaTime) {
     time += deltaTime;
 
-    if (time >= 0.5f) {
+    if (time >= 0.1f) {
         time = 0.0f;
 
         // Fetch new data from simulation

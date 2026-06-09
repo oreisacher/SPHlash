@@ -13,7 +13,7 @@ struct ParticleGPU;
 
 void launchHashParticlesKernel(
     const int numParticles,
-    const ParticleGPU* particles,
+    const float4* position,
     int* particleHashValue,
     int* particleIndex,
     const float h
@@ -42,7 +42,9 @@ float getMaxVelocity(
 
 float getMaxAcceleration(
     int numParticles,
-    ParticleGPU* particles
+    const float4* pressureForce,
+    const float4* viscosityForce,
+    const float4* surfaceTensionForce
 );
 
 void queryRequiredSortingStorage(
@@ -56,14 +58,15 @@ void queryRequiredSortingStorage(
 
 void launchReorderParticlesKernel(
     const int numParticles,
-    const ParticleGPU* particles,
+    const ParticlesGPU particles,
     const int* particleIndices,
-    ParticleGPU* sortedParticles
+    ParticlesGPU sortedParticles
 );
 
 void launchDensityPressureKernel(
     const int numParticles,
-    ParticleGPU* particles,
+    const float4* position,
+    float4* properties,
     const int* hashes,
     const int* offsets,
     const bool hasBoundary,
@@ -77,7 +80,13 @@ void launchDensityPressureKernel(
 
 void launchSphForcesKernel(
     const int numParticles,
-    ParticleGPU* particles,
+    const float4* position,
+    const float4* properties,
+    const float4* velocity,
+    float4* pressureForce,
+    float4* viscosityForce,
+    float4* surfaceTensionForce,
+    float4* flags,
     const int* hashes,
     const int* offsets,
     const bool hasBoundary,
@@ -92,7 +101,11 @@ void launchSphForcesKernel(
 );
 
 void launchUpdateParticlesKernel(
-    ParticleGPU* particles,
+    const float4* pressureForce,
+    const float4* viscosityForce,
+    const float4* surfaceTensionForce,
+    float4* velocity,
+    float4* position,
     const int numParticles,
     const CudaForceField* forceFields,
     const int numForceFields,
@@ -103,25 +116,35 @@ void launchUpdateParticlesKernel(
 
 void launchRenderPrepareKernel(
     const int numParticles,
-    const ParticleGPU* particles,
+    const float4* position,
+    const float4* velocity,
+    const float4* properties,
+    const float4* flags,
+    const float4* color,
     RendererParticle* rendererParticles
 );
 
 void launchInitParticlesKernel(
     CudaParticleSpawn spawn,
-    ParticleGPU* particles,
+    ParticlesGPU particles,
     int* particleCount,
     const int3 gridCount
 );
 
 void launchUpdateParticleMassKernel(
     int numParticles,
-    ParticleGPU* particles,
-    float mass
+    float4* properties,
+    const float mass
 );
 
 void launchResetParticlesKernel(
-    ParticleGPU* particles,
+    float4* position,
+    const float4* startPosition,
+    float4* velocity,
+    float4* properties,
+    float4* pressureForce,
+    float4* viscosityForce,
+    float4* surfaceTensionForce,
     int numParticles
 );
 
@@ -129,7 +152,8 @@ void launchVoxelFieldKernel(
     const VoxelField& field,
     const CudaAABB& domain,
     const int numParticles,
-    const ParticleGPU* particles,
+    const float4* position,
+    const float4* properties,
     const int* hashes,
     const int* offsets,
     const float h
