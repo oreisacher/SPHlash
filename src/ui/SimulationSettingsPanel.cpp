@@ -63,8 +63,17 @@ void SimulationSettingsPanel::draw() {
         ImGui::DragFloat("##g", &simulation->settings.gravity, 0.01);
     }
 
+    if (ImGui::CollapsingHeader("Time Settings")) {
+        ImGui::Checkbox("Enable fixed Time Step##fixedTimeStep", &simulation->settings.useFixedTimeStep);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("If disabled, the actual frame time is used");
+
+        ImGui::Text("Time Step (ms):");
+        ImGui::DragFloat("##fts", &simulation->settings.fixedTimeStep, 0.01);
+    }
+
     if (ImGui::CollapsingHeader("CFL Settings")) {
-        ImGui::Checkbox("Enable##cfl", &simulation->settings.useCFL);
+        ImGui::Checkbox("Enable CFL##cfl", &simulation->settings.useCFL);
 
         ImGui::Text("Safety Factor:");
         ImGui::DragFloat("##cflSF", &simulation->settings.safetyFactor, 0.01);

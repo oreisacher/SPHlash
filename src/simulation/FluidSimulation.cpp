@@ -162,6 +162,9 @@ void FluidSimulation::update(const float deltaTime) {
     updateForceFieldBuffer();
     updateParticles();
 
+    // --- Delta Time ---
+    float dt = settings.useFixedTimeStep ? settings.fixedTimeStep / 1000.0f : deltaTime;
+
     // --- CFL ---
     float cs = 10.0f * settings.maxVelocity;
     settings.speedSound = cs;
@@ -182,7 +185,7 @@ void FluidSimulation::update(const float deltaTime) {
         particleCount,
         d_forceFields,
         scene->getForceFields().size(),
-        settings.useCFL ? fminf(cfl, deltaTime) : deltaTime,
+        settings.useCFL ? fminf(cfl, dt) : dt,
         domain->getCudaAABB(),
         settings.enableGravity ? settings.gravity : 0.0f
     );

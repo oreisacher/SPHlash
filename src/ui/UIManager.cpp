@@ -184,7 +184,7 @@ void UIManager::draw() const {
         ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Right, 0.30f, &dock_right, &dock_main);
 
         // Left
-        ImGui::DockBuilderSplitNode(dock_left, ImGuiDir_Down, 0.80f, &dock_left_2, &dock_left_1);
+        ImGui::DockBuilderSplitNode(dock_left, ImGuiDir_Down, 0.85f, &dock_left_2, &dock_left_1);
         ImGui::DockBuilderSplitNode(dock_left_2, ImGuiDir_Down, 0.50f, &dock_left_3, &dock_left_2);
 
         // Right

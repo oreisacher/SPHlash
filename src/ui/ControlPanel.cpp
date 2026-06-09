@@ -6,6 +6,7 @@
 #include "imgui.h"
 #include <iostream>
 
+#include "imgui_internal.h"
 #include "rendering/Renderer.h"
 
 ControlPanel::ControlPanel(Editor* editor, FluidSimulation* simulation, Renderer* renderer)
@@ -42,26 +43,11 @@ void ControlPanel::draw() {
     if (ImGui::IsKeyPressed(ImGuiKey_Space) && simulationState != UNINITIALIZED)
         simulationState == PAUSED ? simulation->start() : simulation->pause();
 
-    if (ImGui::Button("Reset Simulation", ImVec2(totalWidth, 0))) {
+    if (ImGui::Button("Reset Simulation", ImVec2(totalWidth, 0)))
         simulation->reset();
-        // mesher->updateMesh(true);
-    }
 
-    if (ImGui::IsKeyPressed(ImGuiKey_R) && simulationState != UNINITIALIZED) {
+    if (ImGui::IsKeyPressed(ImGuiKey_R) && simulationState != UNINITIALIZED)
         simulation->reset();
-        // mesher->updateMesh(true);
-    }
-
-    ImGui::Separator();
-
-    ImGui::Text("Manual Frame Step Size (ms):");
-    ImGui::DragFloat("##fss", &stepSize, 1, 1000, 1.0);
-    if (ImGui::Button("Step Single Frame", ImVec2(totalWidth, 0)))
-        simulation->step(stepSize / 1000.0f);
-
-    if (ImGui::IsKeyPressed(ImGuiKey_RightArrow) && simulation->getState() != UNINITIALIZED)
-        simulation->step(stepSize / 1000.0f);
-
 
     ImGui::EndDisabled();
 

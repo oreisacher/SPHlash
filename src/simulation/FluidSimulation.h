@@ -40,32 +40,6 @@ struct ParticleGPU {
     float4 debugging                = { 0.0f, 0.0f, 0.0f, 0.0f };
 };
 
-// struct CudaForceField {
-//     float3 position     = { 0.0f, 0.0f, 0.0f };
-//     float3 halfExtents  = { 0.2f, 0.2f, 0.2f };
-//
-//     float3 right        = { 1.0f, 0.0f, 0.0f };
-//     float3 up           = { 0.0f, 1.0f, 0.0f };
-//     float3 forward      = { 0.0f, 0.0f, 1.0f };
-//
-//     bool active         = true;
-//     float strength      = 5.0f;
-// };
-
-// struct CudaParticleSpawn {
-//     float restDensity       = 1000.0f;
-//     float particleSpacing   = 0.025f;
-//     float4 color            = { 1.0f, 0.0f, 0.0f, 1.0f };
-//
-//     CudaAABB area = {
-//         { 0.0f, 0.0f, 0.0f },
-//         { 1.0f, 1.0f, 1.0f }
-//     };
-//
-//     bool hasShape               = false;
-//     Triangle* d_shapeTriangles  = nullptr;
-// };
-
 struct SimulationSettings {
     // Particles
     float h = 0.05f;
@@ -78,6 +52,10 @@ struct SimulationSettings {
     // Gravity
     bool enableGravity = true;
     float gravity = -9.878;
+
+    // Time
+    bool useFixedTimeStep = false;
+    float fixedTimeStep = 16;
 
     // CFL
     bool useCFL = true;
