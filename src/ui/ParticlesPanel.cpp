@@ -44,11 +44,17 @@ void ParticlesPanel::draw() {
         });
         ImGui::Text("No particles.");
     } else {
+        ImGui::PushItemWidth(-FLT_MIN);
+
+        ImGui::Text("Total Particles:");
+        ImGui::Button(std::format("{}##tp", simulation->getParticleCount()).c_str(), ImVec2(-FLT_MIN, 0));
+
+        ImGui::SeparatorText("");
+
         ImGui::Checkbox("Show particle info", &showParticles);
 
         if (showParticles) {
             ImGui::Spacing();
-            ImGui::PushItemWidth(-FLT_MIN);
             ImGui::Text("Particle ID:");
             ImGui::DragInt("##id", &selectedParticle, 1, 0, particleCount - 1, "%d", ImGuiSliderFlags_AlwaysClamp);
 
