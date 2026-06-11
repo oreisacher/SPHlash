@@ -7,6 +7,7 @@
 
 #include "BoundingBoxNode.h"
 #include "BoundingBoxParticleSpawnNode.h"
+#include "ModelParticleSpawnNode.h"
 #include "simulation/BoundaryBuilder.h"
 #include "ui/SimulationPanel.h"
 
@@ -37,7 +38,13 @@ void Editor::addParticleSpawn(const std::string& path) {
 
         selectedNode = bbParticleSpawnNode.get();
         scene->addSceneNode(std::move(bbParticleSpawnNode));
+        return;
     }
+
+    auto model = std::make_shared<Model>(path);
+    auto modelParticleSpawnNode = std::make_unique<ModelParticleSpawnNode>(std::string("Particle Spawn"), model);
+    selectedNode = modelParticleSpawnNode.get();
+    scene->addSceneNode(std::move(modelParticleSpawnNode));
 }
 
 void Editor::updateRenderingSize(int width, int height) const {

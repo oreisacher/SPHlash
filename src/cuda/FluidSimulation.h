@@ -131,12 +131,6 @@ void launchInitParticlesKernel(
     const int3 gridCount
 );
 
-void launchUpdateParticleMassKernel(
-    int numParticles,
-    float4* properties,
-    const float mass
-);
-
 void launchResetParticlesKernel(
     float4* position,
     const float4* startPosition,

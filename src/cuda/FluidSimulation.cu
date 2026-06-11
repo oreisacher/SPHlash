@@ -11,6 +11,7 @@
 #include <cub/cub.cuh>
 
 #include "Hex32.cuh"
+#include "SDF.cuh"
 #include "rendering/Renderer.h"
 #include "rendering/ForceFieldNode.h"
 #include "utils/VoxelField.h"
@@ -776,21 +777,22 @@ __global__ void initParticlesKernel(
     float posY = spawn.area.min.y + gy * spawn.particleSpacing;
     float posZ = spawn.area.min.z + gz * spawn.particleSpacing;
 
-    if (spawn.hasShape) {
+    if (spawn.hasShape && calculateSDF(make_float3(posX, posY, posZ), spawn.triangleCount, spawn.d_shapeTriangles) > 0.0)
+        return;
 
-    } else {
-        int slot = atomicAdd(particleCount, 1);
+    float mass = spawn.restDensity * spawn.particleSpacing * spawn.particleSpacing * spawn.particleSpacing;
 
-        particles.d_position[slot]              = make_float4(posX, posY, posZ, 0.0);
-        particles.d_startPosition[slot]         = particles.d_position[slot];
-        particles.d_velocity[slot]              = make_float4(0.0, 0.0, 0.0, 0.0);
-        particles.d_properties[slot]            = make_float4(spawn.restDensity, 0.0, 0.0, static_cast<float>(slot));
-        particles.d_flags[slot]                 = make_float4(0.0, 0.0, 0.0, 0.0);
-        particles.d_color[slot]                 = spawn.color;
-        particles.d_pressureForce[slot]         = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-        particles.d_viscosityForce[slot]        = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-        particles.d_surfaceTensionForce[slot]   = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    }
+    int slot = atomicAdd(particleCount, 1);
+
+    particles.d_position[slot]              = make_float4(posX, posY, posZ, 0.0);
+    particles.d_startPosition[slot]         = particles.d_position[slot];
+    particles.d_velocity[slot]              = make_float4(0.0, 0.0, 0.0, 0.0);
+    particles.d_properties[slot]            = make_float4(mass, 0.0, 0.0, static_cast<float>(slot));
+    particles.d_flags[slot]                 = make_float4(0.0, 0.0, 0.0, 0.0);
+    particles.d_color[slot]                 = spawn.color;
+    particles.d_pressureForce[slot]         = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    particles.d_viscosityForce[slot]        = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    particles.d_surfaceTensionForce[slot]   = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 void launchInitParticlesKernel(
@@ -804,32 +806,6 @@ void launchInitParticlesKernel(
 
     initParticlesKernel<<<blocks, threadsPerBlock>>>(
         spawn, particles, particleCount, gridCount
-    );
-}
-
-__global__ void updateParticleMassKernel(
-    int numParticles,
-    float4* properties,
-    const float mass
-) {
-    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
-
-    if (id >= numParticles)
-        return;
-
-    properties[id].x = mass;
-}
-
-void launchUpdateParticleMassKernel(
-    int numParticles,
-    float4* properties,
-    const float mass
-) {
-    int threadsPerBlock = 256;
-    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
-
-    updateParticleMassKernel<<<blocks, threadsPerBlock>>>(
-        numParticles, properties, mass
     );
 }
 

@@ -100,47 +100,6 @@ __global__ void marchingCubesKernel(
             cube[i] = isoLevel;
         }
     }
-    // if (x == 0) {
-    //     cube[0] = isoLevel;
-    //     cube[3] = isoLevel;
-    //     cube[4] = isoLevel;
-    //     cube[7] = isoLevel;
-    // }
-    //
-    // if (y == 0) {
-    //     cube[0] = isoLevel;
-    //     cube[1] = isoLevel;
-    //     cube[4] = isoLevel;
-    //     cube[5] = isoLevel;
-    // }
-    //
-    // if (z == 0) {
-    //     cube[0] = isoLevel;
-    //     cube[1] = isoLevel;
-    //     cube[2] = isoLevel;
-    //     cube[3] = isoLevel;
-    // }
-    //
-    // if (x == field.resolution.x - 2) {
-    //     cube[1] = isoLevel;
-    //     cube[2] = isoLevel;
-    //     cube[5] = isoLevel;
-    //     cube[6] = isoLevel;
-    // }
-    //
-    // if (y == field.resolution.y - 2) {
-    //     cube[2] = isoLevel;
-    //     cube[3] = isoLevel;
-    //     cube[6] = isoLevel;
-    //     cube[7] = isoLevel;
-    // }
-    //
-    // if (z == field.resolution.z - 2) {
-    //     cube[4] = isoLevel;
-    //     cube[5] = isoLevel;
-    //     cube[6] = isoLevel;
-    //     cube[7] = isoLevel;
-    // }
 
     // Build cube index
     int cubeIndex = 0;

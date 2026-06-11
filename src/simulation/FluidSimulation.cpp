@@ -532,7 +532,7 @@ ParticleHost FluidSimulation::getParticle(const int id) const {
     if (id < 0 || id >= particleCount)
         return {};
 
-    ParticleHost p;
+    ParticleHost p{};
     particles.copyToHost(p, id);
     return p;
 }
@@ -583,34 +583,9 @@ bool FluidSimulation::initParticles() {
         CUDA_KERNEL_CHECK("InitParticlesKernel");
 #endif
 
-        cudaDeviceSynchronize();
-
         int spawnParticleCount;
         cudaMemcpy(&spawnParticleCount, d_spawnParticleCount, sizeof(int), cudaMemcpyDeviceToHost);
         cudaFree(d_spawnParticleCount);
-
-        float volume;
-        if (cudaSpawn.hasShape) {
-
-        } else {
-            volume = (cudaSpawn.area.max.x - cudaSpawn.area.min.x) *
-                     (cudaSpawn.area.max.y - cudaSpawn.area.min.y) *
-                     (cudaSpawn.area.max.z - cudaSpawn.area.min.z);
-        }
-
-        float mass = (cudaSpawn.restDensity * volume) / spawnParticleCount;
-
-        launchUpdateParticleMassKernel(
-            spawnParticleCount,
-            spawnParticles.d_properties,
-            mass
-        );
-
-#ifdef DEBUG_CUDA
-        CUDA_KERNEL_CHECK("UpdateParticlesMassKernel");
-#endif
-
-        cudaDeviceSynchronize();
 
         // Copy spawn particles back to host and append
         ParticlesHost spawnParticlesHost;

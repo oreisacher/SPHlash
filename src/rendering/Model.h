@@ -26,11 +26,15 @@ public:
     AABB getBoundingBox() const;
     AABB getWorldBoundingBox(const glm::mat4& transform) const;
 
+    std::vector<Triangle> getWorldSpaceTriangles(const glm::mat4& transform) const;
+
     void addMesh(std::unique_ptr<Mesh> mesh);
     std::vector<Mesh*> getMeshes() const;
 
     int addMaterial(const Material& material);
-    Material& getMaterial(int index);
+    Material* getMaterial(int index);
+    std::vector<Material*> getMaterials();
+    void clearMaterials();
 
     void setInstanceCount(int c);
 

@@ -10,6 +10,11 @@
 #include <glm/glm.hpp>
 #include "Texture.h"
 
+enum class FillMode {
+    Fill,
+    Wireframe
+};
+
 class Material {
 public:
     Material(const std::string& name, const std::shared_ptr<Shader>& shader);
@@ -19,6 +24,13 @@ public:
     std::string getName();
     Shader* getShader() const;
 
+    void setFillMode(FillMode mode);
+    FillMode getFillMode() const;
+
+    void setCullFaces(bool cull);
+    bool getCullFaces() const;
+
+    // -- Shader parameters ---
     void setFloat(const std::string& name, float value);
     void setVec3(const std::string& name, glm::vec3 value);
     void setVec4(const std::string& name, glm::vec4 value);
@@ -27,8 +39,11 @@ public:
 
 private:
     std::string name;
-
     std::shared_ptr<Shader> shader;
+
+    FillMode fillMode = FillMode::Fill;
+    bool cullFaces = true;
+
     std::unordered_map<std::string, float> floatParams;
     std::unordered_map<std::string, glm::vec3> vec3Params;
     std::unordered_map<std::string, glm::vec4> vec4Params;

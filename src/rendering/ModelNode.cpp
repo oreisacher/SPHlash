@@ -60,14 +60,7 @@ Model* ModelNode::getModel() const {
 }
 
 std::vector<Triangle> ModelNode::getWorldSpaceTriangles() const {
-    std::vector<Triangle> triangles;
-
-    for (const auto& mesh : model->getMeshes()) {
-        auto meshTriangles = mesh->getWorldSpaceTriangles(transform);
-        triangles.insert(triangles.end(), meshTriangles.begin(), meshTriangles.end());
-    }
-
-    return triangles;
+    return model->getWorldSpaceTriangles(transform);
 }
 
 AABB ModelNode::getBoundingBox() const {

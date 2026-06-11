@@ -32,7 +32,7 @@ Properties SkyboxNode::buildProperties() {
         [this] (std::shared_ptr<Texture> tex)
         {
             skyboxTexture = tex;
-            skyboxModel->getMaterial(0).setTexture("skybox", skyboxTexture);
+            skyboxModel->getMaterial(0)->setTexture("skybox", skyboxTexture);
         }
     ));
 

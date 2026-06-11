@@ -160,6 +160,9 @@ void Model::draw(const glm::mat4& view, const glm::mat4& projection, const glm::
 
             material.bind();
 
+            material.getCullFaces() ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
+            glPolygonMode(GL_FRONT_AND_BACK, material.getFillMode() == FillMode::Fill ? GL_FILL : GL_LINE);
+
             material.getShader()->setMat4("view", view);
             material.getShader()->setVec3("viewPos", cameraPos);
             material.getShader()->setMat4("projection", projection);
@@ -214,6 +217,17 @@ AABB Model::getWorldBoundingBox(const glm::mat4& transform) const {
     return { center, size };
 }
 
+std::vector<Triangle> Model::getWorldSpaceTriangles(const glm::mat4& transform) const {
+    std::vector<Triangle> triangles;
+
+    for (auto& mesh : meshes) {
+        auto meshTriangles = mesh->getWorldSpaceTriangles(transform);
+        triangles.insert(triangles.end(), meshTriangles.begin(), meshTriangles.end());
+    }
+
+    return triangles;
+}
+
 void Model::addMesh(std::unique_ptr<Mesh> mesh) {
     meshes.push_back(std::move(mesh));
 
@@ -236,12 +250,25 @@ int Model::addMaterial(const Material& material) {
     return matIndex;
 }
 
-Material& Model::getMaterial(const int index) {
+Material* Model::getMaterial(const int index) {
     if (index < 0 || index >= materials.size()) {
         std::cerr << "Material index out of bounds" << std::endl;
     }
 
-    return materials[index];
+    return &materials[index];
+}
+
+std::vector<Material*> Model::getMaterials() {
+    std::vector<Material*> mats;
+
+    for (int i = 0 ; i < materials.size(); i++)
+        mats.push_back(&materials[i]);
+
+    return mats;
+}
+
+void Model::clearMaterials() {
+    materials.clear();
 }
 
 void Model::setInstanceCount(int c) {

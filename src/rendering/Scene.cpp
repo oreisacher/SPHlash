@@ -7,6 +7,7 @@
 #include "BoundingBoxParticleSpawnNode.h"
 #include "ForceFieldNode.h"
 #include "ModelNode.h"
+#include "ModelParticleSpawnNode.h"
 #include "simulation/FluidSimulation.h"
 #include "utils/Config.h"
 
@@ -35,7 +36,7 @@ void Scene::addSceneNode(std::unique_ptr<SceneNode> node) {
 }
 
 void Scene::removeSceneNode(const SceneNode* node) {
-    std::erase_if(models,     [&](const ModelNode* n)       { return n == node; });
+    std::erase_if(models,         [&](const ModelNode* n)       { return n == node; });
     std::erase_if(boundingBoxes,  [&](const BoundingBoxNode* n) { return n == node; });
     std::erase_if(forceFields,    [&](const ForceFieldNode* n)  { return n == node; });
 
@@ -180,6 +181,9 @@ std::unique_ptr<SceneNode> Scene::nodeFromJson(const nlohmann::json& j) {
 
     if (type == "BoundingBoxParticleSpawnNode")
         return std::make_unique<BoundingBoxParticleSpawnNode>(j);
+
+    if (type == "ModelParticleSpawnNode")
+        return std::make_unique<ModelParticleSpawnNode>(j);
 
     throw std::runtime_error("Unknown node type: " + type);
 }

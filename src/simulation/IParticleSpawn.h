@@ -5,6 +5,9 @@
 #ifndef SPHLASH_IPARTICLESPAWN_H
 #define SPHLASH_IPARTICLESPAWN_H
 
+#include <vector_types.h>
+#include "utils/AABB.h"
+
 struct Triangle;
 
 struct CudaParticleSpawn {
@@ -18,6 +21,7 @@ struct CudaParticleSpawn {
     };
 
     bool hasShape               = false;
+    int triangleCount           = 0;
     Triangle* d_shapeTriangles  = nullptr;
 };
 

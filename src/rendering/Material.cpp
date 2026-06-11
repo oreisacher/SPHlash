@@ -41,6 +41,22 @@ Shader* Material::getShader() const {
     return shader.get();
 }
 
+void Material::setFillMode(const FillMode mode) {
+    fillMode = mode;
+}
+
+FillMode Material::getFillMode() const {
+    return fillMode;
+}
+
+void Material::setCullFaces(bool cull) {
+    cullFaces = cull;
+}
+
+bool Material::getCullFaces() const {
+    return cullFaces;
+}
+
 void Material::setFloat(const std::string& name, float value) {
     floatParams[name] = value;
 }

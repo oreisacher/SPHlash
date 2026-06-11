@@ -38,7 +38,7 @@ public:
     nlohmann::json toJson() const override;
     std::string getTypeName() const override;
 
-private:
+protected:
     std::shared_ptr<Model> model;
 
     bool boundary = true;

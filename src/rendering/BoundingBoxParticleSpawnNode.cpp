@@ -15,10 +15,12 @@ BoundingBoxParticleSpawnNode::BoundingBoxParticleSpawnNode(const std::string& na
 }
 
 BoundingBoxParticleSpawnNode::BoundingBoxParticleSpawnNode(const nlohmann::json json) : BoundingBoxNode(json) {
+    particleSpawn.hasShape = false;
+    particleSpawn.d_shapeTriangles = nullptr;
+
     // Particle spawn
     particleSpawn.restDensity = json["restDensity"];
     particleSpawn.particleSpacing = json["particleSpacing"];
-    particleSpawn.hasShape = json["hasShape"];
     particleSpawn.color = make_float4(
         json["color"][0].get<float>(),
         json["color"][1].get<float>(),
@@ -77,7 +79,6 @@ nlohmann::json BoundingBoxParticleSpawnNode::toJson() const {
     j["restDensity"] = particleSpawn.restDensity;
     j["particleSpacing"] = particleSpawn.particleSpacing;
     j["color"] = { particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z };
-    j["hasShape"] = particleSpawn.hasShape;
 
     return j;
 }

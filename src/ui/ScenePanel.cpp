@@ -93,6 +93,26 @@ void ScenePanel::draw() {
 
     ImGui::SeparatorText("");
 
+    // --- Particle Spawns ---
+    if (ImGui::Button("Add Particle Spawn Cube", ImVec2(totalWidth, 0))) {
+        editor->addParticleSpawn("");
+    }
+
+    if (ImGuiFileDialog::Instance()->Display("LoadParticleSpawnModel")) {
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            editor->addParticleSpawn(ImGuiFileDialog::Instance()->GetFilePathName());
+        }
+
+        ImGuiFileDialog::Instance()->Close();
+    }
+
+    if (ImGui::Button("Add Particle Spawn Model", ImVec2(totalWidth, 0))) {
+        IGFD::FileDialogConfig config;
+        config.path = ".";
+        ImGuiFileDialog::Instance()->OpenDialog("LoadParticleSpawnModel", "Choose Model", ".obj", config);
+    }
+
+    // --- Add (Load) Model ---
     if (ImGuiFileDialog::Instance()->Display("LoadModel")) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             editor->addBoundary(ImGuiFileDialog::Instance()->GetFilePathName());
@@ -101,16 +121,13 @@ void ScenePanel::draw() {
         ImGuiFileDialog::Instance()->Close();
     }
 
-    if (ImGui::Button("Add Particle Spawn Cube", ImVec2(totalWidth, 0))) {
-        editor->addParticleSpawn("");
-    }
-
     if (ImGui::Button("Add Model", ImVec2(totalWidth, 0))) {
         IGFD::FileDialogConfig config;
         config.path = ".";
         ImGuiFileDialog::Instance()->OpenDialog("LoadModel", "Choose Model", ".obj", config);
     }
 
+    // --- Force Fields ---
     if (ImGui::Button("Add Force Field", ImVec2(totalWidth, 0))) {
         editor->addForceField();
     }
