@@ -5,9 +5,9 @@
 #ifndef SPHLASH_BOUNDARIES_H
 #define SPHLASH_BOUNDARIES_H
 
-#include "rendering/Mesh.h"
-#include "utils/AABB.h"
-#include "utils/Hex32Field.h"
+struct CudaAABB;
+struct Hex32Field;
+struct Triangle;
 
 void launchSdfKernel(
     const int triangleCount,

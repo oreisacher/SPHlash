@@ -1,10 +1,8 @@
 #include "Boundaries.h"
-#include "Math.cuh"
-#include "utils/AABB.h"
-#include "utils/Hex32Field.h"
-#include "curand_kernel.h"
+#include "CudaAABB.h"
 #include "Hex32.cuh"
 #include "SDF.cuh"
+#include "simulation/boundaries/Hex32Field.h"
 
 __global__ void sdfKernel(
     const int triangleCount,

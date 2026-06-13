@@ -6,8 +6,9 @@
 #define FLUIDSIMSPH_FLUIDRENDERER_H
 
 #include "Framebuffer.h"
-#include "ParticlesNode.h"
+#include "simulation/scene/nodes/ParticlesNode.h"
 #include "glad/gl.h"
+#include "glm/fwd.hpp"
 
 class Scene;
 class FluidSimulation;

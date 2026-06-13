@@ -1,8 +1,9 @@
 #include "MarchingCubes.h"
 
+#include "CudaAABB.h"
 #include "MarchingCubesLookup.h"
-#include "utils/AABB.h"
-#include "utils/VoxelField.h"
+#include "assets/Vertex.h"
+#include "simulation/VoxelField.h"
 
 __device__ inline float3 operator+(const float3& a, const float3& b) {
     return make_float3(
@@ -224,10 +225,6 @@ void launchMarchingCubesKernel(
     const float isoLevel,
     const bool smoothNormals
 ) {
-    int threadsPerBlock = 256;
-    int cells = (field.resolution.x - 1) * (field.resolution.y - 1) * (field.resolution.z - 1);
-    int blocks = (cells + threadsPerBlock - 1) / threadsPerBlock;
-
     dim3 blockSize(8, 8, 8);
     dim3 gridSize(
         (field.resolution.x - 1 + blockSize.x - 1) / blockSize.x,

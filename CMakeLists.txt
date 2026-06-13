@@ -46,6 +46,7 @@ add_executable(SPHlash
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
+        src/rendering/RendererParticle.h
 )
 
 add_library(imgui

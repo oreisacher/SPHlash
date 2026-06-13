@@ -1,0 +1,14 @@
+//
+// Created by ruut on 6/13/26.
+//
+
+#ifndef SPHLASH_TRIANGLE_H
+#define SPHLASH_TRIANGLE_H
+
+#include <vector_types.h>
+
+struct Triangle {
+    float3 v0, v1, v2;
+};
+
+#endif //SPHLASH_TRIANGLE_H

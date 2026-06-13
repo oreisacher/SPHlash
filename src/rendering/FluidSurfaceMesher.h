@@ -6,9 +6,9 @@
 #define SPHLASH_FLUIDSURFACEMESHER_H
 
 #include <memory>
-#include "Model.h"
+#include "../assets/Model.h"
 #include "glm/glm.hpp"
-#include "utils/VoxelField.h"
+#include "../simulation/VoxelField.h"
 
 class Mesh;
 class ModelNode;

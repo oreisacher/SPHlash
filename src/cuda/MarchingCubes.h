@@ -5,9 +5,9 @@
 #ifndef SPHLASH_MARCHINGCUBES_CU
 #define SPHLASH_MARCHINGCUBES_CU
 
-#include "rendering/Mesh.h"
-#include "utils/AABB.h"
-#include "utils/VoxelField.h"
+struct Vertex;
+struct CudaAABB;
+struct VoxelField;
 
 void launchMarchingCubesKernel(
     const VoxelField field,

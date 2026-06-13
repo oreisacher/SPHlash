@@ -6,7 +6,7 @@
 #define FLUIDSIMSPH_UIMANAGER_H
 
 #include <vector>
-#include "UIPanel.h"
+#include "panels/UIPanel.h"
 #include "GLFW/glfw3.h"
 
 class UIManager {

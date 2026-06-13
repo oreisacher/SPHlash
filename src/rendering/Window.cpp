@@ -2,10 +2,10 @@
 // Created by ruut on 3/16/26.
 //
 
-#include "Window.h"
+#include "rendering/Window.h"
 #include <format>
 #include <iostream>
-#include "utils/Logger.h"
+#include "../utils/Logger.h"
 
 GLFWwindow* Window::getNativeWindow() const { return window; }
 

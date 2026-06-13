@@ -6,7 +6,7 @@
 #define FLUIDSIMSPH_FLUIDSIMULATIONGPU_H
 
 #include <vector_types.h>
-#include "utils/Hex32Field.h"
+#include "boundaries/Hex32Field.h"
 #include <cstddef>
 #include <vector>
 

@@ -2,7 +2,7 @@
 // Created by ruut on 6/7/26.
 //
 
-#include "FluidSurfaceScreenSpace.h"
+#include "rendering/FluidSurfaceScreenSpace.h"
 #include "Framebuffer.h"
 #include "glm/gtc/type_ptr.inl"
 

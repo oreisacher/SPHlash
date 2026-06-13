@@ -137,7 +137,7 @@ __device__ inline float3 operator*(const float3& a, const float& b) {
     );
 }
 
-__host__ __device__ inline float3 cross(const float3 a, const float3 b) {
+__device__ inline float3 cross(const float3 a, const float3 b) {
     float3 result;
     result.x = a.y * b.z - a.z * b.y;
     result.y = a.z * b.x - a.x * b.z;
@@ -145,30 +145,30 @@ __host__ __device__ inline float3 cross(const float3 a, const float3 b) {
     return result;
 }
 
-__host__ __device__ inline float dot(const float3 a, const float3 b) {
+__device__ inline float dot(const float3 a, const float3 b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-__host__ __device__ inline float signf(float x) {
+__device__ inline float signf(float x) {
     return (x > 0.0f) - (x < 0.0f);
 }
 
-__host__ __device__ inline float dot2(const float3 v) {
+__device__ inline float dot2(const float3 v) {
     return v.x * v.x + v.y * v.y + v.z * v.z;
 }
 
-__host__ __device__ inline float clampf(float x, float a, float b) {
+__device__ inline float clampf(float x, float a, float b) {
     return fminf(fmaxf(x, a), b);
 }
 
-__host__ __device__ inline float dot(const float4& a, const float4& b) {
+__device__ inline float dot(const float4& a, const float4& b) {
     return a.x * b.x +
            a.y * b.y +
            a.z * b.z +
            a.w * b.w;
 }
 
-__host__ __device__ inline float3 normalize(float3 v) {
+__device__ inline float3 normalize(float3 v) {
     float len = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
 
     if (len > 1e-8f) {

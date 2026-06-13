@@ -6,11 +6,10 @@
 #define SPHLASH_FLUIDSURFACESCREENSPACE_H
 
 #include <memory>
-#include "Model.h"
-#include "Shader.h"
+#include "Framebuffer.h"
+#include "assets/Model.h"
+#include "assets/Shader.h"
 #include "glm/glm.hpp"
-
-class Framebuffer;
 
 struct ScreenSpaceSettings {
     float particleSize      = 0.015;

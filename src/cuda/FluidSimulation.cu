@@ -1,20 +1,13 @@
 #include "FluidSimulation.h"
-#include "simulation/FluidSimulation.h"
 #include "cuda/Kernels.cuh"
 #include "cuda/Math.cuh"
-
-#include <complex>
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
-#include <thrust/sort.h>
-#include <thrust/device_vector.h>
 #include <cub/cub.cuh>
-
 #include "Hex32.cuh"
 #include "SDF.cuh"
-#include "rendering/Renderer.h"
-#include "rendering/ForceFieldNode.h"
-#include "utils/VoxelField.h"
+#include <thrust/sort.h>
+#include <cuda/CudaForceField.h>
+#include "rendering/RendererParticle.h"
+#include "simulation/VoxelField.h"
 
 void queryRequiredSortingStorage(
     const int numParticles,

@@ -2,20 +2,20 @@
 // Created by ruut on 3/16/26.
 //
 
-#include "FluidSimulation.h"
+#include "simulation/FluidSimulation.h"
 #include <algorithm>
 #include <cuda_runtime.h>
 #include <iostream>
 #include <random>
 #include <nvtx3/nvToolsExt.h>
-#include "cuda/Boundaries.h"
 #include "cuda/FluidSimulation.h"
-#include <cuda_gl_interop.h>
 #include "imgui.h"
-#include "rendering/BoundingBoxNode.h"
-#include "rendering/ForceFieldNode.h"
-#include "rendering/Scene.h"
-#include "utils/CudaUtils.h"
+#include "simulation/scene/nodes/BoundingBoxNode.h"
+#include "simulation/scene/nodes/ForceFieldNode.h"
+#include "scene/Scene.h"
+#include "cuda/CudaUtils.h"
+#include <cuda_gl_interop.h>
+#include "scene/nodes/ParticlesNode.h"
 
 // --- ParticlesHost ------------------------------------
 
