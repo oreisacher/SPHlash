@@ -6,6 +6,7 @@
 #define SPHLASH_PROPERTIES_H
 
 #include <functional>
+#include <math.h>
 #include <memory>
 #include <string>
 #include "glm/vec3.hpp"
@@ -18,13 +19,22 @@ struct Property {
 };
 
 struct FloatProperty : Property {
-    FloatProperty(const std::string& name, std::function<float()> get, std::function<void (float)> set)
-        : name(name), get(std::move(get)), set(std::move(set))
+    FloatProperty(
+        const std::string& name,
+        std::function<float()> get,
+        std::function<void (float)> set,
+        float min = -INFINITY, float max = INFINITY, float speed = 1.0f
+    )
+        : name(name), get(std::move(get)), set(std::move(set)), min(min), max(max), speed(speed)
     {}
 
     std::string                     name;
     std::function<float()>          get;
     std::function<void (float)>     set;
+
+    float min = -INFINITY;
+    float max = INFINITY;
+    float speed = 0.1f;
 
     void draw() override;
 };

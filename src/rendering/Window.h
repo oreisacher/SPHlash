@@ -171,6 +171,7 @@ class Window {
         bool shouldClose() const;
         void close() const;
 
+        void startFrame() const;
         void endFrame() const;
 
         std::string getTitle() const;

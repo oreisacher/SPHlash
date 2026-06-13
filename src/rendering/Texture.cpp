@@ -13,7 +13,7 @@ Texture::Texture(const std::string& path) {
 
     // default settings
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -72,12 +72,3 @@ void Texture::setHeight(const int &height) { this->height = height; }
 
 const int& Texture::getNrChannels() const { return nrChannels; }
 void Texture::setNrChannels(const int &nrChannels) { this->nrChannels = nrChannels; }
-
-const bool& Texture::isTransparent() const { return transparent; }
-void Texture::setTransparent(const bool &transparent) { this->transparent = transparent; }
-
-const Texture::Filter& Texture::getFilter() const { return filter; }
-void Texture::setFilter(const Filter &filter) { this->filter = filter; }
-
-const Texture::Wrap & Texture::getWrap() const { return wrap; }
-void Texture::setWrap(const Wrap &wrap) { this->wrap = wrap; }

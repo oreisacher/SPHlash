@@ -12,7 +12,7 @@
 #include "ui/SimulationSettingsPanel.h"
 #include "ui/SimulationPanel.h"
 #include "ui/UIManager.h"
-#include "utils/Camera.h"
+#include "utils/CameraNode.h"
 #include "utils/InputManager.h"
 #include "utils/Logger.h"
 #include "utils/Time.h"
@@ -62,7 +62,7 @@ Application::Application() {
     ui->addPanel(new ScenePanel                 (editor, renderer));
 
     // Setup scene
-    scene.setCamera(std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 1.0f)));
+    scene.addSceneNode(std::make_unique<CameraNode>(window, glm::vec3(0.0f, 0.0f, 1.0f)));
     camera = scene.getCamera();
 }
 
@@ -78,53 +78,24 @@ void Application::run() const {
     while (!window->shouldClose()) {
         deltaTime = Time.getDeltaTime();
 
-        // Camera
-        camera->update(deltaTime);
+        window->startFrame();
 
         // Simulation
         simulation->update(deltaTime);
+
+        // Update SceneNodes
+        scene.update(deltaTime);
 
         // Render simulation into texture
         renderer->render(scene);
 
         // Update & Draw UI
-        ui->update(deltaTime);
+        ui->preDraw(deltaTime);
         ui->draw();
-
-        processEvents();
+        ui->postDraw(deltaTime);
 
         window->endFrame();
         Time.update();
         Input.reset();
-    }
-}
-
-void Application::processEvents() const {
-    for (const auto& e : ui->getPanel<SimulationPanel>()->getEvents()) {
-        switch (e.type) {
-        case PanelEvent::RESIZE:
-            // Update framebuffer
-            renderer->setSize(e.resize.size.x, e.resize.size.y);
-
-            // Update nodes via editor
-            editor->updateRenderingSize(e.resize.size.x, e.resize.size.y);
-
-            // Update camera aspect ratio
-            scene.getCamera()->setAspectRatio(e.resize.size.x / e.resize.size.y);
-            break;
-        case PanelEvent::MOUSEDOWN:
-            if (e.mouse.button == 2)
-                window->setCursorMode(Window::CursorMode::CURSOR_HIDDEN);
-            break;
-        case PanelEvent::MOUSEUP:
-            if (e.mouse.button == 2) {
-                window->setCursorMode(Window::CursorMode::CURSOR_NORMAL);
-
-                // Reset camera to ignore first delta to avoid jump
-                scene.getCamera()->reset();
-            }
-            break;
-        default: break;
-        }
     }
 }

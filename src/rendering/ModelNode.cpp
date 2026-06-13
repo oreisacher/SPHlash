@@ -89,6 +89,8 @@ void ModelNode::setBoundary(bool on) {
     this->boundary = on;
 }
 
+void ModelNode::update(float deltaTime) { }
+
 void ModelNode::draw(const glm::mat4& view, const glm::mat4& projection) const {
     model->draw(view, projection, transform);
 }

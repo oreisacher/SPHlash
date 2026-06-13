@@ -12,7 +12,7 @@
 #include "rendering/Window.h"
 #include "simulation/FluidSimulation.h"
 #include "ui/UIManager.h"
-#include "utils/Camera.h"
+#include "utils/CameraNode.h"
 
 class Application {
 public:
@@ -20,7 +20,6 @@ public:
     ~Application();
 
     void run() const;
-    void processEvents() const;
 
 private:
     Editor* editor;
@@ -31,7 +30,7 @@ private:
     Window* window;
 
     Scene scene;
-    Camera* camera;
+    CameraNode* camera;
 };
 
 #endif //FLUIDSIMSPH_APPLICATION_H

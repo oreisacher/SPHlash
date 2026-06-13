@@ -11,7 +11,7 @@ StatisticsPanel::StatisticsPanel(FluidSimulation* simulation)
     : UIPanel("Statistics"), simulation(simulation) {
 }
 
-void StatisticsPanel::update(double deltaTime) {
+void StatisticsPanel::preDraw(double deltaTime) {
     // Update fps
     frameTime = deltaTime;
     fpsTimer += deltaTime;

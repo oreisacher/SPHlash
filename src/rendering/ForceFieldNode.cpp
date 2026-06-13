@@ -61,6 +61,8 @@ CudaForceField ForceFieldNode::getForceField() const {
     return forceField;
 }
 
+void ForceFieldNode::update(float deltaTime) { }
+
 void ForceFieldNode::draw(const glm::mat4& view, const glm::mat4& projection) const {
     wireframeModel->draw(view, projection, transform);
 
@@ -132,7 +134,8 @@ Properties ForceFieldNode::buildProperties() {
     properties.addProperty(std::make_unique<FloatProperty>(
         "Strength",
         [this] () { return forceField.strength; },
-        [this] (float s) { forceField.strength = s; }
+        [this] (float s) { forceField.strength = s; },
+        -INFINITY, INFINITY, 0.01f
     ));
 
     return properties;

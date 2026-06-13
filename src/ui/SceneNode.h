@@ -10,11 +10,15 @@
 #include <unordered_set>
 #include <nlohmann/json.hpp>
 
+class Scene;
+
 class SceneNode : public ISelectable, public IRenderable {
 public:
     SceneNode() = default;
     SceneNode(const nlohmann::json j);
     ~SceneNode() override = default;
+
+    virtual void update(float deltaTime) = 0;
 
     // --- Name ---
     const std::string& getName() const;
@@ -27,8 +31,14 @@ public:
     void setDeletable(bool deletable);
 
     // --- Editor Flags ---
+    bool isSceneGraphHideable() const;
+    void setSceneGraphHideable(bool hideable);
+
     bool isSceneGraphVisible() const;
     void setSceneGraphVisible(bool visible);
+
+    bool showGizmo() const;
+    void setShowGizmo(bool showGizmo);
 
     // --- Tags ---
     void addTag(const std::string& tag);
@@ -47,16 +57,21 @@ public:
 
 protected:
     std::string name;
+    Scene* scene;
 
     bool visible = true;
     bool deletable = true;
-
-    bool sceneGraphVisible = true;
     bool savable = true;
+
+    bool sceneGraphHideable = true;
+    bool sceneGraphVisible = true;
+    bool gizmoEnabled = true;
 
     std::unordered_set<std::string> tags = {};
 
     std::vector<std::unique_ptr<SceneNode>> children;
+
+    friend class Scene;
 };
 
 #endif //SPHLASH_SCENENODE_H

@@ -11,15 +11,19 @@
 #include "simulation/FluidSimulation.h"
 #include "utils/Config.h"
 
-Camera* Scene::getCamera() const {
-    return camera.get();
+void Scene::update(float deltaTime) const {
+    for (auto& node : sceneNodes)
+        node->update(deltaTime);
 }
 
-void Scene::setCamera(std::unique_ptr<Camera> camera) {
-    this->camera = std::move(camera);
+CameraNode* Scene::getCamera() const {
+    return camera;
 }
 
 void Scene::addSceneNode(std::unique_ptr<SceneNode> node) {
+    if (auto *camera = dynamic_cast<CameraNode*>(node.get()))
+        this->camera = camera;
+
     if (auto* model = dynamic_cast<ModelNode*>(node.get()))
         models.push_back(model);
 
@@ -32,6 +36,7 @@ void Scene::addSceneNode(std::unique_ptr<SceneNode> node) {
     if (auto* particleSpawn = dynamic_cast<IParticleSpawn*>(node.get()))
         particleSpawns.push_back(particleSpawn);
 
+    node->scene = this;
     sceneNodes.push_back(std::move(node));
 }
 

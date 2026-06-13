@@ -74,12 +74,14 @@ Properties ModelParticleSpawnNode::buildProperties() {
     properties.addProperty(std::make_unique<FloatProperty>(
         "Rest Density",
         [this] () { return particleSpawn.restDensity; },
-        [this] (float mass) { particleSpawn.restDensity = mass; }
+        [this] (float mass) { particleSpawn.restDensity = mass; },
+        0.0, INFINITY, 1.0f
     ));
     properties.addProperty(std::make_unique<FloatProperty>(
         "Particle Spacing",
         [this] () { return particleSpawn.particleSpacing; },
-        [this] (float spacing) { particleSpawn.particleSpacing = spacing; }
+        [this] (float spacing) { particleSpawn.particleSpacing = spacing; },
+        0.001f, INFINITY, 0.0001f
     ));
     properties.addProperty(std::make_unique<ColorProperty>(
         "Particle Color",

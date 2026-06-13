@@ -38,6 +38,8 @@ BoundingBoxNode::BoundingBoxNode(const nlohmann::json json) : SceneNode(json) {
     material->setVec3("color", { json["color"][0], json["color"][1], json["color"][2] });
 }
 
+void BoundingBoxNode::update(float deltaTime) { }
+
 void BoundingBoxNode::draw(const glm::mat4& view, const glm::mat4& projection) const {
     // Setup wireframe shader
     material->bind();

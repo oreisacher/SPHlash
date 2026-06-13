@@ -110,9 +110,12 @@ void Window::close() const {
     glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
 
+void Window::startFrame() const {
+    glfwPollEvents();
+}
+
 void Window::endFrame() const {
     glfwSwapBuffers(window);
-    glfwPollEvents();
 }
 
 std::string Window::getTitle() const { return title; }

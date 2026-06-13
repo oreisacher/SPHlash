@@ -16,7 +16,7 @@ class StatisticsPanel : public UIPanel {
 public:
     explicit StatisticsPanel(FluidSimulation* simulation);
 
-    void update(double deltaTime) override;
+    void preDraw(double deltaTime) override;
     void draw() override;
 
 private:

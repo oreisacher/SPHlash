@@ -16,6 +16,7 @@ public:
     BoundingBoxNode(const std::string& name, glm::vec3 color);
     BoundingBoxNode(const nlohmann::json json);
 
+    void update(float deltaTime) override;
     void draw(const glm::mat4& view, const glm::mat4& projection) const override;
 
     void setTransform(glm::mat4 transform) override;

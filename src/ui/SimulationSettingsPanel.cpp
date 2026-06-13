@@ -18,7 +18,7 @@ SimulationSettingsPanel::SimulationSettingsPanel(Editor* editor, FluidSimulation
     boundaryBuilder = editor->getBoundaryBuilder();
 }
 
-void SimulationSettingsPanel::update(double deltaTime) { }
+void SimulationSettingsPanel::preDraw(double deltaTime) { }
 
 void SimulationSettingsPanel::draw() {
     if (!visible)

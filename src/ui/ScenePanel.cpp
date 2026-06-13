@@ -14,7 +14,7 @@ ScenePanel::ScenePanel(Editor* editor, Renderer* renderer)
     : UIPanel("Scene"), editor(editor), renderer(renderer)
 { }
 
-void ScenePanel::update(double deltaTime) { }
+void ScenePanel::preDraw(double deltaTime) { }
 
 void ScenePanel::draw() {
     if (!visible)
@@ -70,9 +70,11 @@ void ScenePanel::draw() {
 
             ImGui::TableNextColumn();
 
-            auto visibilityLabel = sceneNodes[i]->isVisible() ? "Hide" : "Show";
-            if (ImGui::Button(visibilityLabel, ImVec2(0, 19))) {
-                sceneNodes[i]->setVisible(!sceneNodes[i]->isVisible());
+            if (sceneNodes[i]->isSceneGraphHideable()) {
+                auto visibilityLabel = sceneNodes[i]->isVisible() ? "Hide" : "Show";
+                if (ImGui::Button(visibilityLabel, ImVec2(0, 19))) {
+                    sceneNodes[i]->setVisible(!sceneNodes[i]->isVisible());
+                }
             }
 
             ImGui::TableNextColumn();

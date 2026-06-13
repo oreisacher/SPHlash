@@ -12,7 +12,7 @@ void InputManager::addInputWindow(Window* window) {
 
     // Mouse Scroll Delta
     window->addMouseScrollCallback([&](Window *window, double x, double y) {
-        mouseScrollDelta = { static_cast<int>(x), static_cast<int>(y) };
+        mouseScrollDelta = glm::vec2(x, y);
     });
 
     // Mouse Button

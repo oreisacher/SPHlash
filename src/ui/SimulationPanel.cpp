@@ -8,13 +8,11 @@
 #include "../rendering/Renderer.h"
 #include "glm/gtc/type_ptr.hpp"
 
-SimulationPanel::SimulationPanel(Editor* editor, const Renderer* renderer)
-    : UIPanel("Simulation"), editor(editor), texture(renderer->getTextureId())
+SimulationPanel::SimulationPanel(Editor* editor, Renderer* renderer)
+    : UIPanel("Simulation"), editor(editor), renderer(renderer)
 { }
 
-void SimulationPanel::update(double deltaTime) {
-    events.clear();
-}
+void SimulationPanel::preDraw(double deltaTime) {}
 
 void SimulationPanel::draw() {
     if (!visible)
@@ -24,121 +22,29 @@ void SimulationPanel::draw() {
 
     ImVec2 size = ImGui::GetContentRegionAvail();
 
-    // Check if resized
-    if (viewportSize.x != size.x || viewportSize.y != size.y) {
-        viewportSize = { size.x, size.y };
-        events.push_back({
-            .type = PanelEvent::RESIZE,
-            .resize = { viewportSize }
-        });
-    }
-
     ImGui::Image(
-        (void *)(intptr_t)texture,
-        size,
+        (void *)static_cast<intptr_t>(renderer->getTextureId()),
+        ImVec2(viewportSize.x, viewportSize.y),
         ImVec2(0, 1),
         ImVec2(1, 0)
     );
 
+    // Check if resized
+    if (viewportSize.x != size.x || viewportSize.y != size.y) {
+        viewportSize = { size.x, size.y };
+        pendingResize = true;
+    }
+
+    editor->getScene()->getCamera()->setHover(ImGui::IsWindowHovered() && !ImGuizmo::IsOver());
+
+    // --- Gizmo ---
     ImVec2 viewportPos = ImGui::GetItemRectMin();
     ImVec2 viewportSize = ImGui::GetItemRectSize();
 
-    if (ImGui::IsItemHovered()) {
-        // Mouse movement
-        auto mouse = ImGui::GetMousePos();
-        auto imageMin = ImGui::GetItemRectMin();
-
-        glm::vec2 newMousePosition = { mouse.x - imageMin.x, mouse.y - imageMin.y };
-
-        if (newMousePosition != mousePosition) {
-            events.push_back({
-                .type = PanelEvent::MOUSEMOVE,
-                .mouseMove = { mousePosition, dragging, newMousePosition - mousePosition },
-            });
-
-            mousePosition = newMousePosition;
-        }
-
-        // Scroll
-        if (ImGui::GetIO().MouseWheel != 0) {
-            events.push_back({
-                .type = PanelEvent::SCROLL,
-                .scroll = { ImGui::GetIO().MouseWheel }
-            });
-        }
-
-        // Buttons
-        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-            dragging = true;
-            events.push_back({
-                .type = PanelEvent::MOUSEDOWN,
-                .mouse = { 1 }
-            });
-        }
-
-        if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-            dragging = true;
-            events.push_back({
-                .type = PanelEvent::MOUSEDOWN,
-                .mouse = { 2 }
-            });
-        }
-
-        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-            dragging = false;
-            events.push_back({
-                .type = PanelEvent::MOUSEUP,
-                .mouse = { 1 }
-            });
-        }
-
-        if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
-            dragging = false;
-            events.push_back({
-                .type = PanelEvent::MOUSEUP,
-                .mouse = { 2 }
-            });
-        }
-    }
-
-    // Mouse Release outside if dragging
-    if (dragging) {
-        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-            dragging = false;
-            events.push_back({
-                .type = PanelEvent::MOUSEUP,
-                .mouse = { 1 }
-            });
-        }
-
-        if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
-            dragging = false;
-            events.push_back({
-                .type = PanelEvent::MOUSEUP,
-                .mouse = { 2 }
-            });
-        }
-    }
-
-    if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-        events.push_back({
-            .type = PanelEvent::MOUSEHOLD,
-            .mouse = { 1 }
-        });
-    }
-
-    if (ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
-        events.push_back({
-            .type = PanelEvent::MOUSEHOLD,
-            .mouse = { 2 }
-        });
-    }
-
-    // --- Gizmo ---
     ImGuizmo::SetDrawlist();
     ImGuizmo::SetRect(viewportPos.x, viewportPos.y, viewportSize.x, viewportSize.y);
 
-    if (auto selected = editor->getSelected()) {
+    if (auto selected = editor->getSelected(); selected && selected->showGizmo()) {
         static ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
         static ImGuizmo::MODE mode = ImGuizmo::MODE::WORLD;
 
@@ -197,4 +103,14 @@ void SimulationPanel::draw() {
     ImGui::End();
 }
 
-std::vector<PanelEvent> SimulationPanel::getEvents() { return events; }
+void SimulationPanel::postDraw(double deltaTime) {
+    if (pendingResize) {
+        pendingResize = false;
+
+        // Update systems
+        ImVec2 size = { viewportSize.x, viewportSize.y };
+        renderer->setSize(size.x, size.y);
+        editor->updateRenderingSize(size.x, size.y);
+        editor->getScene()->getCamera()->setAspectRatio(size.x / size.y);
+    }
+}

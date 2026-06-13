@@ -16,7 +16,7 @@ RenderingSettingsPanel::RenderingSettingsPanel(ParticlesNode* particles)
     surfaceScreenSpace = particles->getSurfaceScreenSpace();
 }
 
-void RenderingSettingsPanel::update(double deltaTime) { }
+void RenderingSettingsPanel::preDraw(double deltaTime) { }
 
 void RenderingSettingsPanel::draw() {
     if (!visible)

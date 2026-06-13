@@ -5,16 +5,9 @@
 #ifndef FLUIDSIMSPH_FLUIDRENDERER_H
 #define FLUIDSIMSPH_FLUIDRENDERER_H
 
-#include <vector_functions.h>
-#include <vector_types.h>
 #include "Framebuffer.h"
-#include "Mesh.h"
-#include "Model.h"
-#include "ModelNode.h"
 #include "ParticlesNode.h"
-#include "Shader.h"
 #include "glad/gl.h"
-#include "utils/Camera.h"
 
 class Scene;
 class FluidSimulation;

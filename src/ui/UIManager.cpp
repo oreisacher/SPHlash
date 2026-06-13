@@ -134,7 +134,7 @@ void UIManager::closePanel(UIPanel* panel) {
     panel->shouldClose = true;
 }
 
-void UIManager::closePanel(const std::string& name) {\
+void UIManager::closePanel(const std::string& name) const {
     for (auto p : panels) {
         if (p->name == name) {
             p->shouldClose = true;
@@ -142,7 +142,7 @@ void UIManager::closePanel(const std::string& name) {\
     }
 }
 
-void UIManager::update(double deltaTime) {
+void UIManager::preDraw(double deltaTime) {
     // Check if any windows are marked as to delete
     std::erase_if(panels,
         [] (UIPanel* p) {
@@ -154,7 +154,7 @@ void UIManager::update(double deltaTime) {
         });
 
     for (auto& panel : panels)
-        panel->update(deltaTime);
+        panel->preDraw(deltaTime);
 }
 
 void UIManager::draw() const {
@@ -208,4 +208,9 @@ void UIManager::draw() const {
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void UIManager::postDraw(double deltaTime) const {
+    for (auto& panel : panels)
+        panel->postDraw(deltaTime);
 }

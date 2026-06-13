@@ -7,7 +7,7 @@
 
 #include <vector>
 #include <nlohmann/json_fwd.hpp>
-#include "utils/Camera.h"
+#include "utils/CameraNode.h"
 
 class IParticleSpawn;
 class ForceFieldNode;
@@ -18,12 +18,12 @@ class SceneNode;
 
 class Scene {
 public:
-    // --- Camera ---
-    Camera* getCamera() const;
-    void setCamera(std::unique_ptr<Camera> camera);
+    void update(float deltaTime) const;
 
     void addSceneNode(std::unique_ptr<SceneNode> node);
     void removeSceneNode(const SceneNode* node);
+
+    CameraNode* getCamera() const;
 
     void setSimulationDomain(BoundingBoxNode* domain);
     BoundingBoxNode* getSimulationDomain() const;
@@ -41,12 +41,12 @@ public:
     void resetScene();
 
 private:
-    std::unique_ptr<Camera> camera                      = nullptr;
 
     // --- Scene Nodes ---
     std::vector<std::unique_ptr<SceneNode>> sceneNodes  = {};
 
     // --- Node Cache ---
+    CameraNode*                     camera              = nullptr;
     BoundingBoxNode*                simulationDomain    = nullptr;
     ParticlesNode*                  particles           = nullptr;
     std::vector<ModelNode*>         models              = {};

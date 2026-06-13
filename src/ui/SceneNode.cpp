@@ -34,6 +34,14 @@ void SceneNode::setSceneGraphVisible(bool visible) {
     this->sceneGraphVisible = visible;
 }
 
+bool SceneNode::showGizmo() const {
+    return gizmoEnabled;
+}
+
+void SceneNode::setShowGizmo(bool showGizmo) {
+    gizmoEnabled = showGizmo;
+}
+
 void SceneNode::addTag(const std::string& tag) {
     tags.insert(tag);
 }
@@ -88,4 +96,12 @@ bool SceneNode::isDeletable() const {
 
 void SceneNode::setDeletable(bool deletable) {
     this->deletable = deletable;
+}
+
+bool SceneNode::isSceneGraphHideable() const {
+    return sceneGraphHideable;
+}
+
+void SceneNode::setSceneGraphHideable(bool hideable) {
+    sceneGraphHideable = hideable;
 }

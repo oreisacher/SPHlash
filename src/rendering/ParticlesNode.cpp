@@ -27,6 +27,8 @@ ParticlesNode::ParticlesNode(FluidSimulation* simulation) : simulation(simulatio
     updateRenderingSettings();
 }
 
+void ParticlesNode::update(float deltaTime) { }
+
 void ParticlesNode::draw(const glm::mat4& view, const glm::mat4& projection) const {
     if (settings.mode == MARCHING_CUBES) {
         mesher.updateMesh();

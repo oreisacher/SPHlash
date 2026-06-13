@@ -15,7 +15,7 @@ ParticlesPanel::ParticlesPanel(FluidSimulation* simulation, ParticlesNode* parti
     particlesShader = particles->getParticleShader();
 }
 
-void ParticlesPanel::update(double deltaTime) {
+void ParticlesPanel::preDraw(double deltaTime) {
     time += deltaTime;
 
     if (time >= 0.1f) {

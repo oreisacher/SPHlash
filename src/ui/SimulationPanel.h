@@ -10,33 +10,21 @@
 #include "rendering/Editor.h"
 #include "utils/Hex32Field.h"
 
-struct PanelEvent {
-    enum Type { RESIZE, MOUSEMOVE, MOUSEDOWN, MOUSEUP, MOUSEHOLD, SCROLL } type;
-
-    union {
-        struct { glm::vec2 size; } resize;
-        struct { glm::vec2 pos; bool dragging; glm::vec2 delta; } mouseMove;
-        struct { int button; } mouse;
-        struct { float delta; } scroll;
-    };
-};
-
 class SimulationPanel : public UIPanel {
 public:
-    explicit SimulationPanel(Editor* editor, const Renderer* renderer);
+    explicit SimulationPanel(Editor* editor, Renderer* renderer);
 
-    void update(double deltaTime) override;
+    void preDraw(double deltaTime) override;
     void draw() override;
+    void postDraw(double deltaTime) override;
 
-    std::vector<PanelEvent> getEvents();
-
-    static inline Camera* camera = nullptr;
+    static inline CameraNode* camera = nullptr;
 
 private:
     Editor* editor;
-    GLuint texture;
+    Renderer* renderer;
 
-    std::vector<PanelEvent> events;
+    bool pendingResize = false;
 
     glm::vec2 viewportSize = { 0, 0 };
     glm::vec2 mousePosition = { 0, 0 };

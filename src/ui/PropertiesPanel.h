@@ -14,7 +14,7 @@ class PropertiesPanel : public UIPanel {
 public:
     PropertiesPanel(Editor* editor);
 
-    void update(double deltaTime) override;
+    void preDraw(double deltaTime) override;
     void draw() override;
 
 private:

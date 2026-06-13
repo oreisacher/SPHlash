@@ -7,7 +7,7 @@
 
 PropertiesPanel::PropertiesPanel(Editor* editor) : UIPanel("Properties"), editor(editor) { }
 
-void PropertiesPanel::update(double deltaTime) {
+void PropertiesPanel::preDraw(double deltaTime) {
     if (editor->getSelected() != selected) {
         selected = editor->getSelected();
 

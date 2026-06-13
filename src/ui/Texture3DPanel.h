@@ -16,7 +16,7 @@ class Texture3DPanel : public UIPanel {
 public:
     explicit Texture3DPanel(const std::string& name, GLuint texture, int width, int height, int depth);
 
-    void update(double deltaTime) override;
+    void preDraw(double deltaTime) override;
     void draw() override;
 
 private:

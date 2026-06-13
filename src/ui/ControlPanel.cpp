@@ -13,7 +13,7 @@ ControlPanel::ControlPanel(Editor* editor, FluidSimulation* simulation, Renderer
     : UIPanel("Controls"), editor(editor), simulation(simulation), renderer(renderer) {
 }
 
-void ControlPanel::update(double deltaTime) { }
+void ControlPanel::preDraw(double deltaTime) { }
 
 void ControlPanel::draw() {
     if (!visible)

@@ -3,17 +3,16 @@
 //
 
 #include "SkyboxNode.h"
-
-#include <X11/Xlib.h>
+#include "Scene.h"
 
 SkyboxNode::SkyboxNode() {
     name = "Skybox";
     deletable = false;
     savable = false;
+    gizmoEnabled = false;
 
     // --- Skybox Model ---
-    skyboxModel = std::make_shared<Model>("Skybox", Mesh::createSphere("Skybox Mesh", 10, 10));
-
+    skyboxModel = std::make_shared<Model>("Skybox", Mesh::createBox("Skybox Mesh"));
     skyboxTexture = std::make_shared<Texture>("assets/textures/skybox1.png");
 
     Material skyboxMaterial("Skybox", Shader::createSkybox());
@@ -39,12 +38,14 @@ Properties SkyboxNode::buildProperties() {
     return properties;
 }
 
+void SkyboxNode::update(float deltaTime) { }
+
 void SkyboxNode::draw(const glm::mat4& view, const glm::mat4& projection) const {
     glFrontFace(GL_CW);
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
     glDisable(GL_CULL_FACE);
-    skyboxModel->draw(view, projection, glm::mat4(1.0f));
+    skyboxModel->draw(view, scene->getCamera()->getPerspectiveProjectionMatrix(), glm::mat4(1.0f));
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glFrontFace(GL_CCW);
