@@ -754,6 +754,7 @@ __global__ void initParticlesKernel(
     CudaParticleSpawn spawn,
     ParticlesGPU particles,
     int* particleCount,
+    const CudaAABB domain,
     const int3 gridCount
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -769,6 +770,12 @@ __global__ void initParticlesKernel(
     float posX = spawn.area.min.x + gx * spawn.particleSpacing;
     float posY = spawn.area.min.y + gy * spawn.particleSpacing;
     float posZ = spawn.area.min.z + gz * spawn.particleSpacing;
+
+    // Skip particles which would spawn outside the simulation domain
+    if (    posX < domain.min.x || posY < domain.min.y || posZ < domain.min.z
+         || posX > domain.max.x || posY > domain.max.y || posZ > domain.max.z ) {
+        return;
+    }
 
     if (spawn.hasShape && calculateSDF(make_float3(posX, posY, posZ), spawn.triangleCount, spawn.d_shapeTriangles) > 0.0)
         return;
@@ -792,13 +799,14 @@ void launchInitParticlesKernel(
     CudaParticleSpawn spawn,
     ParticlesGPU particles,
     int* particleCount,
+    const CudaAABB domain,
     const int3 gridCount
 ) {
     int threadsPerBlock = 256;
     int blocks = (gridCount.x * gridCount.y * gridCount.z + threadsPerBlock - 1) / threadsPerBlock;
 
     initParticlesKernel<<<blocks, threadsPerBlock>>>(
-        spawn, particles, particleCount, gridCount
+        spawn, particles, particleCount, domain, gridCount
     );
 }
 

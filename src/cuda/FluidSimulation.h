@@ -127,6 +127,7 @@ void launchInitParticlesKernel(
     CudaParticleSpawn spawn,
     ParticlesGPU particles,
     int* particleCount,
+    const CudaAABB domain,
     const int3 gridCount
 );
 

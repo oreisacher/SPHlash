@@ -562,6 +562,7 @@ bool FluidSimulation::initParticles() {
             cudaSpawn,
             spawnParticles,
             d_spawnParticleCount,
+            scene->getSimulationDomain()->getCudaAABB(),
             { countX, countY, countZ }
         );
 
