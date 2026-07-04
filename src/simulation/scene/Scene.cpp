@@ -138,6 +138,8 @@ void Scene::loadScene(const std::string& path) {
     Config config;
 
     if (config.load(path)) {
+        resetScene();
+
         // Load scene nodes
         for (auto &node : config.get<nlohmann::json>("nodes", {})) {
             auto sceneNode = nodeFromJson(node);
