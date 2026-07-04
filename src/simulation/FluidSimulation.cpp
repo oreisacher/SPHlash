@@ -16,6 +16,7 @@
 #include "cuda/CudaUtils.h"
 #include <cuda_gl_interop.h>
 #include "scene/nodes/ParticlesNode.h"
+#include "scene/nodes/SimulationDomainNode.h"
 
 // --- ParticlesHost ------------------------------------
 
@@ -114,21 +115,10 @@ void ParticlesGPU::copyToHost(ParticleHost& host, int id) const {
 FluidSimulation::FluidSimulation(Scene* scene, bool headless) : scene(scene), headless(headless) {
     cudaSetDevice(0);
 
-    // Setup domain bounding box
-    auto domainBB = std::make_unique<BoundingBoxNode>("Simulation Domain", glm::vec4(0.2f, 0.6f, 1.0f, 1.0f));
-    domain = domainBB.get();
-    domain->setScale({ 2.0f, 2.0f, 2.0f });
-    domain->setDeletable(false);
-    domain->addTag(SimulationDomainTag);
-    scene->setSimulationDomain(domain);
-    scene->addSceneNode(std::move(domainBB));
-
     // Setup particles node for rendering
     if (!headless) {
         auto particlesNode = std::make_unique<ParticlesNode>(this);
-        particlesNode->addTag("fluid");
         this->particlesNode = particlesNode.get();
-        scene->setParticleNode(this->particlesNode);
         scene->addSceneNode(std::move(particlesNode));
     }
 }
@@ -216,7 +206,7 @@ void FluidSimulation::updateParticles() {
         sdfMap.d_cells != nullptr,
         sdfMap,
         volumeMap,
-        domain->getCudaAABB(),
+        scene->getSimulationDomain()->getCudaAABB(),
         settings.h,
         settings.speedSound,
         settings.p_0
@@ -240,7 +230,7 @@ void FluidSimulation::updateParticles() {
         sdfMap.d_cells != nullptr,
         sdfMap,
         volumeMap,
-        domain->getCudaAABB(),
+        scene->getSimulationDomain()->getCudaAABB(),
         settings.h,
         settings.alpha,
         settings.speedSound,
@@ -300,7 +290,7 @@ void FluidSimulation::update(const float deltaTime) {
             d_forceFields,
             scene->getForceFields().size(),
             settings.useCFL ? fminf(cfl, dt) : dt,
-            domain->getCudaAABB(),
+            scene->getSimulationDomain()->getCudaAABB(),
             settings.enableGravity ? settings.gravity : 0.0f
         );
     }
@@ -453,10 +443,6 @@ int FluidSimulation::getParticleCount() const {
     return particleCount;
 }
 
-BoundingBoxNode* FluidSimulation::getDomain() const {
-    return domain;
-}
-
 void FluidSimulation::rebuildForceFieldBuffer() {
     if (d_forceFields) cudaFree(d_forceFields);
 
@@ -509,7 +495,7 @@ bool FluidSimulation::computeVoxelField(const VoxelField& field) const {
 
     launchVoxelFieldKernel(
         field,
-        domain->getCudaAABB(),
+        scene->getSimulationDomain()->getCudaAABB(),
         particleCount,
         particles.d_position,
         particles.d_properties,

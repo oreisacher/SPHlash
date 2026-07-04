@@ -11,6 +11,24 @@
 #include "core/Config.h"
 #include <algorithm>
 
+#include "nodes/ParticlesNode.h"
+#include "nodes/SimulationDomainNode.h"
+#include "nodes/SkyboxNode.h"
+
+Scene::Scene(Window* window) {
+    // Add Skybox Node to Scene
+    auto skyboxNode = std::make_unique<SkyboxNode>();
+    addSceneNode(std::move(skyboxNode));
+
+    // --- Camera ---
+    auto cameraNode = std::make_unique<CameraNode>(window, glm::vec3(0.0f, 0.0, 1.0f));
+    addSceneNode(std::move(cameraNode));
+
+    // --- Simulation ---
+    auto simulationDomain = std::make_unique<SimulationDomainNode>();
+    addSceneNode(std::move(simulationDomain));
+}
+
 void Scene::update(float deltaTime) const {
     for (auto& node : sceneNodes)
         node->update(deltaTime);
@@ -26,6 +44,18 @@ void Scene::addSceneNode(std::unique_ptr<SceneNode> node) {
 
     if (auto* model = dynamic_cast<ModelNode*>(node.get()))
         models.push_back(model);
+
+    if (auto *particles = dynamic_cast<ParticlesNode*>(node.get()))
+        this->particles = particles;
+
+    if (auto *domain = dynamic_cast<SimulationDomainNode*>(node.get())) {
+        // Remove old simulation domain
+        if (this->simulationDomain) {
+            removeSceneNode(this->simulationDomain);
+        }
+
+        this->simulationDomain = domain;
+    }
 
     if (auto* boundingBox = dynamic_cast<BoundingBoxNode*>(node.get()))
         boundingBoxes.push_back(boundingBox);
@@ -51,16 +81,8 @@ void Scene::removeSceneNode(const SceneNode* node) {
     std::erase_if(sceneNodes, [&](const std::unique_ptr<SceneNode>& n) { return n.get() == node; });
 }
 
-void Scene::setSimulationDomain(BoundingBoxNode* domain) {
-    simulationDomain = domain;
-}
-
 BoundingBoxNode* Scene::getSimulationDomain() const {
     return simulationDomain;
-}
-
-void Scene::setParticleNode(ParticlesNode* particles) {
-    this->particles = particles;
 }
 
 ParticlesNode* Scene::getParticlesNode() const {
@@ -95,22 +117,6 @@ std::vector<SceneNode*> Scene::getSceneNodes() const {
 void Scene::saveScene(const std::string& path) const {
     Config config;
 
-    // Simulation domain
-    nlohmann::json domain;
-    domain["position"] = {
-        simulationDomain->getPosition().x,
-        simulationDomain->getPosition().y,
-        simulationDomain->getPosition().z
-    };
-
-    domain["scale"] = {
-        simulationDomain->getScale().x,
-        simulationDomain->getScale().y,
-        simulationDomain->getScale().z
-    };
-
-    config.set<nlohmann::json>("simulationDomain", domain);
-
     // Scene Nodes
     nlohmann::json nodes = nlohmann::json::array();
     for (int i = 0 ; i < sceneNodes.size(); i++) {
@@ -132,19 +138,6 @@ void Scene::loadScene(const std::string& path) {
     Config config;
 
     if (config.load(path)) {
-        // Set simulation domain
-        auto domain = config.get<nlohmann::json>("simulationDomain", {});
-        simulationDomain->setPosition(glm::vec3(
-            domain["position"][0].get<float>(),
-            domain["position"][1].get<float>(),
-            domain["position"][2].get<float>()
-        ));
-        simulationDomain->setScale(glm::vec3(
-            domain["scale"][0].get<float>(),
-            domain["scale"][1].get<float>(),
-            domain["scale"][2].get<float>()
-        ));
-
         // Load scene nodes
         for (auto &node : config.get<nlohmann::json>("nodes", {})) {
             auto sceneNode = nodeFromJson(node);
@@ -184,11 +177,14 @@ std::unique_ptr<SceneNode> Scene::nodeFromJson(const nlohmann::json& j) {
     if (type == "ForceFieldNode")
         return std::make_unique<ForceFieldNode>(j);
 
-    if (type == "BoundingBoxParticleSpawnNode")
+    if (type == "BoundingBoxFluidSpawnNode")
         return std::make_unique<BoundingBoxParticleSpawnNode>(j);
 
-    if (type == "ModelParticleSpawnNode")
+    if (type == "ModelFluidSpawnNode")
         return std::make_unique<ModelParticleSpawnNode>(j);
+
+    if (type == "SimulationDomainNode")
+        return std::make_unique<SimulationDomainNode>(j);
 
     throw std::runtime_error("Unknown node type: " + type);
 }

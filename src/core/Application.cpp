@@ -27,8 +27,8 @@
 Application::Application() {
     // Window creation
     Window::Init();
-    window = new Window(WINDOW_SIZE_X, WINDOW_SIZE_Y, std::format("SPHlash {}", VERSION).c_str());
-    Input.addInputWindow(window);
+    _window = new Window(WINDOW_SIZE_X, WINDOW_SIZE_Y, std::format("SPHlash {}", VERSION).c_str());
+    Input.addInputWindow(_window);
 
     // Load OpenGL
     if (!gladLoadGL(glfwGetProcAddress)) {
@@ -36,59 +36,60 @@ Application::Application() {
         return;
     }
 
+    _scene = new Scene(_window);
+
     // Simulation
-    simulation = new FluidSimulation(&scene);
+    _simulation = new FluidSimulation(_scene);
 
     // Rendering
-    renderer = new Renderer(&scene);
+    _renderer = new Renderer(_scene);
 
-    editor = new Editor(scene, simulation);
+    _editor = new Editor(_scene, _simulation);
 
     // Setup UI
-    ui = new UIManager(window->getNativeWindow());
-    ui->addPanel(new SimulationPanel            (editor, renderer));
-    ui->addPanel(new ControlPanel               (editor, simulation, renderer));
-    ui->addPanel(new StatisticsPanel            (simulation));
-    ui->addPanel(new SimulationSettingsPanel    (editor, simulation, renderer));
-    ui->addPanel(new RenderingSettingsPanel     (scene.getParticlesNode()));
-    ui->addPanel(new ParticlesPanel             (simulation, scene.getParticlesNode()));
-    ui->addPanel(new PropertiesPanel            (editor));
-    ui->addPanel(new ScenePanel                 (editor, renderer));
+    _ui = new UIManager(_window->getNativeWindow());
+    _ui->addPanel(new SimulationPanel            (_editor, _renderer));
+    _ui->addPanel(new ControlPanel               (_editor, _simulation, _renderer));
+    _ui->addPanel(new StatisticsPanel            (_simulation));
+    _ui->addPanel(new SimulationSettingsPanel    (_editor, _simulation, _renderer));
+    _ui->addPanel(new RenderingSettingsPanel     (_scene->getParticlesNode()));
+    _ui->addPanel(new ParticlesPanel             (_simulation, _scene->getParticlesNode()));
+    _ui->addPanel(new PropertiesPanel            (_editor));
+    _ui->addPanel(new ScenePanel                 (_editor, _renderer));
 
     // Setup scene
-    scene.addSceneNode(std::make_unique<CameraNode>(window, glm::vec3(0.0f, 0.0f, 1.0f)));
-    camera = scene.getCamera();
+    _camera = _scene->getCamera();
 }
 
 Application::~Application() {
-    delete simulation;
-    delete ui;
-    delete window;
-    delete editor;
+    delete _simulation;
+    delete _ui;
+    delete _window;
+    delete _editor;
 }
 
 void Application::run() const {
     float deltaTime = 0.0f;
-    while (!window->shouldClose()) {
+    while (!_window->shouldClose()) {
         deltaTime = Time.getDeltaTime();
 
-        window->startFrame();
+        _window->startFrame();
 
         // Simulation
-        simulation->update(deltaTime);
+        _simulation->update(deltaTime);
 
         // Update SceneNodes
-        scene.update(deltaTime);
+        _scene->update(deltaTime);
 
         // Render simulation into texture
-        renderer->render(scene);
+        _renderer->render(_scene);
 
         // Update & Draw UI
-        ui->preDraw(deltaTime);
-        ui->draw();
-        ui->postDraw(deltaTime);
+        _ui->preDraw(deltaTime);
+        _ui->draw();
+        _ui->postDraw(deltaTime);
 
-        window->endFrame();
+        _window->endFrame();
         Time.update();
         Input.reset();
     }

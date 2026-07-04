@@ -50,7 +50,7 @@ FluidSurfaceMesher::~FluidSurfaceMesher() {
     cudaFree(d_triangleCount);
 }
 
-void FluidSurfaceMesher::updateMesh() const {
+void FluidSurfaceMesher::updateMesh(const CudaAABB& domain) const {
     if (!simulation->computeVoxelField(voxelField))
         return;
 
@@ -73,7 +73,7 @@ void FluidSurfaceMesher::updateMesh() const {
 
     launchMarchingCubesKernel(
         voxelField,
-        simulation->getDomain()->getCudaAABB(),
+        domain,
         d_vertexCount,
         d_triangleCount,
         d_vertices,
@@ -119,8 +119,6 @@ void FluidSurfaceMesher::updateVoxelFieldSize() {
     // Allocate device memory for cells
     cudaMalloc(&voxelField.d_color, sampleCount * sizeof(float));
     cudaMalloc(&voxelField.d_normal, sampleCount * sizeof(float3));
-
-    updateMesh();
 }
 
 Model* FluidSurfaceMesher::getSurfaceModel() const {

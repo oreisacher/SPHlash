@@ -8,7 +8,6 @@
 #include "Editor.h"
 #include "rendering/Renderer.h"
 #include "simulation/scene/Scene.h"
-#include "rendering/Window.h"
 #include "simulation/FluidSimulation.h"
 #include "ui/UIManager.h"
 #include "simulation/scene/nodes/CameraNode.h"
@@ -21,15 +20,15 @@ public:
     void run() const;
 
 private:
-    Editor* editor;
-    FluidSimulation* simulation;
-    Renderer* renderer;
+    Editor* _editor                 = nullptr;
+    FluidSimulation* _simulation    = nullptr;
+    Renderer* _renderer             = nullptr;
 
-    UIManager* ui;
-    Window* window;
+    UIManager* _ui                  = nullptr;
+    Window* _window                 = nullptr;
 
-    Scene scene;
-    CameraNode* camera;
+    Scene* _scene                   = nullptr;
+    CameraNode* _camera             = nullptr;
 };
 
 #endif //FLUIDSIMSPH_APPLICATION_H

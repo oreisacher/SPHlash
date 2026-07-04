@@ -4,7 +4,6 @@
 
 #include "simulation/scene/Scene.h"
 #include "simulation/scene/nodes/SkyboxNode.h"
-
 #include "simulation/scene/Properties.h"
 
 SkyboxNode::SkyboxNode() {

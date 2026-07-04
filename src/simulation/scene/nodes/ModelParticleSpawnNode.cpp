@@ -18,14 +18,11 @@ ModelParticleSpawnNode::ModelParticleSpawnNode(const std::string& name, const st
 
 ModelParticleSpawnNode::ModelParticleSpawnNode(const nlohmann::json json) : ModelNode(json) {
     // Particle spawn
-    particleSpawn.restDensity = json["restDensity"];
-    particleSpawn.particleSpacing = json["particleSpacing"];
-    particleSpawn.color = make_float4(
-        json["color"][0].get<float>(),
-        json["color"][1].get<float>(),
-        json["color"][2].get<float>(),
-        1.0f
-    );
+    particleSpawn.restDensity = json.value("restDensity", particleSpawn.restDensity);
+    particleSpawn.particleSpacing = json.value("particleSpacing", particleSpawn.particleSpacing);
+
+    auto color = json.value("color", std::vector{particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z, particleSpawn.color.w });
+    particleSpawn.color = make_float4(color[0], color[1], color[2], 1.0f);
 
     init();
 }
@@ -109,7 +106,7 @@ nlohmann::json ModelParticleSpawnNode::toJson() const {
 }
 
 std::string ModelParticleSpawnNode::getTypeName() const {
-    return "ModelParticleSpawnNode";
+    return "ModelFluidSpawnNode";
 }
 
 void ModelParticleSpawnNode::init() {

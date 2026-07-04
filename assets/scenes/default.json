@@ -1,6 +1,29 @@
 {
     "nodes": [
         {
+            "color": [
+                0.2,
+                0.6,
+                1.0
+            ],
+            "name": "Simulation Domain",
+            "position": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                3.641434907913208,
+                2.0,
+                2.0
+            ],
+            "tags": [
+                "simulation_Domain"
+            ],
+            "type": "SimulationDomainNode",
+            "visible": true
+        },
+        {
             "boundary": true,
             "name": "suzanne",
             "path": "assets/models/suzanne.obj",
@@ -30,7 +53,6 @@
                 0.0,
                 0.0
             ],
-            "hasShape": false,
             "name": "Particle Spawn",
             "particleSpacing": 0.02500000037252903,
             "position": [
@@ -45,7 +67,7 @@
                 1.3299999237060547
             ],
             "tags": [],
-            "type": "BoundingBoxParticleSpawnNode",
+            "type": "BoundingBoxFluidSpawnNode",
             "visible": true
         },
         {
@@ -54,7 +76,6 @@
                 0.0,
                 0.9607843160629272
             ],
-            "hasShape": false,
             "name": "Particle Spawn",
             "particleSpacing": 0.02500000037252903,
             "position": [
@@ -69,7 +90,7 @@
                 0.6599999666213989
             ],
             "tags": [],
-            "type": "BoundingBoxParticleSpawnNode",
+            "type": "BoundingBoxFluidSpawnNode",
             "visible": true
         },
         {
@@ -96,17 +117,5 @@
             "type": "ForceFieldNode",
             "visible": true
         }
-    ],
-    "simulationDomain": {
-        "position": [
-            0.0,
-            0.0,
-            0.0
-        ],
-        "scale": [
-            3.3481645584106445,
-            2.0,
-            1.8226251602172852
-        ]
-    }
+    ]
 }

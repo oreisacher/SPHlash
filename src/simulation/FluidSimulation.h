@@ -134,8 +134,6 @@ public:
     float getCFL() const;
     int getParticleCount() const;
 
-    BoundingBoxNode* getDomain() const;
-
     void rebuildForceFieldBuffer();
     void updateForceFieldBuffer() const;
 
@@ -154,7 +152,7 @@ public:
 
 private:
     Scene* scene;
-    BoundingBoxNode* domain;
+    // BoundingBoxNode* domain;
 
     float cfl = 0;
     int particleCount = 0;

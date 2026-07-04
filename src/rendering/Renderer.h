@@ -18,7 +18,7 @@ public:
     Renderer(Scene* scene);
     ~Renderer();
 
-    void render(const Scene& scene) const;
+    void render(const Scene* scene) const;
 
     // Framebuffer texture
     GLuint getTextureId() const;

@@ -20,21 +20,23 @@ BoundingBoxParticleSpawnNode::BoundingBoxParticleSpawnNode(const nlohmann::json 
     particleSpawn.d_shapeTriangles = nullptr;
 
     // Particle spawn
-    particleSpawn.restDensity = json["restDensity"];
-    particleSpawn.particleSpacing = json["particleSpacing"];
+    particleSpawn.restDensity = json.value("restDensity", particleSpawn.restDensity);
+    particleSpawn.particleSpacing = json.value("particleSpacing", particleSpawn.particleSpacing);
+
+    auto color = json.value("color", std::vector{particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z, particleSpawn.color.w });
     particleSpawn.color = make_float4(
-        json["color"][0].get<float>(),
-        json["color"][1].get<float>(),
-        json["color"][2].get<float>(),
+        color[0],
+        color[1],
+        color[2],
         1.0f
     );
 
     // Update shader color variable
     material->bind();
     material->setVec3("color", {
-        json["color"][0].get<float>(),
-        json["color"][1].get<float>(),
-        json["color"][2].get<float>()
+        particleSpawn.color.x,
+        particleSpawn.color.y,
+        particleSpawn.color.z,
     });
 }
 
@@ -87,5 +89,5 @@ nlohmann::json BoundingBoxParticleSpawnNode::toJson() const {
 }
 
 std::string BoundingBoxParticleSpawnNode::getTypeName() const {
-    return "BoundingBoxParticleSpawnNode";
+    return "BoundingBoxFluidSpawnNode";
 }

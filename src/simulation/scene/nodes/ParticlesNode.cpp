@@ -3,10 +3,13 @@
 //
 
 #include "ParticlesNode.h"
+
+#include "BoundingBoxNode.h"
 #include "rendering/Renderer.h"
 #include "glm/gtc/type_ptr.hpp"
 #include "rendering/RendererParticle.h"
 #include "simulation/scene/Properties.h"
+#include "simulation/scene/Scene.h"
 
 ParticlesNode::ParticlesNode(FluidSimulation* simulation) : simulation(simulation), mesher(simulation) {
     // --- Models ---
@@ -23,6 +26,7 @@ ParticlesNode::ParticlesNode(FluidSimulation* simulation) : simulation(simulatio
     visible = false;
     sceneGraphVisible = false;
     savable = false;
+    addTag("fluid");
 
     setupInstancing();
     updateRenderingSettings();
@@ -32,7 +36,7 @@ void ParticlesNode::update(float deltaTime) { }
 
 void ParticlesNode::draw(const glm::mat4& view, const glm::mat4& projection) const {
     if (settings.mode == MARCHING_CUBES) {
-        mesher.updateMesh();
+        mesher.updateMesh(scene->getSimulationDomain()->getCudaAABB());
         surfaceModel->draw(view, projection, glm::mat4(1.0f));
         return;
     }

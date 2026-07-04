@@ -24,10 +24,6 @@ Renderer::Renderer(Scene* scene) {
     framebuffer->bind();
     framebuffer->addColorAttachment(GL_LINEAR);
     framebuffer->addDepthTexture();
-
-    // Add Skybox Node to Scene
-    auto skyboxNode = std::make_unique<SkyboxNode>();
-    scene->addSceneNode(std::move(skyboxNode));
 }
 
 Renderer::~Renderer() {
@@ -44,18 +40,18 @@ void Renderer::renderNode(const SceneNode* node, const glm::mat4& view, const gl
         renderNode(child, view, projection);
 }
 
-void Renderer::render(const Scene& scene) const {
+void Renderer::render(const Scene* scene) const {
     // Render into framebuffer
     framebuffer->bind();
     glViewport(0, 0, framebuffer->getSize().x, framebuffer->getSize().y);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Camera transform
-    auto camera = scene.getCamera();
+    auto camera = scene->getCamera();
     auto view = camera->getViewMatrix();
     auto projection = camera->getProjectionMatrix();
 
-    auto nodes = scene.getSceneNodes();
+    auto nodes = scene->getSceneNodes();
 
     std::sort(nodes.begin(), nodes.end(), [](const SceneNode* a, const SceneNode* b) {
         return a->getRenderPriority() < b->getRenderPriority();

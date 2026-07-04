@@ -18,6 +18,8 @@ class SceneNode;
 
 class Scene {
 public:
+    Scene(Window* window);
+
     void update(float deltaTime) const;
 
     void addSceneNode(std::unique_ptr<SceneNode> node);
@@ -25,9 +27,7 @@ public:
 
     CameraNode* getCamera() const;
 
-    void setSimulationDomain(BoundingBoxNode* domain);
     BoundingBoxNode* getSimulationDomain() const;
-    void setParticleNode(ParticlesNode* particles);
     ParticlesNode* getParticlesNode() const;
 
     std::vector<ModelNode*> getModels() const;

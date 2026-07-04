@@ -206,8 +206,6 @@ class Window {
         std::vector<std::function<void(Window*, double, double)>> mouseScrollCallback;
         std::vector<std::function<void(Window*, Key, Action, int)>> keyCallback;
         std::vector<std::function<void(Window*, int, int)>> resizeCallback;
-
-        friend class WindowManager;
     };
 
 #endif //FLUIDSIMSPH_WINDOW_H

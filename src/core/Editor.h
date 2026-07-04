@@ -12,7 +12,7 @@
 
 class Editor {
 public:
-    Editor(Scene& scene, FluidSimulation* sim);
+    Editor(Scene* scene, FluidSimulation* sim);
 
     Scene* getScene() const;
 
