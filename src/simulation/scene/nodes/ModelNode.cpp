@@ -86,7 +86,7 @@ void ModelNode::draw(const glm::mat4& view, const glm::mat4& projection) const {
 }
 
 Properties ModelNode::buildProperties() {
-    Properties properties;
+    Properties properties = SceneNode::buildProperties();
 
     properties.addSection("Transform");
     properties.addProperty(std::make_unique<Vec3Property>(

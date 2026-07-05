@@ -23,7 +23,7 @@ SkyboxNode::SkyboxNode() {
 }
 
 Properties SkyboxNode::buildProperties() {
-    Properties properties;
+    Properties properties = SceneNode::buildProperties();
 
     properties.addSection("Skybox");
     properties.addProperty(std::make_unique<TextureProperty>(
@@ -54,4 +54,8 @@ void SkyboxNode::draw(const glm::mat4& view, const glm::mat4& projection) const 
 
 int SkyboxNode::getRenderPriority() const {
     return -1;
+}
+
+std::string SkyboxNode::getDefaultName() const {
+    return "Skybox";
 }

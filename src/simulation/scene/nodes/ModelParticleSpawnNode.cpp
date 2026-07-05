@@ -41,7 +41,7 @@ CudaParticleSpawn ModelParticleSpawnNode::getParticleSpawn() {
 }
 
 Properties ModelParticleSpawnNode::buildProperties() {
-    Properties properties;
+    Properties properties = SceneNode::buildProperties();
 
     properties.addSection("Transform");
     properties.addProperty(std::make_unique<Vec3Property>(

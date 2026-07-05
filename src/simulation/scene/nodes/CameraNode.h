@@ -39,6 +39,7 @@ public:
     glm::mat4 getOrthoProjectionMatrix() const;
 
     Properties buildProperties() override;
+    std::string getDefaultName() const override;
 
 private:
     void updateVectors();

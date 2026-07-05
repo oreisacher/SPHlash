@@ -63,7 +63,7 @@ add_library(imgui
 target_include_directories(imgui PUBLIC
     external/imgui
     external/imgui/backends
-    external/imgui/misc
+    external/imgui/misc/cpp
 )
 
 find_package(CUDAToolkit REQUIRED)

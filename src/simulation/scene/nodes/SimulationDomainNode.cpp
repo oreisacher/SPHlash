@@ -20,3 +20,7 @@ SimulationDomainNode::SimulationDomainNode(const nlohmann::json& json) : Boundin
 std::string SimulationDomainNode::getTypeName() const {
     return "SimulationDomainNode";
 }
+
+std::string SimulationDomainNode::getDefaultName() const {
+    return "Simulation Domain";
+}

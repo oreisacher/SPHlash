@@ -97,7 +97,7 @@ void ForceFieldNode::updateTransform() {
 }
 
 Properties ForceFieldNode::buildProperties() {
-    Properties properties;
+    Properties properties = SceneNode::buildProperties();
 
     properties.addSection("Transform");
     properties.addProperty(std::make_unique<Vec3Property>(

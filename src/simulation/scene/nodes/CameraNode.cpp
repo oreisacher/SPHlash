@@ -193,7 +193,7 @@ glm::mat4 CameraNode::getOrthoProjectionMatrix() const {
 }
 
 Properties CameraNode::buildProperties() {
-    Properties properties;
+    Properties properties = SceneNode::buildProperties();
 
     properties.addSection("Transform");
     properties.addProperty(std::make_unique<Vec3Property>(
@@ -217,6 +217,10 @@ Properties CameraNode::buildProperties() {
     ));
 
     return properties;
+}
+
+std::string CameraNode::getDefaultName() const {
+    return "Camera";
 }
 
 void CameraNode::updateVectors() {

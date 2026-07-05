@@ -12,6 +12,7 @@ public:
     SimulationDomainNode();
     explicit SimulationDomainNode(const nlohmann::json& json);
     std::string getTypeName() const override;
+    std::string getDefaultName() const override;
 };
 
 #endif //SPHLASH_SIMULATIONDOMAINNODE_H

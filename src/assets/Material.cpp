@@ -71,3 +71,10 @@ void Material::setVec4(const std::string& name, glm::vec4 value) {
 void Material::setTexture(const std::string& name, std::shared_ptr<Texture> tex) {
     textures[name] = tex;
 }
+
+Material Material::createWireframe() {
+    Material material("Wireframe", Shader::createDefaultUnshaded());
+    material.setFillMode(FillMode::Wireframe);
+    material.setCullFaces(false);
+    return material;
+}

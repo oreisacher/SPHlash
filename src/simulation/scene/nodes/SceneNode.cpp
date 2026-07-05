@@ -18,6 +18,10 @@ void SceneNode::setName(const std::string& name) {
     this->name = name;
 }
 
+std::string SceneNode::getDefaultName() const {
+    return "Node";
+}
+
 bool SceneNode::isVisible() const {
     return visible;
 }
@@ -88,6 +92,19 @@ std::vector<SceneNode*> SceneNode::getChildren() const {
         result.push_back(c.get());
 
     return result;
+}
+
+Properties SceneNode::buildProperties() {
+    Properties properties;
+
+    properties.addSection("Node");
+    properties.addProperty(std::make_unique<StringProperty>(
+        "Name",
+        [this] () { return name; },
+        [this] (std::string n) { setName(n); }
+    ));
+
+    return properties;
 }
 
 bool SceneNode::isDeletable() const {
