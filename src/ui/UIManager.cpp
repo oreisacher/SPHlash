@@ -12,7 +12,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_internal.h"
-#include "core/InputManager.h"
+#include "core/Input.h"
 
 UIManager::UIManager(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
@@ -205,7 +205,7 @@ void UIManager::draw() const {
     }
 
     ImGuiIO& io = ImGui::GetIO();
-    Input.setInputBlocked(io.WantCaptureKeyboard);
+    Input::Get()->setInputBlocked(io.WantTextInput);
 
     for (auto& panel : panels)
         panel->draw();

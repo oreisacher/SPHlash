@@ -5,7 +5,7 @@
 #include "Application.h"
 #include "Version.h"
 #include <format>
-#include "InputManager.h"
+#include "Input.h"
 #include "Time.h"
 #include "ui/panels/ControlPanel.h"
 #include "ui/panels/PropertiesPanel.h"
@@ -28,7 +28,7 @@ Application::Application() {
     // Window creation
     Window::Init();
     _window = new Window(WINDOW_SIZE_X, WINDOW_SIZE_Y, std::format("SPHlash {}", VERSION).c_str());
-    Input.addInputWindow(_window);
+    Input::Get()->addInputWindow(_window);
 
     // Load OpenGL
     if (!gladLoadGL(glfwGetProcAddress)) {
@@ -91,6 +91,6 @@ void Application::run() const {
 
         _window->endFrame();
         Time.update();
-        Input.reset();
+        Input::Get()->update();
     }
 }
