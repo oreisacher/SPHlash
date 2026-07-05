@@ -20,7 +20,12 @@ public:
     glm::vec2 getMousePosition() const;
     glm::vec2 getSrollDelta() const;
 
+    void setInputBlocked(bool blocked);
+    bool isInputBlocked() const;
+
 private:
+    bool inputBlocked = false;
+
     std::unordered_map<Window::Key, bool> keys;
     std::unordered_map<Window::MouseButton, bool> mouseButtons;
 

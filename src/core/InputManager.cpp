@@ -31,6 +31,9 @@ void InputManager::reset() {
 }
 
 bool InputManager::isKeyPressed(Window::Key key) {
+    if (inputBlocked)
+        return false;
+
     auto it = keys.find(key);
     return it != keys.end() && it->second;
 }
@@ -46,4 +49,12 @@ glm::vec2 InputManager::getMousePosition() const {
 
 glm::vec2 InputManager::getSrollDelta() const {
     return mouseScrollDelta;
+}
+
+void InputManager::setInputBlocked(bool blocked) {
+    inputBlocked = blocked;
+}
+
+bool InputManager::isInputBlocked() const {
+    return inputBlocked;
 }

@@ -12,6 +12,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_internal.h"
+#include "core/InputManager.h"
 
 UIManager::UIManager(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
@@ -202,6 +203,9 @@ void UIManager::draw() const {
 
         ImGui::DockBuilderFinish(dockspace_id);
     }
+
+    ImGuiIO& io = ImGui::GetIO();
+    Input.setInputBlocked(io.WantCaptureKeyboard);
 
     for (auto& panel : panels)
         panel->draw();
