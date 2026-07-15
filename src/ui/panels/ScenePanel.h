@@ -15,6 +15,7 @@ public:
 
     void preDraw(double deltaTime) override;
     void draw() override;
+    void drawMenu() override;
 
 private:
     Editor* editor;

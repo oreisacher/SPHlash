@@ -133,12 +133,14 @@ void ScenePanel::draw() {
         editor->addForceField();
     }
 
-    ImGui::SeparatorText("");
+    // --- Load & Save File Dialogs ---
+    if (ImGuiFileDialog::Instance()->Display("LoadScene")) {
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+            editor->getScene()->loadScene(filePathName);
+        }
 
-    if (ImGui::Button("Save Scene", ImVec2(totalWidth, 0))) {
-        IGFD::FileDialogConfig config;
-        config.path = ".";
-        ImGuiFileDialog::Instance()->OpenDialog("SaveScene", "Choose location", ".json", config);
+        ImGuiFileDialog::Instance()->Close();
     }
 
     if (ImGuiFileDialog::Instance()->Display("SaveScene")) {
@@ -150,25 +152,28 @@ void ScenePanel::draw() {
         ImGuiFileDialog::Instance()->Close();
     }
 
-    if (ImGui::Button("Load Scene", ImVec2(totalWidth, 0))) {
-        IGFD::FileDialogConfig config;
-        config.path = ".";
-        ImGuiFileDialog::Instance()->OpenDialog("LoadScene", "Choose location", ".json", config);
-    }
+    ImGui::End();
+}
 
-    if (ImGuiFileDialog::Instance()->Display("LoadScene")) {
-        if (ImGuiFileDialog::Instance()->IsOk()) {
-            std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-            editor->getScene()->loadScene(filePathName);
+void ScenePanel::drawMenu() {
+    if (ImGui::BeginMenu("Scene")) {
+        if (ImGui::MenuItem("Load Scene")) {
+            IGFD::FileDialogConfig config;
+            config.path = ".";
+            ImGuiFileDialog::Instance()->OpenDialog("LoadScene", "Choose location", ".json", config);
         }
 
-        ImGuiFileDialog::Instance()->Close();
-    }
+        if (ImGui::MenuItem("Save Scene")) {
+            IGFD::FileDialogConfig config;
+            config.path = ".";
+            ImGuiFileDialog::Instance()->OpenDialog("SaveScene", "Choose location", ".json", config);
+        }
 
-    if (ImGui::Button("Reset Scene", ImVec2(totalWidth, 0))) {
-        editor->setSelected(nullptr);
-        editor->getScene()->resetScene();
-    }
+        if (ImGui::MenuItem("Reset Scene")) {
+            editor->setSelected(nullptr);
+            editor->getScene()->resetScene();
+        }
 
-    ImGui::End();
+        ImGui::EndMenu();
+    }
 }

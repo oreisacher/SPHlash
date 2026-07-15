@@ -117,3 +117,56 @@ float calculateAverageDensity(
 
     return totalDensity / static_cast<float>(numParticles);
 }
+
+struct HeightCount {
+    float height;
+    int count;
+
+    __host__ __device__
+    HeightCount(float h = 0.0f, int c = 0) : height(h), count(c) {}
+};
+
+struct TopSurfaceHeight {
+    const float4* position;
+    const float4* flags;
+
+    __device__ HeightCount operator()(const int i) const {
+        if (flags[i].y >= 0.5f) {
+            return HeightCount(position[i].y, 1);
+        }
+
+        return HeightCount(0.0f, 0);
+    }
+};
+
+struct HeightCountAdd {
+    __host__ __device__
+    HeightCount operator()(const HeightCount& a, const HeightCount& b) const {
+        return HeightCount(
+            a.height + b.height,
+            a.count + b.count
+        );
+    }
+};
+
+float calculateAverageTopSurfaceHeight(
+    int numParticles,
+    const float4* position,
+    const float4* flags
+) {
+    auto begin = thrust::counting_iterator<int>(0);
+    auto end = begin + numParticles;
+
+    HeightCount result = thrust::transform_reduce(
+        begin,
+        end,
+        TopSurfaceHeight{position, flags},
+        HeightCount(),
+        HeightCountAdd()
+    );
+
+    if (result.count == 0)
+        return 0.0f;
+
+    return result.height / static_cast<float>(result.count);
+}

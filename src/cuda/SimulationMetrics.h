@@ -31,4 +31,10 @@ float calculateAverageDensity(
     const float4* properties
 );
 
+float calculateAverageTopSurfaceHeight(
+    int numParticles,
+    const float4* position,
+    const float4* flags
+);
+
 #endif //SPHLASH_SIMULATIONMETRICS_H

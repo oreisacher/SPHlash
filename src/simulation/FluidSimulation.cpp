@@ -217,6 +217,15 @@ void FluidSimulation::updateParticles() {
     CUDA_KERNEL_CHECK("DensityPressureKernel");
 #endif
 
+    launchTopSurfaceParticlesKernel(
+        particleCount,
+        sortedParticles.d_position,
+        sortedParticles.d_flags,
+        d_sortedParticleHashes,
+        d_offsets,
+        settings.h
+    );
+
     launchSphForcesKernel(
         particleCount,
         sortedParticles.d_position,
@@ -267,6 +276,7 @@ void FluidSimulation::update(const float deltaTime) {
         updateParticles();
 
         // --- Frame Metrics ---
+#ifdef METRIC_DENSITY
         metrics.averageDensity = calculateAverageDensity(particleCount, particles.d_properties);
 
         metrics.averageDensityError = calculateAverageDensityError(
@@ -276,6 +286,15 @@ void FluidSimulation::update(const float deltaTime) {
         );
 
         metrics.densityStandardDeviation = calculateDensityStandardDeviation(particleCount, particles.d_properties, metrics.averageDensity);
+#endif
+
+#ifdef METRIC_AVG_HEIGHT
+        metrics.avgTopSurfaceHeight = calculateAverageTopSurfaceHeight(
+            particleCount,
+            particles.d_position,
+            particles.d_flags
+        );
+#endif
 
         // --- CFL ---
         float cs = 10.0f * settings.maxVelocity;

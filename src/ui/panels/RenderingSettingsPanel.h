@@ -27,6 +27,7 @@ private:
         "Particles - Velocity",
         "Particles - Pressure",
         "Particles - Surface",
+        "Particles - Top Surface",
         "Marching Cubes Surface",
         "Screen Space Surface"
     };

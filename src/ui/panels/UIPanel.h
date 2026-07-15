@@ -19,6 +19,7 @@ public:
     virtual void preDraw(double deltaTime) {};
     virtual void draw() = 0;
     virtual void postDraw(double deltaTime) {};
+    virtual void drawMenu() {};
 
     std::string getName() const;
 

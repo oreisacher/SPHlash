@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.22)
 project(SPHlash LANGUAGES CXX C CUDA)
 
 option(ENABLE_CUDA_DEBUG "Enable Cuda debug checks for kernel calls" OFF)
+option(METRIC_DENSITY "Enable metrics related to density" ON)
+option(METRIC_AVG_HEIGHT "Enable advanced metric for average height of top surface particles" OFF)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CUDA_STANDARD 17)
@@ -122,6 +124,14 @@ set_target_properties(SPHlash PROPERTIES
 
 if (ENABLE_CUDA_DEBUG)
     target_compile_definitions(SPHlash PRIVATE DEBUG_CUDA)
+endif()
+
+if (METRIC_DENSITY)
+    target_compile_definitions(SPHlash PRIVATE METRIC_DENSITY)
+endif()
+
+if (METRIC_AVG_HEIGHT)
+    target_compile_definitions(SPHlash PRIVATE METRIC_AVG_HEIGHT)
 endif()
 
 # --- Copy assets to build directory ---

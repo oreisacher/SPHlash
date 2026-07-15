@@ -191,13 +191,13 @@ void UIManager::draw() const {
         ImGui::DockBuilderSplitNode(dock_left_2, ImGuiDir_Down, 0.50f, &dock_left_3, &dock_left_2);
 
         // Right
-        ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Down,  0.50f, &dock_right_2, &dock_right_1);
+        ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Down,  0.40f, &dock_right_2, &dock_right_1);
         ImGui::DockBuilderSplitNode(dock_right_2, ImGuiDir_Up,  0.70f, &dock_right_2, &dock_right_3);
 
         ImGui::DockBuilderDockWindow("Simulation", dock_main);
         ImGui::DockBuilderDockWindow("Simulation Settings", dock_right_1);
         ImGui::DockBuilderDockWindow("Rendering Settings", dock_right_2);
-        ImGui::DockBuilderDockWindow("Particles", dock_right_2);
+        ImGui::DockBuilderDockWindow("Particles", dock_right_1);
         ImGui::DockBuilderDockWindow("Statistics", dock_right_3);
         ImGui::DockBuilderDockWindow("Controls", dock_left_1);
         ImGui::DockBuilderDockWindow("Scene", dock_left_2);
@@ -209,6 +209,8 @@ void UIManager::draw() const {
     ImGuiIO& io = ImGui::GetIO();
     Input::Get()->setInputBlocked(io.WantTextInput);
 
+    drawMenuBar();
+
     for (auto& panel : panels)
         panel->draw();
 
@@ -219,4 +221,23 @@ void UIManager::draw() const {
 void UIManager::postDraw(double deltaTime) const {
     for (auto& panel : panels)
         panel->postDraw(deltaTime);
+}
+
+void UIManager::drawMenuBar() const {
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("Panels")) {
+            for (const auto& panel : panels) {
+                bool visible = panel->visible;
+                ImGui::MenuItem(panel->name.c_str(), nullptr, &visible);
+                panel->visible = visible;
+            }
+            ImGui::EndMenu();
+        }
+
+        for (const auto& panel : panels) {
+            panel->drawMenu();
+        }
+
+        ImGui::EndMainMenuBar();
+    }
 }

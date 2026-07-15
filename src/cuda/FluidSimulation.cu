@@ -821,6 +821,82 @@ void launchResetParticlesKernel(
     );
 }
 
+__global__ void topSurfaceParticlesKernel(
+    const int numParticles,
+    const float4* position,
+    float4* flags,
+    const int* hashes,
+    const int* offsets,
+    const float h
+) {
+    const uint id = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (id >= numParticles)
+        return;
+
+    // Get cell of particle
+    int cellX = floor(position[id].x / h);
+    int cellY = floor(position[id].y / h);
+    int cellZ = floor(position[id].z / h);
+
+    float h2 = h * h;
+
+    // Find neighbors
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                uint hash = hashCell(cellX + dx, cellY + dy, cellZ + dz, numParticles);
+                int offset = offsets[hash];
+
+                if (offset == -1)
+                    continue;
+
+                while (offset < numParticles) {
+                    int neighborIndex = offset;
+                    offset++;
+
+                    // Skip self
+                    if (neighborIndex == id)
+                        continue;
+
+                    uint neighborHash = hashes[neighborIndex];
+                    if (neighborHash != hash)
+                        break;
+
+                    const float4 diff = position[id] - position[neighborIndex];
+
+                    // Check if within radius
+                    float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
+                    float horizontal = sqrtf(diff.x * diff.x + diff.z * diff.z);
+
+                    if (distSq < h2 && diff.y < -0.15f * h && horizontal < -diff.y) {
+                        flags[id].y = 0.0f;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    flags[id].y = 1.0f;
+}
+
+void launchTopSurfaceParticlesKernel(
+    const int numParticles,
+    const float4* position,
+    float4* flags,
+    const int* hashes,
+    const int* offsets,
+    const float h
+) {
+    int threadsPerBlock = 256;
+    int blocks = (numParticles + threadsPerBlock - 1) / threadsPerBlock;
+
+    topSurfaceParticlesKernel<<<blocks, threadsPerBlock>>>(
+        numParticles, position, flags, hashes, offsets, h
+    );
+}
+
 __global__ void voxelFieldKernel(
     const VoxelField field,
     const CudaAABB domain,

@@ -106,6 +106,10 @@ struct FrameMetrics {
     float averageDensityError = 0.0;
     float averageDensity = 0.0f;
     float densityStandardDeviation = 0.0f;
+
+#ifdef METRIC_AVG_HEIGHT
+    float avgTopSurfaceHeight = 0.0f;
+# endif
 };
 
 class FluidSimulation {

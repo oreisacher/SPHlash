@@ -61,4 +61,15 @@ void main() {
         FragColor = mix(Color, vec4(1.0), t);
         return;
     }
+
+    // TOP SURFACE PARTICLES
+    if (mode == 4) {
+        if (Flags.y >= 0.5f) {
+            FragColor = vec4(0.0f, 1.0f, 0.0f, 1.0f);
+            return;
+        }
+
+        FragColor = Color;
+        return;
+    }
 }

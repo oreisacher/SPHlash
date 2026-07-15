@@ -130,6 +130,15 @@ void launchResetParticlesKernel(
     int numParticles
 );
 
+void launchTopSurfaceParticlesKernel(
+    const int numParticles,
+    const float4* position,
+    float4* flags,
+    const int* hashes,
+    const int* offsets,
+    const float h
+);
+
 void launchVoxelFieldKernel(
     const VoxelField& field,
     const CudaAABB& domain,
@@ -140,4 +149,5 @@ void launchVoxelFieldKernel(
     const int* offsets,
     const float h
 );
+
 #endif //FLUIDSIMSPH_HASHPARTICLES_H

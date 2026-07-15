@@ -24,6 +24,8 @@ public:
     void draw() const;
     void postDraw(double deltaTime) const;
 
+    void drawMenuBar() const;
+
     template<typename T>
     T* getPanel() {
         for (auto panel : panels) {

@@ -91,6 +91,12 @@ void RenderingSettingsPanel::draw() {
             particles->updateRenderingSettings();
         break;
 
+    case TOP_SURFACE_PARTICLES:
+        ImGui::Text("Size:");
+        if (ImGui::DragFloat("##ps", &particles->settings.particleSize, 0.0001f, 0.0))
+            particles->updateRenderingSettings();
+        break;
+
     case MARCHING_CUBES:
         ImGui::PushID(MARCHING_CUBES);
 
