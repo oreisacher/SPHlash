@@ -33,6 +33,8 @@ void SimulationPanel::draw() {
     if (viewportSize.x != size.x || viewportSize.y != size.y) {
         viewportSize = { size.x, size.y };
         pendingResize = true;
+        ImGui::EndChild();
+        return;
     }
 
     editor->getScene()->getCamera()->setHover(ImGui::IsWindowHovered());
