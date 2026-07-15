@@ -9,6 +9,11 @@
 #include "imgui.h"
 #include <format>
 
+#include "ImGuiFileDialog.h"
+#include "implot.h"
+#include "core/Input.h"
+#include "utils/Export.h"
+
 ParticlesPanel::ParticlesPanel(FluidSimulation* simulation, ParticlesNode* particles)
     : UIPanel("Particles"), simulation(simulation)
 {
@@ -16,6 +21,45 @@ ParticlesPanel::ParticlesPanel(FluidSimulation* simulation, ParticlesNode* parti
 }
 
 void ParticlesPanel::preDraw(double deltaTime) {
+    if (Input::Get()->isKeyPressed(Window::Key::C)) {
+        averageDensity.clear();
+        minAvgDensity = INFINITY;
+        maxAvgDensity = -INFINITY;
+
+        averageDensityError.clear();
+        minDensityError = INFINITY;
+        maxDensityError = -INFINITY;
+
+        densityStandardDeviation.clear();
+        minDensityStandardDeviation = INFINITY;
+        maxDensityStandardDeviation = -INFINITY;
+    }
+
+    if (simulation->getState() != RUNNING)
+        return;
+
+    FrameMetrics metric = simulation->getFrameMetrics();
+
+    // --- Average Density ---
+    averageDensity.push_back(metric.averageDensity);
+
+    if (metric.averageDensity < minAvgDensity) minAvgDensity = metric.averageDensity;
+    if (metric.averageDensity > maxAvgDensity) maxAvgDensity = metric.averageDensity;
+
+    // --- Average Density Error ---
+    float avgDensityError = metric.averageDensityError * 100.0f;
+    averageDensityError.push_back(avgDensityError);
+
+    if (avgDensityError < minDensityError) minDensityError = avgDensityError;
+    if (avgDensityError > maxDensityError) maxDensityError = avgDensityError;
+
+    // --- Density Standard Deviation ---
+    densityStandardDeviation.push_back(metric.densityStandardDeviation);
+
+    if (metric.densityStandardDeviation < minDensityStandardDeviation) minDensityStandardDeviation = metric.densityStandardDeviation;
+    if (metric.densityStandardDeviation > maxDensityStandardDeviation) maxDensityStandardDeviation = metric.densityStandardDeviation;
+
+    // --- Particle Data ---
     time += deltaTime;
 
     if (time >= 0.1f) {
@@ -45,9 +89,113 @@ void ParticlesPanel::draw() {
         ImGui::Text("No particles.");
     } else {
         ImGui::PushItemWidth(-FLT_MIN);
+        float totalWidth = ImGui::GetContentRegionAvail().x;
 
         ImGui::Text("Total Particles:");
         ImGui::Button(std::format("{}##tp", simulation->getParticleCount()).c_str(), ImVec2(-FLT_MIN, 0));
+
+        ImGui::Spacing();
+
+        // --- Average Density ---
+        ImGui::Text("Average Density:");
+
+        if (ImPlot::BeginPlot("##Average Density", ImVec2(-1, 200), ImPlotFlags_NoLegend)) {
+            ImPlot::SetupAxes("Frame", "Avg Density", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+
+            ImPlot::PlotLine("Average Density", averageDensity.data(), static_cast<int>(averageDensity.size()));
+
+            ImPlotSpec spec;
+            spec.Flags = ImPlotInfLinesFlags_Horizontal;
+            ImPlot::PlotInfLines("Rest Density", &simulation->settings.p_0, 1, spec);
+
+            ImPlot::EndPlot();
+        }
+
+        ImGui::Spacing();
+        ImGui::Text("Min: %f", minAvgDensity);
+        ImGui::SameLine(150);
+        ImGui::Text("Max: %f", maxAvgDensity);
+
+        if (ImGui::Button("Export CSV##avgDensity", ImVec2(totalWidth, 0))) {
+            IGFD::FileDialogConfig config;
+            config.path = ".";
+            ImGuiFileDialog::Instance()->OpenDialog("avgDensityExport", "Choose location", ".csv", config);
+        }
+
+        if (ImGuiFileDialog::Instance()->Display("avgDensityExport")) {
+            if (ImGuiFileDialog::Instance()->IsOk()) {
+                std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+                Export::exportCSV(filePathName, averageDensity);
+            }
+
+            ImGuiFileDialog::Instance()->Close();
+        }
+
+        ImGui::SeparatorText("");
+
+        // --- Average Density Error ---
+        ImGui::Text("Average Density Error:");
+
+        if (ImPlot::BeginPlot("##Average Density Error", ImVec2(-1, 200), ImPlotFlags_NoLegend)) {
+            ImPlot::SetupAxes("Frame", "Error (%)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+            ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, static_cast<double>(maxDensityError) * 1.1, ImGuiCond_Always);
+            ImPlot::SetupAxisFormat(ImAxis_Y1, "%.1f");
+
+            ImPlot::PlotLine("Density Error", averageDensityError.data(), static_cast<int>(averageDensityError.size()));
+            ImPlot::EndPlot();
+        }
+
+        ImGui::Spacing();
+        ImGui::Text("Min: %.3f%%", minDensityError);
+        ImGui::SameLine(150);
+        ImGui::Text("Max: %.3f%%", maxDensityError);
+
+        if (ImGui::Button("Export CSV##avgDensityError", ImVec2(totalWidth, 0))) {
+            IGFD::FileDialogConfig config;
+            config.path = ".";
+            ImGuiFileDialog::Instance()->OpenDialog("avgDensityErrorExport", "Choose location", ".csv", config);
+        }
+
+        if (ImGuiFileDialog::Instance()->Display("avgDensityErrorExport")) {
+            if (ImGuiFileDialog::Instance()->IsOk()) {
+                std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+                Export::exportCSV(filePathName, averageDensityError);
+            }
+
+            ImGuiFileDialog::Instance()->Close();
+        }
+
+        ImGui::SeparatorText("");
+
+        // --- Density Standard Deviation ---
+        ImGui::Text("Density Standard Deviation:");
+
+        if (ImPlot::BeginPlot("##Density Standard Deviation", ImVec2(-1, 200), ImPlotFlags_NoLegend)) {
+            ImPlot::SetupAxes("Frame", "Standard Deviation", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+
+            ImPlot::PlotLine("Standard Deviation", densityStandardDeviation.data(), static_cast<int>(densityStandardDeviation.size()));
+            ImPlot::EndPlot();
+        }
+
+        ImGui::Spacing();
+        ImGui::Text("Min: %f", minDensityStandardDeviation);
+        ImGui::SameLine(150);
+        ImGui::Text("Max: %f", maxDensityStandardDeviation);
+
+        if (ImGui::Button("Export CSV##densityStandardDeviationExport", ImVec2(totalWidth, 0))) {
+            IGFD::FileDialogConfig config;
+            config.path = ".";
+            ImGuiFileDialog::Instance()->OpenDialog("densityStandardDeviationExport", "Choose location", ".csv", config);
+        }
+
+        if (ImGuiFileDialog::Instance()->Display("densityStandardDeviationExport")) {
+            if (ImGuiFileDialog::Instance()->IsOk()) {
+                std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+                Export::exportCSV(filePathName, densityStandardDeviation);
+            }
+
+            ImGuiFileDialog::Instance()->Close();
+        }
 
         ImGui::SeparatorText("");
 

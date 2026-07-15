@@ -567,37 +567,6 @@ void launchSphForcesKernel(
     );
 }
 
-struct AccelerationSq {
-    const float4* pf;
-    const float4* vf;
-    const float4* stf;
-
-    __device__ float operator()(int i) const {
-        float4 f = pf[i] + vf[i] + stf[i];
-        return f.x * f.x + f.y * f.y + f.z * f.z;
-    }
-};
-
-float getMaxAcceleration(
-    int numParticles,
-    const float4* pressureForce,
-    const float4* viscosityForce,
-    const float4* surfaceTensionForce
-) {
-    const thrust::counting_iterator<int> begin(0);
-    const thrust::counting_iterator<int> end(numParticles);
-
-    const float maxAcc = thrust::transform_reduce(
-        begin,
-        end,
-        AccelerationSq{pressureForce, viscosityForce, surfaceTensionForce},
-        0.0f,
-        thrust::maximum<float>()
-    );
-
-    return sqrtf(maxAcc);
-}
-
 __device__ float3 toLocal(float3 p, const CudaForceField& f) {
     float3 d = p - f.position;
 

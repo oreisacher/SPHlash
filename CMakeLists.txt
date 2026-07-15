@@ -48,6 +48,13 @@ add_executable(SPHlash
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
         src/simulation/scene/nodes/SimulationDomainNode.cpp
         src/simulation/scene/nodes/SimulationDomainNode.h
+        src/cuda/SimulationMetrics.h
+        src/utils/Export.cpp
+        src/utils/Export.h
+)
+
+target_compile_options(SPHlash PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>
 )
 
 add_library(imgui
@@ -66,6 +73,13 @@ target_include_directories(imgui PUBLIC
     external/imgui/misc/cpp
 )
 
+add_library(implot STATIC
+    external/implot/implot.cpp
+    external/implot/implot_items.cpp
+)
+
+target_include_directories(implot PUBLIC external/implot)
+
 find_package(CUDAToolkit REQUIRED)
 
 add_subdirectory("external/glfw")
@@ -74,6 +88,7 @@ add_subdirectory("external/json")
 add_subdirectory("external/tinyobjloader")
 add_subdirectory("external/ImGuizmo")
 target_link_libraries(imguizmo PUBLIC imgui)
+target_link_libraries(implot PUBLIC imgui)
 
 target_compile_definitions(SPHlash PRIVATE USE_STD_FILESYSTEM)
 
@@ -85,6 +100,7 @@ target_include_directories(SPHlash PUBLIC
     external/tinyobjloader
     external/ImGuizmo/src
     external/stb
+    external/implot
 )
 
 target_link_libraries(SPHlash
@@ -95,6 +111,7 @@ target_link_libraries(SPHlash
     PRIVATE CUDA::cudart
     PRIVATE tinyobjloader
     PRIVATE imguizmo
+    PRIVATE implot
 )
 
 set_target_properties(SPHlash PROPERTIES

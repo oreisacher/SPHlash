@@ -15,8 +15,9 @@
 #include "scene/Scene.h"
 #include "cuda/CudaUtils.h"
 #include <cuda_gl_interop.h>
+
+#include "cuda/SimulationMetrics.h"
 #include "scene/nodes/ParticlesNode.h"
-#include "scene/nodes/SimulationDomainNode.h"
 
 // --- ParticlesHost ------------------------------------
 
@@ -265,13 +266,24 @@ void FluidSimulation::update(const float deltaTime) {
     for (int i = 0 ; i < settings.simulationSteps ; i++) {
         updateParticles();
 
+        // --- Frame Metrics ---
+        metrics.averageDensity = calculateAverageDensity(particleCount, particles.d_properties);
+
+        metrics.averageDensityError = calculateAverageDensityError(
+            particleCount,
+            particles.d_properties,
+            settings.p_0
+        );
+
+        metrics.densityStandardDeviation = calculateDensityStandardDeviation(particleCount, particles.d_properties, metrics.averageDensity);
+
         // --- CFL ---
         float cs = 10.0f * settings.maxVelocity;
         settings.speedSound = cs;
 
         float cflTimeStep = settings.safetyFactor * settings.h / (cs * (1.0f + 0.6f * settings.alpha));
 
-        float maxAcc = getMaxAcceleration(particleCount, particles.d_pressureForce, particles.d_viscosityForce, particles.d_surfaceTensionForce);
+        float maxAcc = calculateMaxAcceleration(particleCount, particles.d_pressureForce, particles.d_viscosityForce, particles.d_surfaceTensionForce);
 
         if (settings.enableGravity)
             maxAcc = fminf(maxAcc, abs(settings.gravity));
@@ -521,6 +533,10 @@ ParticleHost FluidSimulation::getParticle(const int id) const {
     ParticleHost p{};
     particles.copyToHost(p, id);
     return p;
+}
+
+FrameMetrics FluidSimulation::getFrameMetrics() const {
+    return metrics;
 }
 
 bool FluidSimulation::initParticles() {

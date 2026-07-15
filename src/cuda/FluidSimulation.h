@@ -34,18 +34,6 @@ void launchBuildOffsetsKernel(
     int* offsets
 );
 
-float getMaxVelocity(
-    int numParticles,
-    ParticleGPU* particles
-);
-
-float getMaxAcceleration(
-    int numParticles,
-    const float4* pressureForce,
-    const float4* viscosityForce,
-    const float4* surfaceTensionForce
-);
-
 void queryRequiredSortingStorage(
     const int numParticles,
     size_t &sortTempStorageBytes,

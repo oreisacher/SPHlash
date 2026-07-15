@@ -5,6 +5,7 @@
 #ifndef FLUIDSIMSPH_PARTICLESPANEL_H
 #define FLUIDSIMSPH_PARTICLESPANEL_H
 
+#include <cmath>
 #include "UIPanel.h"
 #include "simulation/FluidSimulation.h"
 
@@ -29,6 +30,21 @@ private:
 
     bool showParticles = false;
     int selectedParticle = 0;
+
+    // Average Density
+    std::vector<float> averageDensity;
+    float minAvgDensity = INFINITY;
+    float maxAvgDensity = -INFINITY;
+
+    // Average Density Error
+    std::vector<float> averageDensityError;
+    float minDensityError = INFINITY;
+    float maxDensityError = -INFINITY;
+
+    // Density Standard Deviation
+    std::vector<float> densityStandardDeviation;
+    float minDensityStandardDeviation = INFINITY;
+    float maxDensityStandardDeviation = -INFINITY;
 };
 
 #endif //FLUIDSIMSPH_PARTICLESPANEL_H

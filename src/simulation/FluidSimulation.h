@@ -101,6 +101,13 @@ struct SimulationSettings {
     float safetyFactor = 0.25f;
 };
 
+
+struct FrameMetrics {
+    float averageDensityError = 0.0;
+    float averageDensity = 0.0f;
+    float densityStandardDeviation = 0.0f;
+};
+
 class FluidSimulation {
 public:
     FluidSimulation(Scene* scene, bool headless = false);
@@ -150,13 +157,15 @@ public:
 
     inline static const char* SimulationDomainTag = "simulation_domain";
 
+    FrameMetrics getFrameMetrics() const;
 private:
     Scene* scene;
-    // BoundingBoxNode* domain;
 
-    float cfl = 0;
     int particleCount = 0;
     bool headless = false;
+
+    float cfl = 0;
+    FrameMetrics metrics;
 
     // --- Simulation State ---
     SimulationState state = UNINITIALIZED;
