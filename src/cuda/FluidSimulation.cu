@@ -6,8 +6,8 @@
 #include "SDF.cuh"
 #include <thrust/sort.h>
 #include <cuda/CudaForceField.h>
-#include "rendering/RendererParticle.h"
-#include "simulation/VoxelField.h"
+#include "../../include/rendering/RendererParticle.h"
+#include "../../include/simulation/VoxelField.h"
 
 void queryRequiredSortingStorage(
     const int numParticles,

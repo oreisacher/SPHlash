@@ -2,7 +2,7 @@
 // Created by ruut on 4/29/26.
 //
 
-#include "Material.h"
+#include "assets/Material.h"
 #include <ranges>
 
 Material::Material(const std::string& name, const std::shared_ptr<Shader>& shader)

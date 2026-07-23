@@ -2,17 +2,17 @@
 // Created by ruut on 3/24/26.
 //
 
-#include "ParticlesPanel.h"
-#include "assets/Shader.h"
-#include "simulation/FluidSimulation.h"
-#include "simulation/scene/nodes/ParticlesNode.h"
+#include "../../../include/ui/panels/ParticlesPanel.h"
+#include "../../../include/assets/Shader.h"
+#include "../../../include/simulation/FluidSimulation.h"
+#include "../../../include/simulation/scene/nodes/ParticlesNode.h"
 #include "imgui.h"
 #include <format>
 
 #include "ImGuiFileDialog.h"
 #include "implot.h"
-#include "core/Input.h"
-#include "utils/Export.h"
+#include "../../../include/core/Input.h"
+#include "../../../include/utils/Export.h"
 
 ParticlesPanel::ParticlesPanel(FluidSimulation* simulation, ParticlesNode* particles)
     : UIPanel("Particles"), simulation(simulation)

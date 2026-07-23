@@ -2,7 +2,7 @@
 // Created by ruut on 4/12/26.
 //
 
-#include "RenderingSettingsPanel.h"
+#include "../../../include/ui/panels/RenderingSettingsPanel.h"
 #include "imgui.h"
 #include "glm/gtc/type_ptr.hpp"
 

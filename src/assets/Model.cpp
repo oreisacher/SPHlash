@@ -4,14 +4,14 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include "Model.h"
+#include "assets/Model.h"
 #include <filesystem>
 #include <format>
 #include <iostream>
-#include "rendering/Renderer.h"
+#include "../../include/rendering/Renderer.h"
 #include "tiny_obj_loader.h"
 #include "glm/gtc/quaternion.hpp"
-#include "simulation/scene/nodes/BoundingBoxNode.h"
+#include "../../include/simulation/scene/nodes/BoundingBoxNode.h"
 
 Model::Model(const std::string& path, bool shaded) {
     name = std::filesystem::path(path).stem().string();

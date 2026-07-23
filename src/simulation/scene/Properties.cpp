@@ -2,7 +2,7 @@
 // Created by ruut on 5/31/26.
 //
 
-#include "simulation/scene/Properties.h"
+#include "../../../include/simulation/scene/Properties.h"
 #include "imgui.h"
 #include "ImGuiFileDialog.h"
 #include "glm/gtc/type_ptr.hpp"

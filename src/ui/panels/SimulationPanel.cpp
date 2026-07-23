@@ -2,10 +2,10 @@
 // Created by ruut on 3/14/26.
 //
 
-#include "SimulationPanel.h"
+#include "../../../include/ui/panels/SimulationPanel.h"
 #include "imgui.h"
 #include "ImGuizmo.h"
-#include "rendering/Renderer.h"
+#include "../../../include/rendering/Renderer.h"
 #include "glm/gtc/type_ptr.hpp"
 
 SimulationPanel::SimulationPanel(Editor* editor, Renderer* renderer)

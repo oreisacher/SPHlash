@@ -2,12 +2,12 @@
 // Created by ruut on 3/16/26.
 //
 
-#include "Shader.h"
+#include "assets/Shader.h"
 #include <filesystem>
 #include <format>
 #include <fstream>
 #include "glm/gtc/type_ptr.hpp"
-#include "../utils/Logger.h"
+#include "../../include/utils/Logger.h"
 
 Shader::Shader(std::initializer_list<std::pair<std::string, Type>> sources) {
     addSources(sources);

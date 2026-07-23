@@ -2,10 +2,10 @@
 // Created by ruut on 6/1/26.
 //
 
-#include "BoundingBoxParticleSpawnNode.h"
+#include "../../../../include/simulation/scene/nodes/BoundingBoxParticleSpawnNode.h"
 #include <vector_functions.h>
-#include "assets/Material.h"
-#include "simulation/scene/Properties.h"
+#include "../../../../include/assets/Material.h"
+#include "../../../../include/simulation/scene/Properties.h"
 
 BoundingBoxParticleSpawnNode::BoundingBoxParticleSpawnNode(const std::string& name)
     : BoundingBoxNode(name, glm::vec3(1.0f, 0.0, 0.0))

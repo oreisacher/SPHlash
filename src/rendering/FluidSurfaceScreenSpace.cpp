@@ -3,7 +3,7 @@
 //
 
 #include "rendering/FluidSurfaceScreenSpace.h"
-#include "Framebuffer.h"
+#include "rendering/Framebuffer.h"
 #include "glm/gtc/type_ptr.inl"
 
 FluidSurfaceScreenSpace::FluidSurfaceScreenSpace() {

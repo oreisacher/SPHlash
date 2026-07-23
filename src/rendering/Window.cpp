@@ -5,7 +5,7 @@
 #include "rendering/Window.h"
 #include <format>
 #include <iostream>
-#include "../utils/Logger.h"
+#include "../../include/utils/Logger.h"
 
 GLFWwindow* Window::getNativeWindow() const { return window; }
 

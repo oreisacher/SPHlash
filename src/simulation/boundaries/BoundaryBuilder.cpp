@@ -2,14 +2,14 @@
 // Created by ruut on 5/9/26.
 //
 
-#include "simulation/boundaries/BoundaryBuilder.h"
+#include "../../../include/simulation/boundaries/BoundaryBuilder.h"
 #include <cuda_runtime.h>
 #include <vector_functions.h>
-#include "assets/Triangle.h"
+#include "../../../include/assets/Triangle.h"
 #include "cuda/Boundaries.h"
 #include "cuda/CudaUtils.h"
 #include "glad/gl.h"
-#include "simulation/scene/nodes/ModelNode.h"
+#include "../../../include/simulation/scene/nodes/ModelNode.h"
 
 bool BoundaryBuilder::constructSDFMap(const Scene* scene, CudaAABB domain, float h, Hex32Field& sdfMap) const {
     // Extract list of all triangles from boundary objects of scene

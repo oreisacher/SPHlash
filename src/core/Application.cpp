@@ -2,20 +2,20 @@
 // Created by ruut on 3/27/26.
 //
 
-#include "Application.h"
+#include "core/Application.h"
 #include "Version.h"
 #include <format>
-#include "Input.h"
-#include "Time.h"
-#include "ui/panels/ControlPanel.h"
-#include "ui/panels/PropertiesPanel.h"
-#include "ui/panels/ScenePanel.h"
+#include "core/Input.h"
+#include "core/Time.h"
+#include "../../include/ui/panels/ControlPanel.h"
+#include "../../include/ui/panels/PropertiesPanel.h"
+#include "../../include/ui/panels/ScenePanel.h"
 #include "ui/panels/RenderingSettingsPanel.h"
-#include "ui/panels/SimulationPanel.h"
+#include "../../include/ui/panels/SimulationPanel.h"
 #include "ui/panels/ParticlesPanel.h"
-#include "ui/panels/SimulationSettingsPanel.h"
-#include "ui/panels/StatisticsPanel.h"
-#include "utils/Logger.h"
+#include "../../include/ui/panels/SimulationSettingsPanel.h"
+#include "../../include/ui/panels/StatisticsPanel.h"
+#include "../../include/utils/Logger.h"
 
 #define GLAD_GL_IMPLEMENTATION
 #define TINYOBJLOADER_IMPLEMENTATION

@@ -2,11 +2,11 @@
 // Created by ruut on 5/4/26.
 //
 
-#include "simulation/scene/nodes/BoundingBoxNode.h"
-#include "assets/Material.h"
-#include "assets/Mesh.h"
-#include "assets/Shader.h"
-#include "simulation/scene/Properties.h"
+#include "../../../../include/simulation/scene/nodes/BoundingBoxNode.h"
+#include "../../../../include/assets/Material.h"
+#include "../../../../include/assets/Mesh.h"
+#include "../../../../include/assets/Shader.h"
+#include "../../../../include/simulation/scene/Properties.h"
 #include "simulation/scene/Scene.h"
 
 BoundingBoxNode::BoundingBoxNode(const std::string& name, glm::vec3 color) {

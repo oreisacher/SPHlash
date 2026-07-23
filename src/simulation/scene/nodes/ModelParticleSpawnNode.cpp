@@ -2,8 +2,8 @@
 // Created by ruut on 6/11/26.
 //
 
-#include "ModelParticleSpawnNode.h"
-#include "BoundingBoxNode.h"
+#include "../../../../include/simulation/scene/nodes/ModelParticleSpawnNode.h"
+#include "../../../../include/simulation/scene/nodes/BoundingBoxNode.h"
 #include <cuda_runtime_api.h>
 #include <vector_functions.h>
 

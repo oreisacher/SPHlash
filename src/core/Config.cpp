@@ -6,7 +6,7 @@
 #include <format>
 #include <fstream>
 #include <iostream>
-#include "utils/Logger.h"
+#include "../../include/utils/Logger.h"
 
 bool Config::load(const std::string& path) {
     this->path = path;

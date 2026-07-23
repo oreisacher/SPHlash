@@ -2,8 +2,8 @@
 
 #include "CudaAABB.h"
 #include "MarchingCubesLookup.h"
-#include "assets/Vertex.h"
-#include "simulation/VoxelField.h"
+#include "../../include/assets/Vertex.h"
+#include "../../include/simulation/VoxelField.h"
 
 __device__ inline float3 operator+(const float3& a, const float3& b) {
     return make_float3(

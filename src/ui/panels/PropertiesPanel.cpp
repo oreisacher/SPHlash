@@ -2,7 +2,7 @@
 // Created by ruut on 5/31/26.
 //
 
-#include "PropertiesPanel.h"
+#include "../../../include/ui/panels/PropertiesPanel.h"
 #include "imgui.h"
 
 PropertiesPanel::PropertiesPanel(Editor* editor) : UIPanel("Properties"), editor(editor) { }

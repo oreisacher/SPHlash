@@ -2,8 +2,8 @@
 // Created by ruut on 5/4/26.
 //
 
-#include "ForceFieldNode.h"
-#include "assets/Model.h"
+#include "../../../../include/simulation/scene/nodes/ForceFieldNode.h"
+#include "../../../../include/assets/Model.h"
 
 ForceFieldNode::ForceFieldNode(const std::string& name) {
     this->name = name;

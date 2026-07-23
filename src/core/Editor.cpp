@@ -3,11 +3,11 @@
 //
 
 #include "core/Editor.h"
-#include "simulation/scene/nodes/BoundingBoxNode.h"
-#include "simulation/scene/nodes/BoundingBoxParticleSpawnNode.h"
-#include "simulation/scene/nodes/ModelParticleSpawnNode.h"
-#include "simulation/boundaries/BoundaryBuilder.h"
-#include "ui/panels/SimulationPanel.h"
+#include "../../include/simulation/scene/nodes/BoundingBoxNode.h"
+#include "../../include/simulation/scene/nodes/BoundingBoxParticleSpawnNode.h"
+#include "../../include/simulation/scene/nodes/ModelParticleSpawnNode.h"
+#include "../../include/simulation/boundaries/BoundaryBuilder.h"
+#include "../../include/ui/panels/SimulationPanel.h"
 #include <memory>
 
 Editor::Editor(Scene* scene, FluidSimulation* sim)

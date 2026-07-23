@@ -6,7 +6,7 @@
 #include <cuda_gl_interop.h>
 #include <vector_functions.h>
 #include "tiny_obj_loader.h"
-#include "Primitives.h"
+#include "assets/Primitives.h"
 #include "assets/SphereCreator.h"
 #include "glm/glm.hpp"
 

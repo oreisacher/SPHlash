@@ -5,8 +5,8 @@
 #ifndef FLUIDSIMSPH_HASHPARTICLES_H
 #define FLUIDSIMSPH_HASHPARTICLES_H
 
-#include "simulation/FluidSimulation.h"
-#include "simulation/scene/IParticleSpawn.h"
+#include "../../include/simulation/FluidSimulation.h"
+#include "../../include/simulation/scene/IParticleSpawn.h"
 
 struct ParticleGPU;
 

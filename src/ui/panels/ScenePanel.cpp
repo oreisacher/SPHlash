@@ -2,11 +2,11 @@
 // Created by ruut on 4/13/26.
 //
 
-#include "ScenePanel.h"
+#include "../../../include/ui/panels/ScenePanel.h"
 #include "ImGuiFileDialog.h"
-#include "PropertiesPanel.h"
-#include "core/Editor.h"
-#include "simulation/scene/Scene.h"
+#include "../../../include/ui/panels/PropertiesPanel.h"
+#include "../../../include/core/Editor.h"
+#include "../../../include/simulation/scene/Scene.h"
 #include "imgui.h"
 
 ScenePanel::ScenePanel(Editor* editor, Renderer* renderer)

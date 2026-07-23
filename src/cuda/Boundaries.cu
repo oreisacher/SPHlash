@@ -2,7 +2,7 @@
 #include "CudaAABB.h"
 #include "Hex32.cuh"
 #include "SDF.cuh"
-#include "simulation/boundaries/Hex32Field.h"
+#include "../../include/simulation/boundaries/Hex32Field.h"
 
 __global__ void sdfKernel(
     const int triangleCount,

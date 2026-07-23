@@ -2,9 +2,9 @@
 // Created by ruut on 6/1/26.
 //
 
-#include "simulation/scene/nodes/ModelNode.h"
-#include "BoundingBoxNode.h"
-#include "assets/Model.h"
+#include "../../../../include/simulation/scene/nodes/ModelNode.h"
+#include "../../../../include/simulation/scene/nodes/BoundingBoxNode.h"
+#include "../../../../include/assets/Model.h"
 
 ModelNode::ModelNode(const std::string& name, const std::shared_ptr<Model>& model) {
     this->name = name;

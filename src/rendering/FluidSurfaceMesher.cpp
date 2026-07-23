@@ -2,12 +2,12 @@
 // Created by ruut on 4/27/26.
 //
 
-#include "simulation/scene/nodes/BoundingBoxNode.h"
+#include "../../include/simulation/scene/nodes/BoundingBoxNode.h"
 #include "rendering/FluidSurfaceMesher.h"
 #include <cuda_runtime.h>
 #include "assets/Model.h"
 #include "../cuda/MarchingCubes.h"
-#include "../simulation/FluidSimulation.h"
+#include "../../include/simulation/FluidSimulation.h"
 
 FluidSurfaceMesher::FluidSurfaceMesher(FluidSimulation* simulation)
     : simulation(simulation)

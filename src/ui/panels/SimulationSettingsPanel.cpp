@@ -2,14 +2,14 @@
 // Created by ruut on 3/16/26.
 //
 
-#include "SimulationSettingsPanel.h"
-#include "simulation/FluidSimulation.h"
+#include "../../../include/ui/panels/SimulationSettingsPanel.h"
+#include "../../../include/simulation/FluidSimulation.h"
 #include "ImGuiFileDialog.h"
-#include "ui/UIManager.h"
+#include "../../../include/ui/UIManager.h"
 #include "glm/gtc/type_ptr.inl"
 #include "imgui.h"
-#include "core/Editor.h"
-#include "rendering/Renderer.h"
+#include "../../../include/core/Editor.h"
+#include "../../../include/rendering/Renderer.h"
 
 SimulationSettingsPanel::SimulationSettingsPanel(Editor* editor, FluidSimulation* simulation, Renderer* renderer)
     : UIPanel("Simulation Settings"), editor(editor), simulation(simulation), renderer(renderer)

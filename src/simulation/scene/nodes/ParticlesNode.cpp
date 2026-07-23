@@ -2,13 +2,13 @@
 // Created by ruut on 6/4/26.
 //
 
-#include "ParticlesNode.h"
+#include "../../../../include/simulation/scene/nodes/ParticlesNode.h"
 
-#include "BoundingBoxNode.h"
-#include "rendering/Renderer.h"
+#include "../../../../include/simulation/scene/nodes/BoundingBoxNode.h"
+#include "../../../../include/rendering/Renderer.h"
 #include "glm/gtc/type_ptr.hpp"
-#include "rendering/RendererParticle.h"
-#include "simulation/scene/Properties.h"
+#include "../../../../include/rendering/RendererParticle.h"
+#include "../../../../include/simulation/scene/Properties.h"
 #include "simulation/scene/Scene.h"
 
 ParticlesNode::ParticlesNode(FluidSimulation* simulation) : simulation(simulation), mesher(simulation) {

@@ -2,9 +2,9 @@
 // Created by ruut on 5/10/26.
 //
 
-#include "Texture3DPanel.h"
+#include "../../../include/ui/panels/Texture3DPanel.h"
 #include "imgui.h"
-#include "ui/UIManager.h"
+#include "../../../include/ui/UIManager.h"
 
 Texture3DPanel::Texture3DPanel(const std::string& name, GLuint texture, int width, int height, int depth)
     : UIPanel(name), texture(texture), totalDepth(depth)

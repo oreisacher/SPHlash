@@ -48,15 +48,11 @@ add_executable(SPHlash
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
-        src/simulation/scene/nodes/SimulationDomainNode.cpp
-        src/simulation/scene/nodes/SimulationDomainNode.h
-        src/cuda/SimulationMetrics.h
-        src/utils/Export.cpp
-        src/utils/Export.h
 )
 
 target_compile_options(SPHlash PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>
+    $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
 )
 
 add_library(imgui
@@ -96,6 +92,7 @@ target_compile_definitions(SPHlash PRIVATE USE_STD_FILESYSTEM)
 
 target_include_directories(SPHlash PUBLIC
     src
+    include
     ${CMAKE_BINARY_DIR}/generated
     external/glad/include
     external/ImGuiFileDialog

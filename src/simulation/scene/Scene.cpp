@@ -2,18 +2,18 @@
 // Created by ruut on 4/29/26.
 //
 
-#include "Scene.h"
-#include "simulation/FluidSimulation.h"
-#include "simulation/scene/nodes/BoundingBoxParticleSpawnNode.h"
-#include "simulation/scene/nodes/ForceFieldNode.h"
-#include "simulation/scene/nodes/ModelNode.h"
-#include "simulation/scene/nodes/ModelParticleSpawnNode.h"
-#include "core/Config.h"
+#include "../../../include/simulation/scene/Scene.h"
+#include "../../../include/simulation/FluidSimulation.h"
+#include "../../../include/simulation/scene/nodes/BoundingBoxParticleSpawnNode.h"
+#include "../../../include/simulation/scene/nodes/ForceFieldNode.h"
+#include "../../../include/simulation/scene/nodes/ModelNode.h"
+#include "../../../include/simulation/scene/nodes/ModelParticleSpawnNode.h"
+#include "../../../include/core/Config.h"
 #include <algorithm>
 
-#include "nodes/ParticlesNode.h"
-#include "nodes/SimulationDomainNode.h"
-#include "nodes/SkyboxNode.h"
+#include "../../../include/simulation/scene/nodes/ParticlesNode.h"
+#include "../../../include/simulation/scene/nodes/SimulationDomainNode.h"
+#include "../../../include/simulation/scene/nodes/SkyboxNode.h"
 
 Scene::Scene(Window* window) {
     // Add Skybox Node to Scene

@@ -2,7 +2,7 @@
 // Created by ruut on 3/16/26.
 //
 
-#include "StatisticsPanel.h"
+#include "../../../include/ui/panels/StatisticsPanel.h"
 #include <format>
 #include "imgui.h"
 

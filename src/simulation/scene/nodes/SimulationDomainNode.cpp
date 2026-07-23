@@ -2,7 +2,7 @@
 // Created by ruut on 7/4/26.
 //
 
-#include "SimulationDomainNode.h"
+#include "../../../../include/simulation/scene/nodes/SimulationDomainNode.h"
 
 SimulationDomainNode::SimulationDomainNode()
     : BoundingBoxNode("Simulation Domain", glm::vec4(0.2f, 0.6f, 1.0f, 1.0f))

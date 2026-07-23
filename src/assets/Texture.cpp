@@ -2,10 +2,10 @@
 // Created by ruut on 6/6/26.
 //
 
-#include "Texture.h"
+#include "assets/Texture.h"
 #include "glad/gl.h"
 #include "stb/stb_image.h"
-#include "utils/Logger.h"
+#include "../../include/utils/Logger.h"
 
 Texture::Texture(const std::string& path) {
     glGenTextures(1, &textureID);

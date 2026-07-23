@@ -2,7 +2,7 @@
 // Created by ruut on 5/31/26.
 //
 
-#include "SceneNode.h"
+#include "../../../../include/simulation/scene/nodes/SceneNode.h"
 
 SceneNode::SceneNode(const nlohmann::json j) {
     this->name = j["name"];

@@ -4,7 +4,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include "simulation/AABB.h"
+#include "../../include/simulation/AABB.h"
 #include <glm/glm.hpp>
 #include "glm/gtx/transform.hpp"
 

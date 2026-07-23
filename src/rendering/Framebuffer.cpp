@@ -2,7 +2,7 @@
 // Created by ruut on 3/14/26.
 //
 
-#include "Framebuffer.h"
+#include "rendering/Framebuffer.h"
 
 Framebuffer::Framebuffer(int width, int height) : width(width), height(height) {
     glGenFramebuffers(1, &fbo);

@@ -2,8 +2,8 @@
 // Created by ruut on 3/14/26.
 //
 
-#include "../rendering/Framebuffer.h"
-#include "ui/UIManager.h"
+#include "../../include/rendering/Framebuffer.h"
+#include "../../include/ui/UIManager.h"
 
 #include <algorithm>
 
@@ -13,7 +13,7 @@
 #include "imgui_impl_opengl3.h"
 #include "imgui_internal.h"
 #include "implot.h"
-#include "core/Input.h"
+#include "../../include/core/Input.h"
 
 UIManager::UIManager(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
