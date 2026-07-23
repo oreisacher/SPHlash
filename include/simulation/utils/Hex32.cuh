@@ -2,7 +2,7 @@
 
 #include <vector_functions.h>
 #include <vector_types.h>
-#include <cuda/Math.cuh>
+#include <../../include/simulation/utils/Math.cuh>
 
 enum NodeType { CORNER, EDGE_XI, EDGE_ETA, EDGE_ZETA };
 

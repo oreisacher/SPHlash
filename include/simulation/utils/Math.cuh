@@ -178,3 +178,22 @@ __device__ inline float3 normalize(float3 v) {
 
     return make_float3(0.0f, 0.0f, 0.0f);
 }
+
+__device__ inline int floorDiv(int a, int b) {
+    int q = a / b;
+    int r = a % b;
+
+    if ((r != 0) && ((r < 0) != (b < 0)))
+        q--;
+
+    return q;
+}
+
+__device__ inline uint floorMod(int a, int b) {
+    int r = a % b;
+
+    if ((r != 0) && ((r < 0) != (b < 0)))
+        r += b;
+
+    return (uint)r;
+}

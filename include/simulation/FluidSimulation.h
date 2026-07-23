@@ -5,9 +5,12 @@
 #ifndef FLUIDSIMSPH_FLUIDSIMULATIONGPU_H
 #define FLUIDSIMSPH_FLUIDSIMULATIONGPU_H
 
-#include <vector_types.h>
+#include "ParticleHost.h"
+#include "ParticlesGPU.h"
 #include "boundaries/Hex32Field.h"
-#include <vector>
+
+#define THREADS_PER_BLOCK 256
+#define BLOCK_COUNT(particleCount) (particleCount + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK
 
 struct ParticlesGPU;
 class ParticlesNode;
@@ -22,57 +25,6 @@ enum SimulationState {
      UNINITIALIZED,
      PAUSED,
      RUNNING
-};
-
-/*
-    Represents a single particle inside simulation. Can be queried via getParticle(id). Host only
-*/
-struct ParticleHost {
-    float4 position;
-    float4 startPosition;
-    float4 velocity;
-    float4 properties;
-    float4 flags;
-    float4 color;
-    float4 pressureForce;
-    float4 viscosityForce;
-    float4 surfaceTensionForce;
-};
-
-struct ParticlesHost {
-    std::vector<float4> position;
-    std::vector<float4> startPosition;
-    std::vector<float4> velocity;
-    std::vector<float4> properties;
-    std::vector<float4> flags;
-    std::vector<float4> color;
-    std::vector<float4> pressureForce;
-    std::vector<float4> viscosityForce;
-    std::vector<float4> surfaceTensionForce;
-
-    void resize(size_t count);
-    void append(ParticlesHost& particles);
-    void copyToDevice(const ParticlesGPU& device, size_t count) const;
-};
-
-/*
-    Represents all particles of simulation as SoA. Contains device pointers. Used during simulation.
-*/
-struct ParticlesGPU {
-    float4* d_position              = nullptr;
-    float4* d_startPosition         = nullptr;
-    float4* d_velocity              = nullptr;
-    float4* d_properties            = nullptr;  //  x: mass,     y: density,     z: pressure,    w: id
-    float4* d_flags                 = nullptr;  //  x: surface,  y: undefined,   z: undefined,   w: undefined
-    float4* d_color                 = nullptr;
-    float4* d_pressureForce         = nullptr;
-    float4* d_viscosityForce        = nullptr;
-    float4* d_surfaceTensionForce   = nullptr;
-
-    void allocate(size_t count);
-    void free();
-    void copyToHost(ParticlesHost& host, size_t count) const;
-    void copyToHost(ParticleHost& host, int id) const;
 };
 
 struct SimulationSettings {
@@ -112,8 +64,10 @@ struct FrameMetrics {
 
 class FluidSimulation {
 public:
-    FluidSimulation(Scene* scene, bool headless = false);
+    FluidSimulation(Scene* scene);
     ~FluidSimulation();
+
+    void init();
 
     /*
      * Calculates density, pressure, etc. values for the current particles.
@@ -130,7 +84,6 @@ public:
 
     void step(float deltaTime);
 
-    void init();
     void start();
     void pause();
     void reset();
@@ -164,7 +117,6 @@ private:
     Scene* scene;
 
     int particleCount = 0;
-    bool headless = false;
 
     float cfl = 0;
     FrameMetrics metrics;

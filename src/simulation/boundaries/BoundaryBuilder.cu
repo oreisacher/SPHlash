@@ -6,7 +6,7 @@
 #include <cuda_runtime.h>
 #include <vector_functions.h>
 #include "../../../include/assets/Triangle.h"
-#include "cuda/Boundaries.h"
+#include "../../../include/simulation/boundaries/Boundaries.cuh"
 #include "cuda/CudaUtils.h"
 #include "glad/gl.h"
 #include "../../../include/simulation/scene/nodes/ModelNode.h"
@@ -38,7 +38,9 @@ bool BoundaryBuilder::constructSDFMap(const Scene* scene, CudaAABB domain, float
     cudaGetLastError();
 #endif
 
-    launchSdfKernel(
+    int cells = sdfMap.resolution.x * sdfMap.resolution.y * sdfMap.resolution.z;
+    int blocks = (cells + 256 - 1) / 256;
+    sdfKernel<<<blocks, 256>>>(
         triangles.size(),
         d_triangles,
         sdfMap,
@@ -63,7 +65,9 @@ bool BoundaryBuilder::constructVolumeMap(Hex32Field sdfHexField, CudaAABB domain
     cudaGetLastError();
 #endif
 
-    launchVolumeMapKernel(
+    int cellCount = sdfHexField.resolution.x * sdfHexField.resolution.y * sdfHexField.resolution.z;
+    int blocks = (cellCount + 256 - 1) / 256;
+    volumeMapKernel<<<blocks, 256>>>(
         sdfHexField,
         volumeMap,
         domain,

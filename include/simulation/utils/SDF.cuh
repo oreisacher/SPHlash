@@ -2,7 +2,7 @@
 
 #include <cuda/cmath>
 #include "Math.cuh"
-#include "../../include/assets/Triangle.h"
+#include "../../assets/Triangle.h"
 
 __device__ inline float distanceTriangle(float3 p, float3 v1, float3 v2, float3 v3) {
     float3 v21 = v2 - v1;

@@ -2,126 +2,33 @@
 // Created by ruut on 3/16/26.
 //
 
-#include "../../include/simulation/FluidSimulation.h"
+#include "simulation/FluidSimulation.h"
 #include <algorithm>
 #include <cuda_runtime.h>
 #include <iostream>
 #include <random>
 #include <nvtx3/nvToolsExt.h>
-#include "cuda/FluidSimulation.h"
-#include "imgui.h"
-#include "../../include/simulation/scene/nodes/BoundingBoxNode.h"
-#include "../../include/simulation/scene/nodes/ForceFieldNode.h"
-#include "../../include/simulation/scene/Scene.h"
+#include "simulation/scene/nodes/BoundingBoxNode.h"
+#include "simulation/scene/nodes/ForceFieldNode.h"
+#include "simulation/scene/Scene.h"
 #include "cuda/CudaUtils.h"
 #include <cuda_gl_interop.h>
-
+#include <cub/device/device_radix_sort.cuh>
+#include "simulation/utils/Hex32.cuh"
 #include "cuda/SimulationMetrics.h"
-#include "../../include/simulation/scene/nodes/ParticlesNode.h"
+#include "simulation/Particles.cuh"
+#include "simulation/ParticlesHost.h"
+#include "simulation/VoxelField.cuh"
+#include "simulation/scene/IParticleSpawn.h"
+#include "simulation/scene/nodes/ParticlesNode.h"
 
-// --- ParticlesHost ------------------------------------
-
-void ParticlesHost::resize(size_t count) {
-    position.resize(count);
-    startPosition.resize(count);
-    velocity.resize(count);
-    properties.resize(count);
-    flags.resize(count);
-    color.resize(count);
-    pressureForce.resize(count);
-    viscosityForce.resize(count);
-    surfaceTensionForce.resize(count);
-}
-
-void ParticlesHost::append(ParticlesHost& particles) {
-    position.insert(position.end(), particles.position.begin(), particles.position.end());
-    startPosition.insert(startPosition.end(), particles.startPosition.begin(), particles.startPosition.end());
-    velocity.insert(velocity.end(), particles.velocity.begin(), particles.velocity.end());
-    properties.insert(properties.end(), particles.properties.begin(), particles.properties.end());
-    flags.insert(flags.end(), particles.flags.begin(), particles.flags.end());
-    color.insert(color.end(), particles.color.begin(), particles.color.end());
-    pressureForce.insert(pressureForce.end(), particles.pressureForce.begin(), particles.pressureForce.end());
-    viscosityForce.insert(viscosityForce.end(), particles.viscosityForce.begin(), particles.viscosityForce.end());
-    surfaceTensionForce.insert(surfaceTensionForce.end(), particles.surfaceTensionForce.begin(), particles.surfaceTensionForce.end());
-}
-
-void ParticlesHost::copyToDevice(const ParticlesGPU& device, const size_t count) const {
-    // Copy data from host to device
-    cudaMemcpy(device.d_position,               position.data(),               count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_startPosition,          startPosition.data(),          count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_velocity,               velocity.data(),               count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_properties,             properties.data(),             count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_flags,                  flags.data(),                  count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_color,                  color.data(),                  count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_pressureForce,          pressureForce.data(),          count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_viscosityForce,         viscosityForce.data(),         count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_surfaceTensionForce,    surfaceTensionForce.data(),    count * sizeof(float4), cudaMemcpyHostToDevice);
-}
-
-// --- ParticlesGPU -------------------------------------
-
-void ParticlesGPU::allocate(const size_t count) {
-    cudaMalloc(reinterpret_cast<void**>(&d_position),               count * sizeof(float4));
-    cudaMalloc(reinterpret_cast<void**>(&d_startPosition),          count * sizeof(float4));
-    cudaMalloc(reinterpret_cast<void**>(&d_velocity),               count * sizeof(float4));
-    cudaMalloc(reinterpret_cast<void**>(&d_properties),             count * sizeof(float4));
-    cudaMalloc(reinterpret_cast<void**>(&d_flags),                  count * sizeof(float4));
-    cudaMalloc(reinterpret_cast<void**>(&d_color),                  count * sizeof(float4));
-    cudaMalloc(reinterpret_cast<void**>(&d_pressureForce),          count * sizeof(float4));
-    cudaMalloc(reinterpret_cast<void**>(&d_viscosityForce),         count * sizeof(float4));
-    cudaMalloc(reinterpret_cast<void**>(&d_surfaceTensionForce),    count * sizeof(float4));
-}
-
-void ParticlesGPU::free() {
-    cudaFree(d_position           ); d_position             = nullptr;
-    cudaFree(d_startPosition      ); d_startPosition        = nullptr;
-    cudaFree(d_velocity           ); d_velocity             = nullptr;
-    cudaFree(d_properties         ); d_properties           = nullptr;
-    cudaFree(d_flags              ); d_flags                = nullptr;
-    cudaFree(d_color              ); d_color                = nullptr;
-    cudaFree(d_pressureForce      ); d_pressureForce        = nullptr;
-    cudaFree(d_viscosityForce     ); d_viscosityForce       = nullptr;
-    cudaFree(d_surfaceTensionForce); d_surfaceTensionForce  = nullptr;
-}
-
-void ParticlesGPU::copyToHost(ParticlesHost& host, const size_t count) const {
-    host.resize(count);
-
-    // Copy data from device to host
-    cudaMemcpy(host.position.data(),            d_position,             count * sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(host.startPosition.data(),       d_startPosition,        count * sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(host.velocity.data(),            d_velocity,             count * sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(host.properties.data(),          d_properties,           count * sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(host.flags.data(),               d_flags,                count * sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(host.color.data(),               d_color,                count * sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(host.pressureForce.data(),       d_pressureForce,        count * sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(host.viscosityForce.data(),      d_viscosityForce,       count * sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(host.surfaceTensionForce.data(), d_surfaceTensionForce,  count * sizeof(float4), cudaMemcpyDeviceToHost);
-}
-
-void ParticlesGPU::copyToHost(ParticleHost& host, int id) const {
-    cudaMemcpy(&host.position,              d_position + id,            sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&host.startPosition,         d_startPosition + id,       sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&host.velocity,              d_velocity + id,            sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&host.properties,            d_properties + id,          sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&host.flags,                 d_flags + id,               sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&host.color,                 d_color + id,               sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&host.pressureForce,         d_pressureForce + id,       sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&host.viscosityForce,        d_viscosityForce + id,      sizeof(float4), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&host.surfaceTensionForce,   d_surfaceTensionForce + id, sizeof(float4), cudaMemcpyDeviceToHost);
-}
-
-// -----------------------------------------------------
-
-FluidSimulation::FluidSimulation(Scene* scene, bool headless) : scene(scene), headless(headless) {
+FluidSimulation::FluidSimulation(Scene* scene) : scene(scene) {
     cudaSetDevice(0);
 
     // Setup particles node for rendering
-    if (!headless) {
-        auto particlesNode = std::make_unique<ParticlesNode>(this);
-        this->particlesNode = particlesNode.get();
-        scene->addSceneNode(std::move(particlesNode));
-    }
+    auto particlesNode = std::make_unique<ParticlesNode>(this);
+    this->particlesNode = particlesNode.get();
+    scene->addSceneNode(std::move(particlesNode));
 }
 
 FluidSimulation::~FluidSimulation() {
@@ -136,8 +43,7 @@ FluidSimulation::~FluidSimulation() {
     cudaFree(d_sortTempStorage);
     cudaFree(d_forceFields);
 
-    if (!headless)
-        cudaGraphicsUnmapResources(1, &rendererResource, nullptr);
+    cudaGraphicsUnmapResources(1, &rendererResource, nullptr);
 }
 
 void FluidSimulation::updateParticles() {
@@ -151,7 +57,7 @@ void FluidSimulation::updateParticles() {
     // Reset old data
     cudaMemset(d_offsets,   -1, particleCount * sizeof(int));
 
-    launchHashParticlesKernel(
+    hashParticlesKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
         particleCount,
         particles.d_position,
         d_particleHashes,
@@ -163,21 +69,18 @@ void FluidSimulation::updateParticles() {
     CUDA_KERNEL_CHECK("HashParticlesKernel");
 #endif
 
-    sortParticlesByHash(
-        particleCount,
+    cub::DeviceRadixSort::SortPairs(
         d_sortTempStorage,
         sortTempStorageBytes,
-        d_particleHashes,
-        d_sortedParticleHashes,
-        d_particleIndices,
-        d_sortedParticleIndices
+        d_particleHashes, d_sortedParticleHashes,
+        d_particleIndices, d_sortedParticleIndices, particleCount
     );
 
 #ifdef DEBUG_CUDA
     CUDA_KERNEL_CHECK("SortParticlesByHash");
 #endif
 
-    launchBuildOffsetsKernel(
+    buildOffsetsKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
         particleCount,
         d_sortedParticleHashes,
         d_offsets
@@ -187,7 +90,7 @@ void FluidSimulation::updateParticles() {
     CUDA_KERNEL_CHECK("BuildOffsetsKernel");
 #endif
 
-    launchReorderParticlesKernel(
+    reorderParticlesKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
         particleCount,
         particles,
         d_sortedParticleIndices,
@@ -198,7 +101,7 @@ void FluidSimulation::updateParticles() {
     CUDA_KERNEL_CHECK("ReorderParticlesKernel");
 #endif
 
-    launchDensityPressureKernel(
+    densityPressureKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
         particleCount,
         sortedParticles.d_position,
         sortedParticles.d_properties,
@@ -217,7 +120,7 @@ void FluidSimulation::updateParticles() {
     CUDA_KERNEL_CHECK("DensityPressureKernel");
 #endif
 
-    launchTopSurfaceParticlesKernel(
+    topSurfaceParticlesKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
         particleCount,
         sortedParticles.d_position,
         sortedParticles.d_flags,
@@ -226,7 +129,7 @@ void FluidSimulation::updateParticles() {
         settings.h
     );
 
-    launchSphForcesKernel(
+    sphForcesKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
         particleCount,
         sortedParticles.d_position,
         sortedParticles.d_properties,
@@ -311,7 +214,7 @@ void FluidSimulation::update(const float deltaTime) {
 
         cfl = fminf(cflTimeStep, accTimeStep);
 
-        launchUpdateParticlesKernel(
+        updateParticlesKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
             particles.d_pressureForce,
             particles.d_viscosityForce,
             particles.d_surfaceTensionForce,
@@ -330,28 +233,26 @@ void FluidSimulation::update(const float deltaTime) {
     CUDA_KERNEL_CHECK("UpdateParticlesKernel");
 #endif
 
-    if (!headless) {
-        // Prepare particles for rendering
-        size_t numBytes;
-        cudaGraphicsMapResources(1, &rendererResource);
-        cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_rendererParticles), &numBytes, rendererResource);
+    // Prepare particles for rendering
+    size_t numBytes;
+    cudaGraphicsMapResources(1, &rendererResource);
+    cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_rendererParticles), &numBytes, rendererResource);
 
-        launchRenderPrepareKernel(
-            particleCount,
-            particles.d_position,
-            particles.d_velocity,
-            particles.d_properties,
-            particles.d_flags,
-            particles.d_color,
-            d_rendererParticles
-        );
+    renderPrepareKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
+        particleCount,
+        particles.d_position,
+        particles.d_velocity,
+        particles.d_properties,
+        particles.d_flags,
+        particles.d_color,
+        d_rendererParticles
+    );
 
 #ifdef DEBUG_CUDA
-        CUDA_KERNEL_CHECK("RenderPrepareKernel");
+    CUDA_KERNEL_CHECK("RenderPrepareKernel");
 #endif
 
-        cudaGraphicsUnmapResources(1, &rendererResource);
-    }
+    cudaGraphicsUnmapResources(1, &rendererResource);
 }
 
 void FluidSimulation::step(float deltaTime) {
@@ -367,18 +268,16 @@ void FluidSimulation::init() {
     // Init particle spawns
     bool success = initParticles();
 
-    if (!headless) {
-        if (!success) {
-            particlesNode->setVisible(false);
-            return;
-        }
-
-        particlesNode->setVisible(true);
-        particlesNode->updateParticlesSize(particleCount);
-
-        // Update particle rendering
-        setRendererVBO(particlesNode->getParticleVBO());
+    if (!success) {
+        particlesNode->setVisible(false);
+        return;
     }
+
+    particlesNode->setVisible(true);
+    particlesNode->updateParticlesSize(particleCount);
+
+    // Update particle rendering
+    setRendererVBO(particlesNode->getParticleVBO());
 
     // Rebuild forcefield buffer
     rebuildForceFieldBuffer();
@@ -395,7 +294,7 @@ void FluidSimulation::pause() {
 void FluidSimulation::reset() {
     state = PAUSED;
 
-    launchResetParticlesKernel(
+    resetParticlesKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
         particles.d_position,
         particles.d_startPosition,
         particles.d_velocity,
@@ -413,7 +312,7 @@ void FluidSimulation::reset() {
 #endif
 
     // Copy reset data to renderer vbo
-    launchRenderPrepareKernel(
+    renderPrepareKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
         particleCount,
         particles.d_position,
         particles.d_velocity,
@@ -449,7 +348,7 @@ void FluidSimulation::setRendererVBO(const GLuint vbo) {
     CUDA_CHECK(cudaGraphicsMapResources(1, &rendererResource));
     CUDA_CHECK(cudaGraphicsResourceGetMappedPointer(reinterpret_cast<void**>(&d_rendererParticles), &numBytes, rendererResource));
 
-    launchRenderPrepareKernel(
+    renderPrepareKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
         particleCount,
         particles.d_position,
         particles.d_velocity,
@@ -524,7 +423,8 @@ bool FluidSimulation::computeVoxelField(const VoxelField& field) const {
     cudaGetLastError();
 #endif
 
-    launchVoxelFieldKernel(
+    int cells = field.resolution.x * field.resolution.y * field.resolution.z;
+    voxelFieldKernel<<<BLOCK_COUNT(cells), THREADS_PER_BLOCK>>>(
         field,
         scene->getSimulationDomain()->getCudaAABB(),
         particleCount,
@@ -593,12 +493,13 @@ bool FluidSimulation::initParticles() {
         cudaMalloc(&d_spawnParticleCount, sizeof(int));
         cudaMemset(d_spawnParticleCount, 0, sizeof(int));
 
-        launchInitParticlesKernel(
+        int blocks = (countX * countY * countZ + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
+        initParticlesKernel<<<blocks, THREADS_PER_BLOCK>>>(
             cudaSpawn,
             spawnParticles,
             d_spawnParticleCount,
             scene->getSimulationDomain()->getCudaAABB(),
-            { countX, countY, countZ }
+        { countX, countY, countZ }
         );
 
 #ifdef DEBUG_CUDA
@@ -635,13 +536,11 @@ bool FluidSimulation::initParticles() {
     cudaMalloc(reinterpret_cast<void**>(&d_offsets), particleCount * sizeof(int));
 
     // Allocate memory for CUB sorting
-    queryRequiredSortingStorage(
-        particleCount,
+    cub::DeviceRadixSort::SortPairs(
+        nullptr,
         sortTempStorageBytes,
-        d_particleHashes,
-        d_sortedParticleHashes,
-        d_particleIndices,
-        d_sortedParticleIndices
+        d_particleHashes, d_sortedParticleHashes,
+        d_particleIndices, d_sortedParticleIndices, particleCount
     );
 
 #ifdef DEBUG_CUDA

@@ -1,8 +1,8 @@
-#include "Boundaries.h"
-#include "CudaAABB.h"
-#include "Hex32.cuh"
-#include "SDF.cuh"
-#include "../../include/simulation/boundaries/Hex32Field.h"
+#include "simulation/boundaries/Boundaries.cuh"
+#include "simulation/utils/Hex32.cuh"
+#include "simulation/utils/SDF.cuh"
+#include "simulation/boundaries/Hex32Field.h"
+#include "../../cuda/CudaAABB.h"
 
 __global__ void sdfKernel(
     const int triangleCount,
@@ -61,26 +61,6 @@ __global__ void sdfKernel(
     }
 
     cell->used = (2.0f * h > phiMin && phiMax > -h);
-}
-
-void launchSdfKernel(
-    const int triangleCount,
-    const Triangle* triangles,
-    const Hex32Field& hexField,
-    const CudaAABB& domain,
-    const float h
-) {
-    int threadsPerBlock = 256;
-    int cells = hexField.resolution.x * hexField.resolution.y * hexField.resolution.z;
-    int blocks = (cells + threadsPerBlock - 1) / threadsPerBlock;
-
-    sdfKernel<<<blocks, threadsPerBlock>>>(
-        triangleCount,
-        triangles,
-        hexField,
-        domain,
-        h
-    );
 }
 
 __device__ float cubicSplineKernel(float x, float h) {
@@ -232,22 +212,4 @@ __global__ void volumeMapKernel(
 
         volumeField.d_cells[id].nodes[nodeIndex] = volume * h * h * h;
     }
-}
-
-void launchVolumeMapKernel(
-    const Hex32Field sdfField,
-    const Hex32Field volumeField,
-    const CudaAABB domain,
-    const float h
-) {
-    int threadsPerBlock = 256;
-    int cells = sdfField.resolution.x * sdfField.resolution.y * sdfField.resolution.z;
-    int blocks = (cells + threadsPerBlock - 1) / threadsPerBlock;
-
-    volumeMapKernel<<<blocks, threadsPerBlock>>>(
-        sdfField,
-        volumeField,
-        domain,
-        h
-    );
 }

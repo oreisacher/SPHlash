@@ -48,6 +48,10 @@ add_executable(SPHlash
     # External
     external/glad/src/gl.c
     external/ImGuiFileDialog/ImGuiFileDialog.cpp
+        src/simulation/ParticlesHost.cpp
+        src/simulation/ParticlesHost.cpp
+        src/simulation/ParticlesGPU.cpp
+        src/simulation/VoxelField.cu
 )
 
 target_compile_options(SPHlash PRIVATE

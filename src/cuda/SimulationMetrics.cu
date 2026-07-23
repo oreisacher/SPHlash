@@ -2,7 +2,7 @@
 
 #include <thrust/execution_policy.h>
 #include <thrust/transform_reduce.h>
-#include "Math.cuh"
+#include "../../include/simulation/utils/Math.cuh"
 
 struct DensityError {
     const float4* properties;
