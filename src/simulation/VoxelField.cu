@@ -4,16 +4,18 @@
 
 #include "simulation/VoxelField.cuh"
 #include "simulation/VoxelField.h"
-#include "cuda/CudaAABB.h"
+
+#include "glm/common.hpp"
+#include "simulation/AABB.cuh"
 #include "simulation/Kernels.cuh"
 #include "simulation/utils/Cell.cuh"
 
 __global__ void voxelFieldKernel(
     const VoxelField field,
-    const CudaAABB domain,
+    const AABBView domain,
     const int numParticles,
-    const float4* position,
-    const float4* properties,
+    const glm::vec3* position,
+    const glm::vec4* properties,
     const int* hashes,
     const int* offsets,
     const float h
@@ -29,25 +31,13 @@ __global__ void voxelFieldKernel(
     int y = (id / field.resolution.x) % field.resolution.y;
     int z = id / (field.resolution.x * field.resolution.y);
 
-    float3 cellSizes = make_float3(
-        (domain.max.x - domain.min.x) / (field.resolution.x - 1),
-        (domain.max.y - domain.min.y) / (field.resolution.y - 1),
-        (domain.max.z - domain.min.z) / (field.resolution.z - 1)
-    );
-
-    float4 samplePosition = make_float4(
-        domain.min.x + x * cellSizes.x,
-        domain.min.y + y * cellSizes.y,
-        domain.min.z + z * cellSizes.z,
-        0.0
-    );
+    glm::vec3 cellSizes = domain.size / static_cast<glm::vec3>(field.resolution - 1);
+    glm::vec3 samplePosition = glm::vec3(x, y, z) * cellSizes + domain.min;
 
     // Get cell of sample point
-    int cellX = floor(samplePosition.x / h);
-    int cellY = floor(samplePosition.y / h);
-    int cellZ = floor(samplePosition.z / h);
+    glm::ivec3 cell = glm::floor(samplePosition / h);
 
-    float4 n = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    glm::vec3 n(0.0f);
     float c = 0.0f;
     float h2 = h * h;
 
@@ -55,7 +45,7 @@ __global__ void voxelFieldKernel(
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             for (int dz = -1; dz <= 1; dz++) {
-                uint hash = hashCell(cellX + dx, cellY + dy, cellZ + dz, numParticles);
+                uint hash = hashCell(cell + glm::ivec3(dx, dy, dz), numParticles);
                 int offset = offsets[hash];
 
                 if (offset == -1)
@@ -69,7 +59,7 @@ __global__ void voxelFieldKernel(
                     if (neighborHash != hash)
                         break;
 
-                    const float4 diff = samplePosition - position[neighborIndex];
+                    const glm::vec3 diff = samplePosition - position[neighborIndex];
 
                     // Check if within radius
                     float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
@@ -86,5 +76,5 @@ __global__ void voxelFieldKernel(
     }
 
     field.d_color[id] = c - 0.5f;
-    field.d_normal[id] = make_float3(-n.x, -n.y, -n.z);
+    field.d_normal[id] = glm::vec3(-n.x, -n.y, -n.z);
 }

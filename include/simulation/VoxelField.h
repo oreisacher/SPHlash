@@ -5,13 +5,13 @@
 #ifndef SPHLASH_VOXELFIELD_H
 #define SPHLASH_VOXELFIELD_H
 
-#include <vector_types.h>
+#include "glm/vec3.hpp"
 
 struct VoxelField {
-    int3 resolution         = { 0, 0, 0 };
+    glm::ivec3 resolution         = { 0, 0, 0 };
 
     float* d_color          = nullptr;
-    float3* d_normal        = nullptr;
+    glm::vec3* d_normal        = nullptr;
 };
 
 #endif //SPHLASH_VOXELFIELD_H

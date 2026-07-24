@@ -11,11 +11,11 @@
 #include "simulation/scene/nodes/BoundingBoxNode.h"
 #include "simulation/scene/nodes/ForceFieldNode.h"
 #include "simulation/scene/Scene.h"
-#include "cuda/CudaUtils.h"
+#include "../../include/utils/CudaUtils.h"
 #include <cuda_gl_interop.h>
 #include <cub/device/device_radix_sort.cuh>
 #include "simulation/utils/Hex32.cuh"
-#include "cuda/SimulationMetrics.h"
+#include "../../include/simulation/utils/SimulationMetrics.h"
 #include "simulation/Particles.cuh"
 #include "simulation/ParticlesHost.h"
 #include "simulation/VoxelField.cuh"
@@ -110,7 +110,7 @@ void FluidSimulation::updateParticles() {
         sdfMap.d_cells != nullptr,
         sdfMap,
         volumeMap,
-        scene->getSimulationDomain()->getCudaAABB(),
+        scene->getSimulationDomain()->getWorldBoundingBox().getAABBView(),
         settings.h,
         settings.speedSound,
         settings.p_0
@@ -143,7 +143,7 @@ void FluidSimulation::updateParticles() {
         sdfMap.d_cells != nullptr,
         sdfMap,
         volumeMap,
-        scene->getSimulationDomain()->getCudaAABB(),
+        scene->getSimulationDomain()->getWorldBoundingBox().getAABBView(),
         settings.h,
         settings.alpha,
         settings.speedSound,
@@ -224,7 +224,7 @@ void FluidSimulation::update(const float deltaTime) {
             d_forceFields,
             scene->getForceFields().size(),
             settings.useCFL ? fminf(cfl, dt) : dt,
-            scene->getSimulationDomain()->getCudaAABB(),
+            scene->getSimulationDomain()->getWorldBoundingBox().getAABBView(),
             settings.enableGravity ? settings.gravity : 0.0f
         );
     }
@@ -379,17 +379,17 @@ void FluidSimulation::rebuildForceFieldBuffer() {
     if (scene->getForceFields().size() == 0)
         return;
 
-    cudaMalloc(&d_forceFields, scene->getForceFields().size() * sizeof(CudaForceField));
+    cudaMalloc(&d_forceFields, scene->getForceFields().size() * sizeof(ForceField));
 }
 
 void FluidSimulation::updateForceFieldBuffer() const {
-    std::vector<CudaForceField> forceFields;
+    std::vector<ForceField> forceFields;
     forceFields.reserve(scene->getForceFields().size());
 
     for (auto& forceField : scene->getForceFields())
         forceFields.push_back(forceField->getForceField());
 
-    cudaMemcpy(d_forceFields, forceFields.data(), forceFields.size() * sizeof(CudaForceField), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_forceFields, forceFields.data(), forceFields.size() * sizeof(ForceField), cudaMemcpyHostToDevice);
 }
 
 void FluidSimulation::setBoundaryMaps(const Hex32Field& sdfMap, const Hex32Field& volumeMap) {
@@ -426,7 +426,7 @@ bool FluidSimulation::computeVoxelField(const VoxelField& field) const {
     int cells = field.resolution.x * field.resolution.y * field.resolution.z;
     voxelFieldKernel<<<BLOCK_COUNT(cells), THREADS_PER_BLOCK>>>(
         field,
-        scene->getSimulationDomain()->getCudaAABB(),
+        scene->getSimulationDomain()->getWorldBoundingBox().getAABBView(),
         particleCount,
         particles.d_position,
         particles.d_properties,
@@ -478,13 +478,10 @@ bool FluidSimulation::initParticles() {
     ParticlesHost allParticles;
 
     for (const auto& spawn : scene->getParticleSpawns()) {
-        CudaParticleSpawn cudaSpawn = spawn->getParticleSpawn();
+        ParticleSpawn cudaSpawn = spawn->getParticleSpawn();
 
-        int countX          = std::floor((cudaSpawn.area.max.x - cudaSpawn.area.min.x) / cudaSpawn.particleSpacing + 1e-5f) + 1;
-        int countY          = std::floor((cudaSpawn.area.max.y - cudaSpawn.area.min.y) / cudaSpawn.particleSpacing + 1e-5f) + 1;
-        int countZ          = std::floor((cudaSpawn.area.max.z - cudaSpawn.area.min.z) / cudaSpawn.particleSpacing + 1e-5f) + 1;
-
-        int maxSpawnParticles = countX * countY * countZ;
+        glm::ivec3 count = glm::floor(cudaSpawn.area.size / cudaSpawn.particleSpacing + 1e-5f) + glm::vec3(1);
+        int maxSpawnParticles = count.x * count.y * count.z;
 
         ParticlesGPU spawnParticles;
         spawnParticles.allocate(maxSpawnParticles);
@@ -493,13 +490,12 @@ bool FluidSimulation::initParticles() {
         cudaMalloc(&d_spawnParticleCount, sizeof(int));
         cudaMemset(d_spawnParticleCount, 0, sizeof(int));
 
-        int blocks = (countX * countY * countZ + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-        initParticlesKernel<<<blocks, THREADS_PER_BLOCK>>>(
+        initParticlesKernel<<<BLOCK_COUNT(maxSpawnParticles), THREADS_PER_BLOCK>>>(
             cudaSpawn,
             spawnParticles,
             d_spawnParticleCount,
-            scene->getSimulationDomain()->getCudaAABB(),
-        { countX, countY, countZ }
+            scene->getSimulationDomain()->getWorldBoundingBox().getAABBView(),
+            count
         );
 
 #ifdef DEBUG_CUDA

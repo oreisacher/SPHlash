@@ -2,13 +2,12 @@
 // Created by ruut on 6/4/26.
 //
 
-#include "../../../../include/simulation/scene/nodes/ParticlesNode.h"
-
-#include "../../../../include/simulation/scene/nodes/BoundingBoxNode.h"
-#include "../../../../include/rendering/Renderer.h"
+#include "simulation/scene/nodes/ParticlesNode.h"
+#include "simulation/scene/nodes/BoundingBoxNode.h"
+#include "rendering/Renderer.h"
 #include "glm/gtc/type_ptr.hpp"
-#include "../../../../include/rendering/RendererParticle.h"
-#include "../../../../include/simulation/scene/Properties.h"
+#include "rendering/RendererParticle.h"
+#include "simulation/scene/Properties.h"
 #include "simulation/scene/Scene.h"
 
 ParticlesNode::ParticlesNode(FluidSimulation* simulation) : simulation(simulation), mesher(simulation) {
@@ -36,7 +35,7 @@ void ParticlesNode::update(float deltaTime) { }
 
 void ParticlesNode::draw(const glm::mat4& view, const glm::mat4& projection) const {
     if (settings.mode == MARCHING_CUBES) {
-        mesher.updateMesh(scene->getSimulationDomain()->getCudaAABB());
+        mesher.updateMesh(scene->getSimulationDomain()->getWorldBoundingBox());
         surfaceModel->draw(view, projection, glm::mat4(1.0f));
         return;
     }
@@ -104,11 +103,11 @@ void ParticlesNode::setupInstancing() {
         glBindVertexArray(mesh->getVAO());
         glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
 
-        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(RendererParticle), (void*)0);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(RendererParticle), (void*)0);
         glEnableVertexAttribArray(3);
         glVertexAttribDivisor(3, 1);
 
-        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(RendererParticle), (void*)offsetof(RendererParticle, velocity));
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(RendererParticle), (void*)offsetof(RendererParticle, velocity));
         glEnableVertexAttribArray(4);
         glVertexAttribDivisor(4, 1);
 
@@ -120,7 +119,7 @@ void ParticlesNode::setupInstancing() {
         glEnableVertexAttribArray(6);
         glVertexAttribDivisor(6, 1);
 
-        glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(RendererParticle), (void*)offsetof(RendererParticle, color));
+        glVertexAttribPointer(7, 3, GL_FLOAT, GL_FALSE, sizeof(RendererParticle), (void*)offsetof(RendererParticle, color));
         glEnableVertexAttribArray(7);
         glVertexAttribDivisor(7, 1);
     }

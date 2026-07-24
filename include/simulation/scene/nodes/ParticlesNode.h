@@ -43,7 +43,7 @@ struct RenderingSettings {
     float pressureMax = 1.0f;
 
     // SURFACE_PARTICLES
-    float maxSurfaceTension = 100.0f;
+    float maxSurfaceTension = 2000.0f;
 };
 
 /*

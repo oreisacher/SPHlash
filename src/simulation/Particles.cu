@@ -1,6 +1,10 @@
 #include "simulation/Particles.cuh"
-#include "cuda/CudaForceField.h"
+
+#include <cstdio>
+
+#include "../../include/simulation/scene/ForceField.h"
 #include "rendering/RendererParticle.h"
+#include "simulation/AABB.cuh"
 #include "simulation/Kernels.cuh"
 #include "simulation/ParticlesGPU.h"
 #include "simulation/boundaries/Hex32Field.h"
@@ -10,11 +14,11 @@
 #include "simulation/utils/SDF.cuh"
 
 __global__ void initParticlesKernel(
-    CudaParticleSpawn spawn,
+    ParticleSpawn spawn,
     ParticlesGPU particles,
     int* particleCount,
-    const CudaAABB domain,
-    const int3 gridCount
+    const AABBView domain,
+    const glm::ivec3 gridCount
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -26,42 +30,42 @@ __global__ void initParticlesKernel(
     const int gy = (id / gridCount.x) % gridCount.y;
     const int gz = id / (gridCount.x * gridCount.y);
 
-    float posX = spawn.area.min.x + gx * spawn.particleSpacing;
-    float posY = spawn.area.min.y + gy * spawn.particleSpacing;
-    float posZ = spawn.area.min.z + gz * spawn.particleSpacing;
+    glm::vec3 pos = spawn.area.min + glm::vec3(gx, gy, gz) * spawn.particleSpacing;
 
     // Skip particles which would spawn outside the simulation domain
-    if (    posX < domain.min.x || posY < domain.min.y || posZ < domain.min.z
-         || posX > domain.max.x || posY > domain.max.y || posZ > domain.max.z ) {
+    if ( pos.x < domain.min.x || pos.y < domain.min.y || pos.z < domain.min.z
+      || pos.x > domain.max.x || pos.y > domain.max.y || pos.z > domain.max.z ) {
         return;
-         }
+    }
 
-    if (spawn.hasShape && calculateSDF(make_float3(posX, posY, posZ), spawn.triangleCount, spawn.d_shapeTriangles) > 0.0)
+
+    if (spawn.hasShape && calculateSDF(pos, spawn.triangleCount, spawn.d_shapeTriangles) > 0.0)
         return;
+
 
     float mass = spawn.restDensity * spawn.particleSpacing * spawn.particleSpacing * spawn.particleSpacing;
 
     int slot = atomicAdd(particleCount, 1);
 
-    particles.d_position[slot]              = make_float4(posX, posY, posZ, 0.0);
+    particles.d_position[slot]              = pos;
     particles.d_startPosition[slot]         = particles.d_position[slot];
-    particles.d_velocity[slot]              = make_float4(0.0, 0.0, 0.0, 0.0);
-    particles.d_properties[slot]            = make_float4(mass, 0.0, 0.0, static_cast<float>(slot));
-    particles.d_flags[slot]                 = make_float4(0.0, 0.0, 0.0, 0.0);
+    particles.d_velocity[slot]              = glm::vec3(0.0);
+    particles.d_pressureForce[slot]         = glm::vec3(0.0);
+    particles.d_viscosityForce[slot]        = glm::vec3(0.0);
+    particles.d_surfaceTensionForce[slot]   = glm::vec3(0.0);
+    particles.d_properties[slot]            = glm::vec4(mass, 0.0, 0.0, static_cast<float>(slot));
+    particles.d_flags[slot]                 = glm::vec4(false);
     particles.d_color[slot]                 = spawn.color;
-    particles.d_pressureForce[slot]         = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    particles.d_viscosityForce[slot]        = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    particles.d_surfaceTensionForce[slot]   = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 __global__ void resetParticlesKernel(
-    float4* position,
-    const float4* startPosition,
-    float4* velocity,
-    float4* properties,
-    float4* pressureForce,
-    float4* viscosityForce,
-    float4* surfaceTensionForce,
+    glm::vec3* position,
+    const glm::vec3* startPosition,
+    glm::vec3* velocity,
+    glm::vec4* properties,
+    glm::vec3* pressureForce,
+    glm::vec3* viscosityForce,
+    glm::vec3* surfaceTensionForce,
     const int numParticles
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -70,21 +74,21 @@ __global__ void resetParticlesKernel(
         return;
 
     position[id] = startPosition[id];
-    velocity[id] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    velocity[id] = glm::vec3(0.0f);
     properties[id].y = 0.0f;
     properties[id].z = 0.0f;
-    pressureForce[id] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    viscosityForce[id] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    surfaceTensionForce[id] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    pressureForce[id] = glm::vec3(0.0f);
+    viscosityForce[id] = glm::vec3(0.0f);
+    surfaceTensionForce[id] = glm::vec3(0.0f);
 }
 
 __global__ void renderPrepareKernel(
     const int numParticles,
-    const float4* position,
-    const float4* velocity,
-    const float4* properties,
-    const float4* flags,
-    const float4* color,
+    const glm::vec3* position,
+    const glm::vec3* velocity,
+    const glm::vec4* properties,
+    const glm::vec4* flags,
+    const glm::vec3* color,
     RendererParticle* rendererParticles
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -101,7 +105,7 @@ __global__ void renderPrepareKernel(
 
 __global__ void hashParticlesKernel(
     const int numParticles,
-    const float4* position,
+    const glm::vec3* position,
     int* particleHashValue,
     int* particleIndex,
     const float h
@@ -112,11 +116,8 @@ __global__ void hashParticlesKernel(
         return;
 
     // Get cell of particle
-    int cellX = floor(position[id].x / h);
-    int cellY = floor(position[id].y / h);
-    int cellZ = floor(position[id].z / h);
-
-    uint hash = hashCell(cellX, cellY, cellZ, numParticles);
+    glm::ivec3 cell = glm::floor(position[id] / h);
+    uint hash = hashCell(cell, numParticles);
 
     particleHashValue[id] = hash;
     particleIndex[id] = id;
@@ -163,14 +164,14 @@ __global__ void reorderParticlesKernel(
 
 __global__ void densityPressureKernel(
     const int numParticles,
-    const float4* position,
-    float4* properties,
+    const glm::vec3* position,
+    glm::vec4* properties,
     const int* hashes,
     const int* offsets,
     const bool hasBoundary,
     const Hex32Field sdfMap,
     const Hex32Field volumeMap,
-    const CudaAABB domain,
+    const AABBView domain,
     const float h,
     const float cs,
     const float p_0
@@ -181,9 +182,7 @@ __global__ void densityPressureKernel(
         return;
 
     // Get cell of particle
-    int cellX = floor(position[id].x / h);
-    int cellY = floor(position[id].y / h);
-    int cellZ = floor(position[id].z / h);
+    glm::ivec3 cell = glm::floor(position[id] / h);
 
     float density = 0.0f;
     float h2 = h * h;
@@ -192,7 +191,7 @@ __global__ void densityPressureKernel(
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             for (int dz = -1; dz <= 1; dz++) {
-                uint hash = hashCell(cellX + dx, cellY + dy, cellZ + dz, numParticles);
+                uint hash = hashCell(cell + glm::ivec3(dx, dy, dz), numParticles);
                 int offset = offsets[hash];
 
                 if (offset == -1)
@@ -207,7 +206,7 @@ __global__ void densityPressureKernel(
                         break;
 
                     // const ParticleGPU other = particles[neighborIndex];
-                    const float4 diff = position[id] - position[neighborIndex];
+                    const glm::vec3 diff = position[id] - position[neighborIndex];
 
                     // Check if within radius
                     float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
@@ -221,11 +220,7 @@ __global__ void densityPressureKernel(
 
     // Handle boundary density
     if (hasBoundary) {
-        float3 boundaryCellSize = make_float3(
-            (domain.max.x - domain.min.x) / volumeMap.resolution.x,
-            (domain.max.y - domain.min.y) / volumeMap.resolution.y,
-            (domain.max.z - domain.min.z) / volumeMap.resolution.z
-        );
+        glm::vec3 boundaryCellSize = domain.size / static_cast<glm::vec3>(volumeMap.resolution);
 
         // Determine boundary cell coords and clamp to valid range
         int boundaryCellX = max(0, min(static_cast<int>((position[id].x - domain.min.x) / boundaryCellSize.x), volumeMap.resolution.x - 1));
@@ -241,19 +236,10 @@ __global__ void densityPressureKernel(
 
         // Cell does not contribute any density if unused, meaning the cell is far away from any boundary
         if (volumeCell->used) {
-            float3 boundaryCellMin = make_float3(
-                domain.min.x + boundaryCellX * boundaryCellSize.x,
-                domain.min.y + boundaryCellY * boundaryCellSize.y,
-                domain.min.z + boundaryCellZ * boundaryCellSize.z
-            );
+            glm::vec3 boundaryCellMin = domain.min + glm::vec3(boundaryCellX, boundaryCellY, boundaryCellZ) * boundaryCellSize;
+            glm::vec3 boundaryCellMax = boundaryCellMin + boundaryCellSize;
 
-            float3 boundaryCellMax = make_float3(
-                boundaryCellMin.x + boundaryCellSize.x,
-                boundaryCellMin.y + boundaryCellSize.y,
-                boundaryCellMin.z + boundaryCellSize.z
-            );
-
-            float3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, make_float3(position[id].x, position[id].y, position[id].z));
+            glm::vec3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, position[id]);
             isoparametricCoords.x = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.x));
             isoparametricCoords.y = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.y));
             isoparametricCoords.z = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.z));
@@ -289,19 +275,19 @@ __global__ void densityPressureKernel(
 
 __global__ void sphForcesKernel(
     const int numParticles,
-    const float4* position,
-    const float4* properties,
-    const float4* velocity,
-    float4* pressureForce,
-    float4* viscosityForce,
-    float4* surfaceTensionForce,
-    float4* flags,
+    const glm::vec3* position,
+    const glm::vec4* properties,
+    const glm::vec3* velocity,
+    glm::vec3* pressureForce,
+    glm::vec3* viscosityForce,
+    glm::vec3* surfaceTensionForce,
+    glm::vec4* flags,
     const int* hashes,
     const int* offsets,
     const bool hasBoundary,
     const Hex32Field sdfMap,
     const Hex32Field volumeMap,
-    const CudaAABB domain,
+    const AABBView domain,
     const float h,
     const float alpha,
     const float cs,
@@ -314,13 +300,11 @@ __global__ void sphForcesKernel(
         return;
 
     // Get cell of particle
-    int cellX = floor(position[id].x / h);
-    int cellY = floor(position[id].y / h);
-    int cellZ = floor(position[id].z / h);
+    glm::ivec3 cell = glm::floor(position[id] / h);
 
-    pressureForce[id]       = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    viscosityForce[id]      = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-    surfaceTensionForce[id] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    pressureForce[id]       = glm::vec3(0.0f);
+    viscosityForce[id]      = glm::vec3(0.0f);
+    surfaceTensionForce[id] = glm::vec3(0.0f);
 
     float h2 = h * h;
 
@@ -328,7 +312,7 @@ __global__ void sphForcesKernel(
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             for (int dz = -1; dz <= 1; dz++) {
-                uint hash = hashCell(cellX + dx, cellY + dy, cellZ + dz, numParticles);
+                uint hash = hashCell(cell + glm::ivec3(dx, dy, dz), numParticles);
                 int offset = offsets[hash];
 
                 if (offset == -1)
@@ -346,7 +330,7 @@ __global__ void sphForcesKernel(
                     if (neighborIndex == id)
                         continue;
 
-                    const float4 diff = position[id] - position[neighborIndex];
+                    const glm::vec3 diff = position[id] - position[neighborIndex];
 
                     // Check if within radius
                     float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
@@ -361,9 +345,9 @@ __global__ void sphForcesKernel(
                             spikyKernelGradient(diff, h);
 
                         // Viscosity
-                        float4 vab = velocity[id] - velocity[neighborIndex];
+                        glm::vec3 vab = velocity[id] - velocity[neighborIndex];
 
-                        float dotTerm = dot(vab, diff);
+                        float dotTerm = glm::dot(vab, diff);
 
                         if (dotTerm < 0) {
                             const float eps = 0.01f;
@@ -397,11 +381,7 @@ __global__ void sphForcesKernel(
 
     // Handle boundary force
     if (hasBoundary) {
-        float3 boundaryCellSize = make_float3(
-            (domain.max.x - domain.min.x) / volumeMap.resolution.x,
-            (domain.max.y - domain.min.y) / volumeMap.resolution.y,
-            (domain.max.z - domain.min.z) / volumeMap.resolution.z
-        );
+        glm::vec3 boundaryCellSize = domain.size / static_cast<glm::vec3>(volumeMap.resolution);
 
         // Determine boundary cell coords and clamp to valid range
         int boundaryCellX = max(0, min(static_cast<int>((position[id].x - domain.min.x) / boundaryCellSize.x), volumeMap.resolution.x - 1));
@@ -417,19 +397,10 @@ __global__ void sphForcesKernel(
 
         // Cell does not contribute any additional force if unused, meaning the cell is far away from any boundary
         if (volumeCell->used) {
-            float3 boundaryCellMin = make_float3(
-                domain.min.x + boundaryCellX * boundaryCellSize.x,
-                domain.min.y + boundaryCellY * boundaryCellSize.y,
-                domain.min.z + boundaryCellZ * boundaryCellSize.z
-            );
+            glm::vec3 boundaryCellMin = domain.min + glm::vec3(boundaryCellX, boundaryCellY, boundaryCellZ) * boundaryCellSize;
+            glm::vec3 boundaryCellMax = boundaryCellMin + boundaryCellSize;
 
-            float3 boundaryCellMax = make_float3(
-                boundaryCellMin.x + boundaryCellSize.x,
-                boundaryCellMin.y + boundaryCellSize.y,
-                boundaryCellMin.z + boundaryCellSize.z
-            );
-
-            float3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, make_float3(position[id].x, position[id].y, position[id].z));
+            glm::vec3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, position[id]);
             isoparametricCoords.x = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.x));
             isoparametricCoords.y = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.y));
             isoparametricCoords.z = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.z));
@@ -442,33 +413,15 @@ __global__ void sphForcesKernel(
             );
 
             // Determine gradient of current position to calculate nearest point on sdf
-            float3 gradLocal = interpolateHex32Gradient(
+            glm::vec3 gradLocal = interpolateHex32Gradient(
                 isoparametricCoords.x, isoparametricCoords.y, isoparametricCoords.z,
                 sdfCell->nodes
             );
 
-            float3 gradSDF = make_float3(
-                gradLocal.x * 2.0f / (boundaryCellMax.x - boundaryCellMin.x),
-                gradLocal.y * 2.0f / (boundaryCellMax.y - boundaryCellMin.y),
-                gradLocal.z * 2.0f / (boundaryCellMax.z - boundaryCellMin.z)
-            );
-
-            float len = sqrtf(gradSDF.x * gradSDF.x + gradSDF.y * gradSDF.y + gradSDF.z * gradSDF.z + 1e-10f);
-            float3 normal = make_float3(gradSDF.x / len, gradSDF.y / len, gradSDF.z / len);
-
-            float4 nearest = make_float4(
-                position[id].x - normal.x * interpolatedSDF,
-                position[id].y - normal.y * interpolatedSDF,
-                position[id].z - normal.z * interpolatedSDF,
-                0.0
-            );
-
-            float4 diff = make_float4(
-                position[id].x - nearest.x,
-                position[id].y - nearest.y,
-                position[id].z - nearest.z,
-                0.0
-            );
+            glm::vec3 gradSDF = gradLocal * 2.0f / (boundaryCellMax - boundaryCellMin);
+            glm::vec3 normal = glm::normalize(gradSDF);
+            glm::vec3 nearest = position[id] - normal * interpolatedSDF;
+            glm::vec3 diff = position[id] - nearest;
 
             float interpolatedVolume = interpolateHex32(
                 isoparametricCoords.x,
@@ -487,44 +440,43 @@ __global__ void sphForcesKernel(
     }
 }
 
-__device__ float3 toLocal(float3 p, const CudaForceField& f) {
-    float3 d = p - f.position;
+__device__ glm::vec3 toLocal(glm::vec3 p, const ForceField& f) {
+    glm::vec3 d = p - f.position;
 
-    return make_float3(
+    return glm::vec3(
         dot(d, f.right),
         dot(d, f.up),
         dot(d, f.forward)
     );
 }
 
-__device__ bool isInsideField(float3 worldPos, const CudaForceField& f) {
-    float3 p = toLocal(worldPos, f);
+__device__ bool isInsideField(glm::vec3 worldPos, const ForceField& f) {
+    glm::vec3 p = toLocal(worldPos, f);
 
     return (fabsf(p.x) <= f.halfExtents.x &&
             fabsf(p.y) <= f.halfExtents.y &&
             fabsf(p.z) <= f.halfExtents.z);
 }
 
-__device__ float4 toWorldForce(float4 fLocal, const CudaForceField& f) {
-    return make_float4(
+__device__  glm::vec3 toWorldForce(glm::vec3 fLocal, const ForceField& f) {
+    return glm::vec3(
         fLocal.x * f.right.x   + fLocal.y * f.up.x   + fLocal.z * f.forward.x,
         fLocal.x * f.right.y   + fLocal.y * f.up.y   + fLocal.z * f.forward.y,
-        fLocal.x * f.right.z   + fLocal.y * f.up.z   + fLocal.z * f.forward.z,
-        0.0
+        fLocal.x * f.right.z   + fLocal.y * f.up.z   + fLocal.z * f.forward.z
     );
 }
 
 __global__ void updateParticlesKernel(
-    const float4* pressureForce,
-    const float4* viscosityForce,
-    const float4* surfaceTensionForce,
-    float4* velocity,
-    float4* position,
+    const glm::vec3* pressureForce,
+    const glm::vec3* viscosityForce,
+    const glm::vec3* surfaceTensionForce,
+    glm::vec3* velocity,
+    glm::vec3* position,
     const int numParticles,
-    const CudaForceField* forceFields,
+    const ForceField* forceFields,
     const int numForceFields,
     const float deltaTime,
-    const CudaAABB domain,
+    const AABBView domain,
     const float gravity
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -532,16 +484,16 @@ __global__ void updateParticlesKernel(
     if (id >= numParticles)
         return;
 
-    const float4 force = pressureForce[id] + viscosityForce[id] + surfaceTensionForce[id];
-    float4 acceleration = force + make_float4(0.0f, gravity, 0.0f, 0.0f);
+    const glm::vec3 force = pressureForce[id] + viscosityForce[id] + surfaceTensionForce[id];
+    glm::vec3 acceleration = force + glm::vec3(0.0f, gravity, 0.0f);
 
     // Check force fields
     for (int f = 0 ; f < numForceFields; f++) {
         if (!forceFields[f].active)
             continue;
 
-        if (isInsideField(make_float3(position[id].x, position[id].y, position[id].z), forceFields[f])) {
-            acceleration += toWorldForce({ forceFields[f].strength, 0.0, 0.0, 0.0 }, forceFields[f]);
+        if (isInsideField(position[id], forceFields[f])) {
+            acceleration += toWorldForce({ forceFields[f].strength, 0.0, 0.0 }, forceFields[f]);
         }
     }
 
@@ -582,8 +534,8 @@ __global__ void updateParticlesKernel(
 
 __global__ void topSurfaceParticlesKernel(
     const int numParticles,
-    const float4* position,
-    float4* flags,
+    const glm::vec3* position,
+    glm::vec4* flags,
     const int* hashes,
     const int* offsets,
     const float h
@@ -594,9 +546,7 @@ __global__ void topSurfaceParticlesKernel(
         return;
 
     // Get cell of particle
-    int cellX = floor(position[id].x / h);
-    int cellY = floor(position[id].y / h);
-    int cellZ = floor(position[id].z / h);
+    glm::ivec3 cell = glm::floor(position[id] / h);
 
     float h2 = h * h;
 
@@ -604,7 +554,7 @@ __global__ void topSurfaceParticlesKernel(
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             for (int dz = -1; dz <= 1; dz++) {
-                uint hash = hashCell(cellX + dx, cellY + dy, cellZ + dz, numParticles);
+                uint hash = hashCell(cell + glm::ivec3(dx, dy, dz), numParticles);
                 int offset = offsets[hash];
 
                 if (offset == -1)
@@ -622,14 +572,14 @@ __global__ void topSurfaceParticlesKernel(
                     if (neighborHash != hash)
                         break;
 
-                    const float4 diff = position[id] - position[neighborIndex];
+                    const glm::vec3 diff = position[id] - position[neighborIndex];
 
                     // Check if within radius
                     float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
                     float horizontal = sqrtf(diff.x * diff.x + diff.z * diff.z);
 
                     if (distSq < h2 && diff.y < -0.15f * h && horizontal < -diff.y) {
-                        flags[id].y = 0.0f;
+                        flags[id].y = 0.0;
                         return;
                     }
                 }
@@ -637,5 +587,5 @@ __global__ void topSurfaceParticlesKernel(
         }
     }
 
-    flags[id].y = 1.0f;
+    flags[id].y = 1.0;
 }

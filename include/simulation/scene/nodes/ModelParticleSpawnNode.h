@@ -16,7 +16,7 @@ public:
     ModelParticleSpawnNode(const nlohmann::json json);
     ~ModelParticleSpawnNode() override;
 
-    CudaParticleSpawn getParticleSpawn() override;
+    ParticleSpawn getParticleSpawn() override;
 
     Properties buildProperties() override;
 
@@ -26,7 +26,7 @@ public:
 private:
     void init();
 
-    CudaParticleSpawn particleSpawn;
+    ParticleSpawn particleSpawn;
 };
 
 #endif //SPHLASH_MODELPARTICLESPAWNNODE_H

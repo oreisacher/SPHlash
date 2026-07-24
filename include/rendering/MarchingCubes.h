@@ -5,13 +5,14 @@
 #ifndef SPHLASH_MARCHINGCUBES_CU
 #define SPHLASH_MARCHINGCUBES_CU
 
+struct AABBView;
 struct Vertex;
 struct CudaAABB;
 struct VoxelField;
 
-void launchMarchingCubesKernel(
+__global__ void marchingCubesKernel(
     const VoxelField field,
-    const CudaAABB domain,
+    const AABBView domain,
     int* vertexCount,
     int* triangleCount,
     Vertex* outVertices,

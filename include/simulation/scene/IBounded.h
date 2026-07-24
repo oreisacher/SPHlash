@@ -5,7 +5,7 @@
 #ifndef SPHLASH_IBOUNDED_H
 #define SPHLASH_IBOUNDED_H
 
-#include "../AABB.h"
+#include "../AABB.cuh"
 
 class IBounded {
 public:

@@ -1,9 +1,5 @@
 #pragma once
 
-#include <vector_functions.h>
-#include <vector_types.h>
-#include <../../include/simulation/utils/Math.cuh>
-
 enum NodeType { CORNER, EDGE_XI, EDGE_ETA, EDGE_ZETA };
 
 struct Hex32Node {
@@ -57,15 +53,10 @@ __constant__ Hex32Node Hex32CubeLookup[32] = {
 /*
     Maps a coordinate in world space to coordinate in the element's isoparametric space.
 */
-__device__ inline float3 T(float3 min, float3 max, float3 position) {
-    float3 s = max - min;
-    float3 t = 2.0f * position - (max + min);
-
-    return make_float3(
-        t.x / s.x,
-        t.y / s.y,
-        t.z / s.z
-    );
+__device__ inline glm::vec3 T(glm::vec3 min, glm::vec3 max, glm::vec3 position) {
+    glm::vec3 s = max - min;
+    glm::vec3 t = 2.0f * position - (max + min);
+    return t / s;
 }
 
 /*
@@ -114,12 +105,12 @@ __device__ inline float shapeFunction(
     }
 }
 
-__device__ inline float3 shapeFunctionGradient(
+__device__ inline glm::vec3 shapeFunctionGradient(
     float xi,   float eta,   float zeta,        // Position to interpolate
     float xi_i, float eta_i, float zeta_i,      // Coordinates of hex32 node
     NodeType type
 ) {
-    float3 grad = make_float3(0, 0, 0);
+    glm::vec3 grad(0, 0, 0);
 
     switch (type) {
         case CORNER: {
@@ -195,14 +186,14 @@ __device__ inline float interpolateHex32(
     return result;
 }
 
-__device__ inline float3 interpolateHex32Gradient(
+__device__ inline glm::vec3 interpolateHex32Gradient(
     float xi, float eta, float zeta,     // Position to interpolate
     const float* values                  // Values of the 32 nodes used for interpolation
 ) {
-    float3 gradient = make_float3(0.0f, 0.0f, 0.0f);
+    glm::vec3 gradient(0.0f, 0.0f, 0.0f);
 
     for (int i = 0; i < 32; i++) {
-        float3 dN = shapeFunctionGradient(
+        glm::vec3 dN = shapeFunctionGradient(
             xi, eta, zeta,
             Hex32CubeLookup[i].xi, Hex32CubeLookup[i].eta, Hex32CubeLookup[i].zeta,
             Hex32CubeLookup[i].type

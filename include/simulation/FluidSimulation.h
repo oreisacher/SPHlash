@@ -19,7 +19,7 @@ struct cudaGraphicsResource;
 struct VoxelField;
 class BoundingBoxNode;
 struct RendererParticle;
-struct CudaForceField;
+struct ForceField;
 
 enum SimulationState {
      UNINITIALIZED,
@@ -142,7 +142,7 @@ private:
     size_t sortTempStorageBytes         = 0;
 
     // --- Force Fields ---
-    CudaForceField* d_forceFields           = nullptr;
+    ForceField* d_forceFields           = nullptr;
 
     // --- Boundary Density Map ---
     Hex32Field sdfMap;

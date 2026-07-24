@@ -4,7 +4,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include "../../include/simulation/AABB.h"
+#include "simulation/AABB.cuh"
 #include <glm/glm.hpp>
 #include "glm/gtx/transform.hpp"
 
@@ -45,12 +45,6 @@ glm::mat4 AABB::getTransformMatrix() const {
     return m;
 }
 
-CudaAABB AABB::toCudaAABB() const {
-    const glm::vec3 min = center - size * 0.5f;
-    const glm::vec3 max = center + size * 0.5f;
-
-    return {
-        { min.x, min.y, min.z },
-        { max.x, max.y, max.z }
-    };
+AABBView AABB::getAABBView() const {
+    return { center, size, min(), max() };
 }

@@ -15,7 +15,7 @@ struct Hex32Cell {
 };
 
 struct Hex32Field {
-    int3 resolution = { 0, 0, 0 };
+    glm::ivec3 resolution = { 0, 0, 0 };
     unsigned int texture = 0;
 
     Hex32Cell* d_cells = nullptr;

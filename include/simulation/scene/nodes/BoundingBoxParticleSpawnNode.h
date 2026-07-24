@@ -13,7 +13,7 @@ public:
     BoundingBoxParticleSpawnNode(const std::string& name);
     explicit BoundingBoxParticleSpawnNode(const nlohmann::json json);
 
-    CudaParticleSpawn getParticleSpawn() override;
+    ParticleSpawn getParticleSpawn() override;
 
     Properties buildProperties() override;
 
@@ -21,7 +21,7 @@ public:
     std::string getTypeName() const override;
 
 private:
-    CudaParticleSpawn particleSpawn;
+    ParticleSpawn particleSpawn;
 };
 
 #endif //SPHLASH_BOUNDINGBOXPARTICLESPAWN_H

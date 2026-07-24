@@ -6,7 +6,7 @@
 #define SPHLASH_PARTICLESHOST_H
 
 #include <vector>
-#include <vector_types.h>
+#include "glm/glm.hpp"
 
 struct ParticlesGPU;
 
@@ -14,15 +14,18 @@ struct ParticlesGPU;
     Represents all particles of simulation as SoA. Contains actual data. Used during initialization.
 */
 struct ParticlesHost {
-    std::vector<float4> position;
-    std::vector<float4> startPosition;
-    std::vector<float4> velocity;
-    std::vector<float4> properties;
-    std::vector<float4> flags;
-    std::vector<float4> color;
-    std::vector<float4> pressureForce;
-    std::vector<float4> viscosityForce;
-    std::vector<float4> surfaceTensionForce;
+    std::vector<glm::vec3> position;
+    std::vector<glm::vec3> startPosition;
+
+    std::vector<glm::vec3> velocity;
+    std::vector<glm::vec3> pressureForce;
+    std::vector<glm::vec3> viscosityForce;
+    std::vector<glm::vec3> surfaceTensionForce;
+
+    std::vector<glm::vec4> properties;
+    std::vector<glm::ivec4> flags;
+
+    std::vector<glm::vec3> color;
 
     void resize(size_t count);
     void append(ParticlesHost& particles);

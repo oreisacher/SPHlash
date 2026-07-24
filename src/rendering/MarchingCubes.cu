@@ -1,29 +1,17 @@
-#include "MarchingCubes.h"
+#include "../../include/rendering/MarchingCubes.h"
 
-#include "CudaAABB.h"
-#include "MarchingCubesLookup.h"
-#include "../../include/assets/Vertex.h"
-#include "../../include/simulation/VoxelField.h"
+#include "../../include/rendering/MarchingCubesLookup.h"
+#include "assets/Vertex.h"
+#include "glm/detail/func_geometric.inl"
+#include "simulation/AABB.cuh"
+#include "simulation/VoxelField.h"
 
-__device__ inline float3 operator+(const float3& a, const float3& b) {
-    return make_float3(
-        a.x + b.x,
-        a.y + b.y,
-        a.z + b.z
-    );
-}
-
-__device__ inline float3 interp(float3 p1, float3 p2, float v1, float v2, float isoLevel) {
+__device__ inline glm::vec3 interp(glm::vec3 p1, glm::vec3 p2, float v1, float v2, float isoLevel) {
     if (abs(v1 - v2) < 0.0001f)
         return p1;
 
     const float t = (isoLevel - v1) / (v2 - v1 + 1e-6f);
-
-    return make_float3(
-      p1.x + t * (p2.x - p1.x),
-      p1.y + t * (p2.y - p1.y),
-      p1.z + t * (p2.z - p1.z)
-    );
+    return p1 + t * (p2 - p1);
 }
 
 __constant__ int3 offsets[8] = {
@@ -39,7 +27,7 @@ __constant__ int3 offsets[8] = {
 
 __global__ void marchingCubesKernel(
     const VoxelField field,
-    const CudaAABB domain,
+    const AABBView domain,
     int* vertexCount,
     int* triangleCount,
     Vertex* outVertices,
@@ -56,15 +44,8 @@ __global__ void marchingCubesKernel(
     if (x >= field.resolution.x - 1 || y >= field.resolution.y - 1 || z >= field.resolution.z - 1)
         return;
 
-    int cx = field.resolution.x - 1;
-    int cy = field.resolution.y - 1;
-    int cz = field.resolution.z - 1;
-
-    float3 cellSizes = make_float3(
-        (domain.max.x - domain.min.x) / cx,
-        (domain.max.y - domain.min.y) / cy,
-        (domain.max.z - domain.min.z) / cz
-    );
+    glm::ivec3 cells = field.resolution - 1;
+    glm::vec3 cellSizes = domain.size / static_cast<glm::vec3>(cells);
 
     // 1D scalar field offsets
     int dx = 1;
@@ -118,7 +99,7 @@ __global__ void marchingCubesKernel(
         return;
 
     // Normals & Positions cube
-    float3 normalsCube[8];
+    glm::vec3 normalsCube[8];
     normalsCube[0] = field.d_normal[id               ];
     normalsCube[1] = field.d_normal[id + dx          ];
     normalsCube[2] = field.d_normal[id + dx + dy     ];
@@ -128,19 +109,19 @@ __global__ void marchingCubesKernel(
     normalsCube[6] = field.d_normal[id + dx + dy + dz];
     normalsCube[7] = field.d_normal[id      + dy + dz];
 
-    float3 position[8];
-    position[0] = make_float3((x + 0) * cellSizes.x, (y + 0) * cellSizes.y, (z + 0) * cellSizes.z) + domain.min;
-    position[1] = make_float3((x + 1) * cellSizes.x, (y + 0) * cellSizes.y, (z + 0) * cellSizes.z) + domain.min;
-    position[2] = make_float3((x + 1) * cellSizes.x, (y + 1) * cellSizes.y, (z + 0) * cellSizes.z) + domain.min;
-    position[3] = make_float3((x + 0) * cellSizes.x, (y + 1) * cellSizes.y, (z + 0) * cellSizes.z) + domain.min;
-    position[4] = make_float3((x + 0) * cellSizes.x, (y + 0) * cellSizes.y, (z + 1) * cellSizes.z) + domain.min;
-    position[5] = make_float3((x + 1) * cellSizes.x, (y + 0) * cellSizes.y, (z + 1) * cellSizes.z) + domain.min;
-    position[6] = make_float3((x + 1) * cellSizes.x, (y + 1) * cellSizes.y, (z + 1) * cellSizes.z) + domain.min;
-    position[7] = make_float3((x + 0) * cellSizes.x, (y + 1) * cellSizes.y, (z + 1) * cellSizes.z) + domain.min;
+    glm::vec3 position[8];
+    position[0] = glm::vec3(x + 0, y + 0, z + 0) * cellSizes + domain.min;
+    position[1] = glm::vec3(x + 1, y + 0, z + 0) * cellSizes + domain.min;
+    position[2] = glm::vec3(x + 1, y + 1, z + 0) * cellSizes + domain.min;
+    position[3] = glm::vec3(x + 0, y + 1, z + 0) * cellSizes + domain.min;
+    position[4] = glm::vec3(x + 0, y + 0, z + 1) * cellSizes + domain.min;
+    position[5] = glm::vec3(x + 1, y + 0, z + 1) * cellSizes + domain.min;
+    position[6] = glm::vec3(x + 1, y + 1, z + 1) * cellSizes + domain.min;
+    position[7] = glm::vec3(x + 0, y + 1, z + 1) * cellSizes + domain.min;
 
     // Interpolate
-    float3 edgeVertices[12];
-    float3 edgeNormals[12];
+    glm::vec3 edgeVertices[12];
+    glm::vec3 edgeNormals[12];
 
     for (int i = 0 ; i < 12 ; i++) {
         if (edgeTable[cubeIndex] & (1 << i)) {
@@ -177,27 +158,23 @@ __global__ void marchingCubesKernel(
             int edgeIndex0 = triangleTable[cubeIndex][i + 0];
             int edgeIndex1 = triangleTable[cubeIndex][i + 1];
             int edgeIndex2 = triangleTable[cubeIndex][i + 2];
-            float3 v0 = edgeVertices[edgeIndex0];
-            float3 v1 = edgeVertices[edgeIndex1];
-            float3 v2 = edgeVertices[edgeIndex2];
-            float3 edge1 = make_float3(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
-            float3 edge2 = make_float3(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
 
-            float3 faceNormal = make_float3(
-                edge1.y * edge2.z - edge1.z * edge2.y,
-                edge1.z * edge2.x - edge1.x * edge2.z,
-                edge1.x * edge2.y - edge1.y * edge2.x
-            );
+            glm::vec3 v0 = edgeVertices[edgeIndex0];
+            glm::vec3 v1 = edgeVertices[edgeIndex1];
+            glm::vec3 v2 = edgeVertices[edgeIndex2];
 
-            float length = sqrtf(faceNormal.x * faceNormal.x +
-                                faceNormal.y * faceNormal.y +
-                                faceNormal.z * faceNormal.z);
+            glm::vec3 edge1 = v1 - v0;
+            glm::vec3 edge2 = v2 - v0;
+
+            glm::vec3 faceNormal = edge1 * edge2 - edge1 * edge2;
+            float length = glm::length(faceNormal);
+
             if (length > 1e-6f) {
                 faceNormal.x /= length;
                 faceNormal.y /= length;
                 faceNormal.z /= length;
             } else {
-                faceNormal = make_float3(0.0f, 1.0f, 0.0f);
+                faceNormal = glm::vec3(0.0f, 1.0f, 0.0f);
             }
 
             for (int j = 0 ; j < 3 ; j++) {
@@ -211,28 +188,4 @@ __global__ void marchingCubesKernel(
         outIndices[triangleIndex * 3 + 1] = baseVertexIndex + 1;
         outIndices[triangleIndex * 3 + 2] = baseVertexIndex + 2;
     }
-}
-
-void launchMarchingCubesKernel(
-    const VoxelField field,
-    const CudaAABB domain,
-    int* vertexCount,
-    int* triangleCount,
-    Vertex* outVertices,
-    unsigned int* outIndices,
-    const int maxVertices,
-    const int maxIndices,
-    const float isoLevel,
-    const bool smoothNormals
-) {
-    dim3 blockSize(8, 8, 8);
-    dim3 gridSize(
-        (field.resolution.x - 1 + blockSize.x - 1) / blockSize.x,
-        (field.resolution.y - 1 + blockSize.y - 1) / blockSize.y,
-        (field.resolution.z - 1 + blockSize.z - 1) / blockSize.z
-    );
-
-    marchingCubesKernel<<<gridSize, blockSize>>>(
-        field, domain, vertexCount, triangleCount, outVertices, outIndices, maxVertices, maxIndices, isoLevel, smoothNormals
-    );
 }

@@ -2,8 +2,8 @@
 // Created by ruut on 5/4/26.
 //
 
-#include "../../../../include/simulation/scene/nodes/ForceFieldNode.h"
-#include "../../../../include/assets/Model.h"
+#include "simulation/scene/nodes/ForceFieldNode.h"
+#include "assets/Model.h"
 
 ForceFieldNode::ForceFieldNode(const std::string& name) {
     this->name = name;
@@ -48,7 +48,7 @@ ForceFieldNode::ForceFieldNode(const nlohmann::json json) : SceneNode(json) {
     wireframeModel->addMaterial(wireframeMat);
 }
 
-CudaForceField ForceFieldNode::getForceField() const {
+ForceField ForceFieldNode::getForceField() const {
     return forceField;
 }
 

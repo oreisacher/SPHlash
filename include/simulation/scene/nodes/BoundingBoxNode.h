@@ -20,13 +20,12 @@ public:
     void draw(const glm::mat4& view, const glm::mat4& projection) const override;
 
     void setTransform(glm::mat4 transform) override;
-    void setTransform(const AABB& boundingBox);
+    void setTransform(const AABBView& boundingBox);
 
     void setTarget(IBounded* target);
     void clearTarget();
 
     AABB getWorldBoundingBox() const override;
-    CudaAABB getCudaAABB() const;
 
     Properties buildProperties() override;
 

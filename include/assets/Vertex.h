@@ -5,12 +5,13 @@
 #ifndef SPHLASH_VERTEX_H
 #define SPHLASH_VERTEX_H
 
-#include <vector_types.h>
+#include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
 
 struct Vertex {
-    float3 position;
-    float3 normal;
-    float2 texCoord;
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 texCoord;
 };
 
 #endif //SPHLASH_VERTEX_H

@@ -5,10 +5,10 @@
 #ifndef SPHLASH_EDITOR_H
 #define SPHLASH_EDITOR_H
 
-#include "../simulation/scene/nodes/ForceFieldNode.h"
-#include "../simulation/scene/Scene.h"
-#include "../simulation/boundaries/BoundaryBuilder.h"
-#include "../simulation/FluidSimulation.h"
+#include "simulation/scene/nodes/ForceFieldNode.h"
+#include "simulation/scene/Scene.h"
+#include "simulation/boundaries/BoundaryBuilder.h"
+#include "simulation/FluidSimulation.h"
 
 class Editor {
 public:

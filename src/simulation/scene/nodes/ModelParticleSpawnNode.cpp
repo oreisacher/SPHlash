@@ -2,8 +2,8 @@
 // Created by ruut on 6/11/26.
 //
 
-#include "../../../../include/simulation/scene/nodes/ModelParticleSpawnNode.h"
-#include "../../../../include/simulation/scene/nodes/BoundingBoxNode.h"
+#include "simulation/scene/nodes/ModelParticleSpawnNode.h"
+#include "simulation/scene/nodes/BoundingBoxNode.h"
 #include <cuda_runtime_api.h>
 #include <vector_functions.h>
 
@@ -21,8 +21,8 @@ ModelParticleSpawnNode::ModelParticleSpawnNode(const nlohmann::json json) : Mode
     particleSpawn.restDensity = json.value("restDensity", particleSpawn.restDensity);
     particleSpawn.particleSpacing = json.value("particleSpacing", particleSpawn.particleSpacing);
 
-    auto color = json.value("color", std::vector{particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z, particleSpawn.color.w });
-    particleSpawn.color = make_float4(color[0], color[1], color[2], 1.0f);
+    auto color = json.value("color", std::vector{particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z });
+    particleSpawn.color = glm::vec3(color[0], color[1], color[2]);
 
     init();
 }
@@ -31,12 +31,12 @@ ModelParticleSpawnNode::~ModelParticleSpawnNode() {
     cudaFree(particleSpawn.d_shapeTriangles);
 }
 
-CudaParticleSpawn ModelParticleSpawnNode::getParticleSpawn() {
+ParticleSpawn ModelParticleSpawnNode::getParticleSpawn() {
     // Get current world space triangles of model
     std::vector<Triangle> triangles = this->model->getWorldSpaceTriangles(transform);
     cudaMemcpy(particleSpawn.d_shapeTriangles, triangles.data(), particleSpawn.triangleCount * sizeof(Triangle), cudaMemcpyHostToDevice);
 
-    particleSpawn.area = getWorldBoundingBox().toCudaAABB();
+    particleSpawn.area = getWorldBoundingBox().getAABBView();
     return particleSpawn;
 }
 
@@ -85,7 +85,7 @@ Properties ModelParticleSpawnNode::buildProperties() {
         [this] () { return glm::vec3(particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z); },
         [this] (glm::vec3 color)
         {
-            particleSpawn.color = { color.x, color.y, color.z, 1.0f };
+            particleSpawn.color = { color.x, color.y, color.z };
 
             model->getMaterial(0)->bind();
             model->getMaterial(0)->setVec3("albedo", color);

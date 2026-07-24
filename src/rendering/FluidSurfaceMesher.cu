@@ -6,7 +6,7 @@
 #include "rendering/FluidSurfaceMesher.h"
 #include <cuda_runtime.h>
 #include "assets/Model.h"
-#include "../cuda/MarchingCubes.h"
+#include "../../include/rendering/MarchingCubes.h"
 #include "../../include/simulation/FluidSimulation.h"
 
 FluidSurfaceMesher::FluidSurfaceMesher(FluidSimulation* simulation)
@@ -50,7 +50,7 @@ FluidSurfaceMesher::~FluidSurfaceMesher() {
     cudaFree(d_triangleCount);
 }
 
-void FluidSurfaceMesher::updateMesh(const CudaAABB& domain) const {
+void FluidSurfaceMesher::updateMesh(const AABB& domain) const {
     if (!simulation->computeVoxelField(voxelField))
         return;
 
@@ -71,9 +71,16 @@ void FluidSurfaceMesher::updateMesh(const CudaAABB& domain) const {
     cudaGraphicsResourceGetMappedPointer((void**)&d_vertices, &vboSize, verticesResource);
     cudaGraphicsResourceGetMappedPointer((void**) &d_indices, &eboSize,  indicesResource);
 
-    launchMarchingCubesKernel(
+    dim3 blockSize(8, 8, 8);
+    dim3 gridSize(
+        (voxelField.resolution.x - 1 + blockSize.x - 1) / blockSize.x,
+        (voxelField.resolution.y - 1 + blockSize.y - 1) / blockSize.y,
+        (voxelField.resolution.z - 1 + blockSize.z - 1) / blockSize.z
+    );
+
+    marchingCubesKernel<<<gridSize, blockSize>>>(
         voxelField,
-        domain,
+        domain.getAABBView(),
         d_vertexCount,
         d_triangleCount,
         d_vertices,

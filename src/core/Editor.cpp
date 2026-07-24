@@ -81,14 +81,14 @@ BoundaryBuilder* Editor::getBoundaryBuilder() {
 
 void Editor::buildBoundaryDensityMap() const {
     Hex32Field sdfMap;
-    if (!boundryBuilder.constructSDFMap(scene, scene->getSimulationDomain()->getCudaAABB(), simulation->settings.h, sdfMap)) {
+    if (!boundryBuilder.constructSDFMap(scene, scene->getSimulationDomain()->getWorldBoundingBox(), simulation->settings.h, sdfMap)) {
         // No Models are present > Clear current boundaries of simulation
         simulation->clearBoundaryField();
         return;
     }
 
     Hex32Field volumeMap;
-    if (!boundryBuilder.constructVolumeMap(sdfMap, scene->getSimulationDomain()->getCudaAABB(), simulation->settings.h, volumeMap)) {
+    if (!boundryBuilder.constructVolumeMap(sdfMap, scene->getSimulationDomain()->getWorldBoundingBox(), simulation->settings.h, volumeMap)) {
         // Clear current boundaries of simulation if error occurred during construction
         simulation->clearBoundaryField();
         return;

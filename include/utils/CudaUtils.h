@@ -5,7 +5,7 @@
 #ifndef SPHLASH_CUDAUTILS_H
 #define SPHLASH_CUDAUTILS_H
 
-#include "../../include/utils/Logger.h"
+#include "Logger.h"
 
 #define CUDA_CHECK(call)                            \
     do {                                            \

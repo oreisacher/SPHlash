@@ -5,13 +5,19 @@
 #ifndef SPHLASH_AABB_H
 #define SPHLASH_AABB_H
 
-#include "cuda/CudaAABB.h"
 #include "glm/fwd.hpp"
 #include "glm/vec3.hpp"
 
+struct AABBView {
+    glm::vec3 center;
+    glm::vec3 size;
+    glm::vec3 min;
+    glm::vec3 max;
+};
+
 struct AABB {
-    glm::vec3 center    = {};
-    glm::vec3 size      = {};
+    glm::vec3 center   = {};
+    glm::vec3 size     = {};
 
     void setCenter(glm::vec3 center);
     void setSize(glm::vec3 size);
@@ -24,7 +30,7 @@ struct AABB {
 
     glm::mat4 getTransformMatrix() const;
 
-    CudaAABB toCudaAABB() const;
+    AABBView getAABBView() const;
 };
 
 #endif //SPHLASH_AABB_H

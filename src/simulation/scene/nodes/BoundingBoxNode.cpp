@@ -56,7 +56,7 @@ void BoundingBoxNode::setTransform(glm::mat4 transform) {
     setRotation({0.0, 0.0, 0.0, 0.0});
 }
 
-void BoundingBoxNode::setTransform(const AABB& boundingBox) {
+void BoundingBoxNode::setTransform(const AABBView& boundingBox) {
     position = boundingBox.center;
     rotation = {0.0, 0.0, 0.0, 0.0};
     scale = boundingBox.size;
@@ -70,10 +70,6 @@ void BoundingBoxNode::setTarget(IBounded* target) {
 
 void BoundingBoxNode::clearTarget() {
     this->target = nullptr;
-}
-
-CudaAABB BoundingBoxNode::getCudaAABB() const {
-    return getWorldBoundingBox().toCudaAABB();
 }
 
 AABB BoundingBoxNode::getWorldBoundingBox() const {

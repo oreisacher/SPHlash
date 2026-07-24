@@ -1,14 +1,17 @@
 #include "simulation/boundaries/Boundaries.cuh"
+
+#include <cstdio>
+
+#include "simulation/AABB.cuh"
 #include "simulation/utils/Hex32.cuh"
 #include "simulation/utils/SDF.cuh"
 #include "simulation/boundaries/Hex32Field.h"
-#include "../../cuda/CudaAABB.h"
 
 __global__ void sdfKernel(
     const int triangleCount,
     const Triangle* triangles,
     const Hex32Field hexField,
-    const CudaAABB domain,
+    const AABBView domain,
     const float h
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -21,17 +24,8 @@ __global__ void sdfKernel(
     int cellY = (id / hexField.resolution.x) % hexField.resolution.y;
     int cellZ = id / (hexField.resolution.x * hexField.resolution.y);
 
-    float3 cellSize = make_float3(
-        (domain.max.x - domain.min.x) / hexField.resolution.x,
-        (domain.max.y - domain.min.y) / hexField.resolution.y,
-        (domain.max.z - domain.min.z) / hexField.resolution.z
-    );
-
-    float3 cellMinPos = make_float3(
-        domain.min.x + cellX * cellSize.x,
-        domain.min.y + cellY * cellSize.y,
-        domain.min.z + cellZ * cellSize.z
-    );
+    glm::vec3 cellSize = domain.size / static_cast<glm::vec3>(hexField.resolution);
+    glm::vec3 cellMinPos = domain.min + cellSize * glm::vec3(cellX, cellY, cellZ);
 
     Hex32Cell* cell = &hexField.d_cells[id];
 
@@ -39,10 +33,10 @@ __global__ void sdfKernel(
     for (int n = 0 ; n < 32 ; n++) {
         const Hex32Node& node = Hex32CubeLookup[n];
 
-        float3 worldPos = make_float3(
-            cellMinPos.x + node.x * cellSize.x,
-            cellMinPos.y + node.y * cellSize.y,
-            cellMinPos.z + node.z * cellSize.z
+        glm::vec3 worldPos = cellMinPos + glm::vec3(
+            node.x * cellSize.x,
+            node.y * cellSize.y,
+            node.z * cellSize.z
         );
 
         cell->nodes[n] = calculateSDF(worldPos, triangleCount, triangles);
@@ -91,7 +85,7 @@ __device__ float gammaStar(float x, float r) {
 __global__ void volumeMapKernel(
     const Hex32Field sdfField,
     const Hex32Field volumeField,
-    const CudaAABB domain,
+    const AABBView domain,
     const float h
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -116,17 +110,8 @@ __global__ void volumeMapKernel(
     int cellY = (id / sdfField.resolution.x) % sdfField.resolution.y;
     int cellZ = id / (sdfField.resolution.x * sdfField.resolution.y);
 
-    float3 cellSize = make_float3(
-        (domain.max.x - domain.min.x) / sdfField.resolution.x,
-        (domain.max.y - domain.min.y) / sdfField.resolution.y,
-        (domain.max.z - domain.min.z) / sdfField.resolution.z
-    );
-
-    float3 cellMinPos = make_float3(
-        domain.min.x + cellX * cellSize.x,
-        domain.min.y + cellY * cellSize.y,
-        domain.min.z + cellZ * cellSize.z
-    );
+    glm::vec3 cellSize = domain.size / static_cast<glm::vec3>(sdfField.resolution);
+    glm::vec3 cellMinPos = domain.min + cellSize * glm::vec3(cellX, cellY, cellZ);
 
     // Gauss-Legendre
     const float xi[5] = {
@@ -148,10 +133,10 @@ __global__ void volumeMapKernel(
     for (int nodeIndex = 0 ; nodeIndex < 32 ; nodeIndex++) {
         Hex32Node node = Hex32CubeLookup[nodeIndex];
 
-        float3 nodePos = make_float3(
-            cellMinPos.x + node.x * cellSize.x,
-            cellMinPos.y + node.y * cellSize.y,
-            cellMinPos.z + node.z * cellSize.z
+        glm::vec3 nodePos = cellMinPos + glm::vec3(
+            node.x * cellSize.x,
+            node.y * cellSize.y,
+            node.z * cellSize.z
         );
 
         float volume = 0.0f;
@@ -159,10 +144,10 @@ __global__ void volumeMapKernel(
         for (int z = 0 ; z < 5 ; z++) {
             for (int y = 0 ; y < 5 ; y++) {
                 for (int x = 0 ; x < 5 ; x++) {
-                    float3 queryPosition = make_float3(
-                        nodePos.x + h * xi[x],
-                        nodePos.y + h * xi[y],
-                        nodePos.z + h * xi[z]
+                    glm::vec3 queryPosition = nodePos + glm::vec3(
+                        h * xi[x],
+                        h * xi[y],
+                        h * xi[z]
                     );
 
                     // Reject samples outside domain
@@ -183,20 +168,16 @@ __global__ void volumeMapKernel(
                              + sampleCellZ * sdfField.resolution.x * sdfField.resolution.y;
                     Hex32Cell* sampleCell = &sdfField.d_cells[cellId];
 
-                    float3 sampleCellMin = make_float3(
-                        domain.min.x + sampleCellX * cellSize.x,
-                        domain.min.y + sampleCellY * cellSize.y,
-                        domain.min.z + sampleCellZ * cellSize.z
+                    glm::vec3 sampleCellMin = domain.min + glm::vec3(
+                        sampleCellX * cellSize.x,
+                        sampleCellY * cellSize.y,
+                        sampleCellZ * cellSize.z
                     );
 
-                    float3 sampleCellMax = make_float3(
-                        sampleCellMin.x + cellSize.x,
-                        sampleCellMin.y + cellSize.y,
-                        sampleCellMin.z + cellSize.z
-                    );
+                    glm::vec3 sampleCellMax = sampleCellMin + cellSize;
 
                     // Interpolate sdf values of sample cell based on sample position
-                    float3 isoparametricCoords = T(sampleCellMin, sampleCellMax, queryPosition);
+                    glm::vec3 isoparametricCoords = T(sampleCellMin, sampleCellMax, queryPosition);
                     float interpolatedSDF = interpolateHex32(
                         isoparametricCoords.x,
                         isoparametricCoords.y,

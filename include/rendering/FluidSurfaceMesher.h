@@ -33,7 +33,7 @@ public:
     FluidSurfaceMesher(FluidSimulation* simulation);
     ~FluidSurfaceMesher();
 
-    void updateMesh(const CudaAABB& domain) const;
+    void updateMesh(const AABB& domain) const;
     void updateVoxelFieldSize();
 
     Model* getSurfaceModel() const;

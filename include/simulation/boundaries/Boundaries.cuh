@@ -5,7 +5,7 @@
 #ifndef SPHLASH_BOUNDARIES_H
 #define SPHLASH_BOUNDARIES_H
 
-struct CudaAABB;
+struct AABBView;
 struct Hex32Field;
 struct Triangle;
 
@@ -13,14 +13,14 @@ __global__ void sdfKernel(
     int triangleCount,
     const Triangle* triangles,
     Hex32Field hexField,
-    CudaAABB domain,
+    AABBView domain,
     float h
 );
 
 __global__ void volumeMapKernel(
     Hex32Field sdfField,
     Hex32Field volumeField,
-    CudaAABB domain,
+    AABBView domain,
     float h
 );
 

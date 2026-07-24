@@ -2,16 +2,15 @@
 // Created by ruut on 5/9/26.
 //
 
-#include "../../../include/simulation/boundaries/BoundaryBuilder.h"
+#include "simulation/boundaries/BoundaryBuilder.h"
 #include <cuda_runtime.h>
-#include <vector_functions.h>
-#include "../../../include/assets/Triangle.h"
-#include "../../../include/simulation/boundaries/Boundaries.cuh"
-#include "cuda/CudaUtils.h"
+#include "assets/Triangle.h"
+#include "simulation/boundaries/Boundaries.cuh"
+#include "../../../include/utils/CudaUtils.h"
 #include "glad/gl.h"
-#include "../../../include/simulation/scene/nodes/ModelNode.h"
+#include "simulation/scene/nodes/ModelNode.h"
 
-bool BoundaryBuilder::constructSDFMap(const Scene* scene, CudaAABB domain, float h, Hex32Field& sdfMap) const {
+bool BoundaryBuilder::constructSDFMap(const Scene* scene, AABB domain, float h, Hex32Field& sdfMap) const {
     // Extract list of all triangles from boundary objects of scene
     std::vector<Triangle> triangles;
 
@@ -31,7 +30,7 @@ bool BoundaryBuilder::constructSDFMap(const Scene* scene, CudaAABB domain, float
     cudaMemcpy(d_triangles, triangles.data(), triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
 
     // Calculate SDF field of scene
-    sdfMap.resolution = make_int3(settings.resolution.x, settings.resolution.y, settings.resolution.z);
+    sdfMap.resolution = glm::ivec3(settings.resolution.x, settings.resolution.y, settings.resolution.z);
     cudaMalloc(&(sdfMap.d_cells), sdfMap.resolution.x * sdfMap.resolution.y * sdfMap.resolution.z * sizeof(Hex32Cell));
 
 #ifdef DEBUG_CUDA
@@ -44,7 +43,7 @@ bool BoundaryBuilder::constructSDFMap(const Scene* scene, CudaAABB domain, float
         triangles.size(),
         d_triangles,
         sdfMap,
-        domain,
+        domain.getAABBView(),
         h
     );
 
@@ -57,7 +56,7 @@ bool BoundaryBuilder::constructSDFMap(const Scene* scene, CudaAABB domain, float
     return true;
 }
 
-bool BoundaryBuilder::constructVolumeMap(Hex32Field sdfHexField, CudaAABB domain, float h, Hex32Field& volumeMap) const {
+bool BoundaryBuilder::constructVolumeMap(Hex32Field sdfHexField, AABB domain, float h, Hex32Field& volumeMap) const {
     volumeMap.resolution = sdfHexField.resolution;
     cudaMalloc(&(volumeMap.d_cells), sdfHexField.resolution.x * sdfHexField.resolution.y * sdfHexField.resolution.z * sizeof(Hex32Cell));
 
@@ -70,7 +69,7 @@ bool BoundaryBuilder::constructVolumeMap(Hex32Field sdfHexField, CudaAABB domain
     volumeMapKernel<<<blocks, 256>>>(
         sdfHexField,
         volumeMap,
-        domain,
+        domain.getAABBView(),
         h
     );
 

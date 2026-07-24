@@ -5,14 +5,12 @@
 #ifndef SPHLASH_RENDERERPARTICLE_H
 #define SPHLASH_RENDERERPARTICLE_H
 
-#include <vector_types.h>
-
 struct RendererParticle {
-    float4 position;
-    float4 velocity;
-    float4 properties;
-    float4 flags;
-    float4 color;
+    glm::vec3 position;
+    glm::vec3 velocity;
+    glm::vec4 properties;
+    glm::vec4 flags;
+    glm::vec3 color;
 };
 
 #endif //SPHLASH_RENDERERPARTICLE_H

@@ -1,11 +1,12 @@
-#include "SimulationMetrics.h"
+#include "../../../include/simulation/utils/SimulationMetrics.h"
 
 #include <thrust/execution_policy.h>
 #include <thrust/transform_reduce.h>
-#include "../../include/simulation/utils/Math.cuh"
+#include "glm/vec3.hpp"
+#include "glm/vec4.hpp"
 
 struct DensityError {
-    const float4* properties;
+    const glm::vec4* properties;
     float restDensity;
 
     __device__ float operator()(const int i) const {
@@ -15,7 +16,7 @@ struct DensityError {
 
 float calculateAverageDensityError(
     const int numParticles,
-    const float4* properties,
+    const glm::vec4* properties,
     const float p_0
 ) {
     const thrust::counting_iterator<int> begin(0);
@@ -33,7 +34,7 @@ float calculateAverageDensityError(
 }
 
 struct DensitySquaredDeviation {
-    const float4* properties;
+    const glm::vec4* properties;
     const float avgDensity;
 
     __device__ float operator()(const int i) const {
@@ -44,7 +45,7 @@ struct DensitySquaredDeviation {
 
 float calculateDensityStandardDeviation(
     const int numParticles,
-    const float4* properties,
+    const glm::vec4* properties,
     const float avgDensity
 ) {
     const thrust::counting_iterator<int> begin(0);
@@ -62,21 +63,21 @@ float calculateDensityStandardDeviation(
 }
 
 struct AccelerationSq {
-    const float4* pf;
-    const float4* vf;
-    const float4* stf;
+    const glm::vec3* pf;
+    const glm::vec3* vf;
+    const glm::vec3* stf;
 
     __device__ float operator()(int i) const {
-        float4 f = pf[i] + vf[i] + stf[i];
+        glm::vec3 f = pf[i] + vf[i] + stf[i];
         return f.x * f.x + f.y * f.y + f.z * f.z;
     }
 };
 
 float calculateMaxAcceleration(
     int numParticles,
-    const float4* pressureForce,
-    const float4* viscosityForce,
-    const float4* surfaceTensionForce
+    const glm::vec3* pressureForce,
+    const glm::vec3* viscosityForce,
+    const glm::vec3* surfaceTensionForce
 ) {
     const thrust::counting_iterator<int> begin(0);
     const thrust::counting_iterator<int> end(numParticles);
@@ -93,7 +94,7 @@ float calculateMaxAcceleration(
 }
 
 struct DensitySum {
-    const float4* properties;
+    const glm::vec4* properties;
 
     __device__ float operator()(const int i) const {
         return properties[i].y;
@@ -102,7 +103,7 @@ struct DensitySum {
 
 float calculateAverageDensity(
     int numParticles,
-    const float4* properties
+    const glm::vec4* properties
 ) {
     const thrust::counting_iterator<int> begin(0);
     const thrust::counting_iterator<int> end(numParticles);
@@ -127,15 +128,15 @@ struct HeightCount {
 };
 
 struct TopSurfaceHeight {
-    const float4* position;
-    const float4* flags;
+    const glm::vec3* position;
+    const glm::vec4* flags;
 
     __device__ HeightCount operator()(const int i) const {
-        if (flags[i].y >= 0.5f) {
-            return HeightCount(position[i].y, 1);
+        if (flags[i].y > 0.5f) {
+            return { position[i].y, 1 };
         }
 
-        return HeightCount(0.0f, 0);
+        return { 0.0f, 0 };
     }
 };
 
@@ -151,8 +152,8 @@ struct HeightCountAdd {
 
 float calculateAverageTopSurfaceHeight(
     int numParticles,
-    const float4* position,
-    const float4* flags
+    const glm::vec3* position,
+    const glm::vec4* flags
 ) {
     auto begin = thrust::counting_iterator<int>(0);
     auto end = begin + numParticles;

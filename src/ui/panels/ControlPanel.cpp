@@ -2,9 +2,9 @@
 // Created by ruut on 4/10/26.
 //
 
-#include "../../../include/ui/panels/ControlPanel.h"
 #include "imgui.h"
-#include "../../../include/rendering/Renderer.h"
+#include "ui/panels/ControlPanel.h"
+#include "rendering/Renderer.h"
 
 ControlPanel::ControlPanel(Editor* editor, FluidSimulation* simulation, Renderer* renderer)
     : UIPanel("Controls"), editor(editor), simulation(simulation), renderer(renderer) {

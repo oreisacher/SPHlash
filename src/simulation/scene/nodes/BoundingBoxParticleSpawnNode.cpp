@@ -2,10 +2,10 @@
 // Created by ruut on 6/1/26.
 //
 
-#include "../../../../include/simulation/scene/nodes/BoundingBoxParticleSpawnNode.h"
+#include "simulation/scene/nodes/BoundingBoxParticleSpawnNode.h"
 #include <vector_functions.h>
-#include "../../../../include/assets/Material.h"
-#include "../../../../include/simulation/scene/Properties.h"
+#include "assets/Material.h"
+#include "simulation/scene/Properties.h"
 
 BoundingBoxParticleSpawnNode::BoundingBoxParticleSpawnNode(const std::string& name)
     : BoundingBoxNode(name, glm::vec3(1.0f, 0.0, 0.0))
@@ -23,12 +23,11 @@ BoundingBoxParticleSpawnNode::BoundingBoxParticleSpawnNode(const nlohmann::json 
     particleSpawn.restDensity = json.value("restDensity", particleSpawn.restDensity);
     particleSpawn.particleSpacing = json.value("particleSpacing", particleSpawn.particleSpacing);
 
-    auto color = json.value("color", std::vector{particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z, particleSpawn.color.w });
-    particleSpawn.color = make_float4(
+    auto color = json.value("color", std::vector{particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z });
+    particleSpawn.color = glm::vec3(
         color[0],
         color[1],
-        color[2],
-        1.0f
+        color[2]
     );
 
     // Update shader color variable
@@ -40,9 +39,9 @@ BoundingBoxParticleSpawnNode::BoundingBoxParticleSpawnNode(const nlohmann::json 
     });
 }
 
-CudaParticleSpawn BoundingBoxParticleSpawnNode::getParticleSpawn() {
+ParticleSpawn BoundingBoxParticleSpawnNode::getParticleSpawn() {
     // Update bounding box
-    particleSpawn.area = getWorldBoundingBox().toCudaAABB();
+    particleSpawn.area = getWorldBoundingBox().getAABBView();
 
     return particleSpawn;
 }
@@ -68,7 +67,7 @@ Properties BoundingBoxParticleSpawnNode::buildProperties() {
         [this] () { return glm::vec3(particleSpawn.color.x, particleSpawn.color.y, particleSpawn.color.z); },
         [this] (glm::vec3 color)
         {
-            particleSpawn.color = { color.x, color.y, color.z, 1.0f };
+            particleSpawn.color = { color.x, color.y, color.z };
 
             material->bind();
             material->setVec3("color", color);

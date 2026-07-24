@@ -9,7 +9,7 @@
 #include "Material.h"
 #include "Mesh.h"
 #include "../simulation/scene/nodes/SceneNode.h"
-#include "../simulation/AABB.h"
+#include "../simulation/AABB.cuh"
 
 class Model {
 public:

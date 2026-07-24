@@ -32,13 +32,13 @@ void ParticlesHost::append(ParticlesHost& particles) {
 
 void ParticlesHost::copyToDevice(const ParticlesGPU& device, const size_t count) const {
     // Copy data from host to device
-    cudaMemcpy(device.d_position,               position.data(),               count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_startPosition,          startPosition.data(),          count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_velocity,               velocity.data(),               count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_properties,             properties.data(),             count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_flags,                  flags.data(),                  count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_color,                  color.data(),                  count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_pressureForce,          pressureForce.data(),          count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_viscosityForce,         viscosityForce.data(),         count * sizeof(float4), cudaMemcpyHostToDevice);
-    cudaMemcpy(device.d_surfaceTensionForce,    surfaceTensionForce.data(),    count * sizeof(float4), cudaMemcpyHostToDevice);
+    cudaMemcpy(device.d_position,               position.data(),               count * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+    cudaMemcpy(device.d_startPosition,          startPosition.data(),          count * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+    cudaMemcpy(device.d_velocity,               velocity.data(),               count * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+    cudaMemcpy(device.d_pressureForce,          pressureForce.data(),          count * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+    cudaMemcpy(device.d_viscosityForce,         viscosityForce.data(),         count * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+    cudaMemcpy(device.d_surfaceTensionForce,    surfaceTensionForce.data(),    count * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+    cudaMemcpy(device.d_properties,             properties.data(),             count * sizeof(glm::vec4), cudaMemcpyHostToDevice);
+    cudaMemcpy(device.d_flags,                  flags.data(),                  count * sizeof(glm::vec4), cudaMemcpyHostToDevice);
+    cudaMemcpy(device.d_color,                  color.data(),                  count * sizeof(glm::vec3), cudaMemcpyHostToDevice);
 }

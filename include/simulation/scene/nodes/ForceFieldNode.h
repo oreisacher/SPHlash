@@ -5,17 +5,17 @@
 #ifndef SPHLASH_FORCEMODEL_H
 #define SPHLASH_FORCEMODEL_H
 
-#include "../../../assets/Model.h"
+#include "assets/Model.h"
 #include "../Transform.h"
 #include "SceneNode.h"
-#include "cuda/CudaForceField.h"
+#include "../ForceField.h"
 
 class ForceFieldNode : public Transform, public SceneNode {
 public:
     ForceFieldNode(const std::string& name);
     explicit ForceFieldNode(const nlohmann::json json);
 
-    CudaForceField getForceField() const;
+    ForceField getForceField() const;
 
     void update(float deltaTime) override;
     void draw(const glm::mat4& view, const glm::mat4& projection) const override;
@@ -31,7 +31,7 @@ public:
 private:
     std::unique_ptr<Model> model;
     std::unique_ptr<Model> wireframeModel;
-    CudaForceField forceField;
+    ForceField forceField;
 };
 
 #endif //SPHLASH_FORCEMODEL_H

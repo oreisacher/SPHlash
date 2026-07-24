@@ -132,11 +132,7 @@ std::vector<Triangle> Mesh::getWorldSpaceTriangles(const glm::mat4& model) const
             1.0f
         );
 
-        triangles.push_back({
-            make_float3(v0.x, v0.y, v0.z),
-            make_float3(v1.x, v1.y, v1.z),
-            make_float3(v2.x, v2.y, v2.z)
-        });
+        triangles.push_back({v0, v1, v2});
     }
 
     return triangles;
