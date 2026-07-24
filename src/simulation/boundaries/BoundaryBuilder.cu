@@ -6,8 +6,9 @@
 #include <cuda_runtime.h>
 #include "assets/Triangle.h"
 #include "simulation/boundaries/Boundaries.cuh"
-#include "../../../include/utils/CudaUtils.h"
+#include "utils/CudaUtils.h"
 #include "glad/gl.h"
+#include "simulation/scene/Scene.h"
 #include "simulation/scene/nodes/ModelNode.h"
 
 bool BoundaryBuilder::constructSDFMap(const Scene* scene, AABB domain, float h, Hex32Field& sdfMap) const {

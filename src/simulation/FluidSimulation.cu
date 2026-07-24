@@ -494,8 +494,10 @@ bool FluidSimulation::initParticles() {
             cudaSpawn,
             spawnParticles,
             d_spawnParticleCount,
+            sdfMap,
             scene->getSimulationDomain()->getWorldBoundingBox().getAABBView(),
-            count
+            count,
+            settings.h
         );
 
 #ifdef DEBUG_CUDA

@@ -43,18 +43,14 @@ __global__ void sdfKernel(
     }
 
     // Determine if this cell is unnecessary
-    float phiMin = INFINITY;
-    float phiMax = -INFINITY;
+     float phiMin = INFINITY;
 
-    for (const float& value : cell->nodes) {
-        if (value < phiMin)
-            phiMin = value;
+     for (const float& value : cell->nodes) {
+         if (value < phiMin)
+             phiMin = value;
+     }
 
-        if (value > phiMax)
-            phiMax = value;
-    }
-
-    cell->used = (2.0f * h > phiMin && phiMax > -h);
+     cell->used = (2.0f * h > phiMin);
 }
 
 __device__ float cubicSplineKernel(float x, float h) {

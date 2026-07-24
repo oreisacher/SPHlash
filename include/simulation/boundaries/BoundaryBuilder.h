@@ -6,9 +6,10 @@
 #define SPHLASH_BOUNDARYBUILDER_H
 
 #include "glm/vec3.hpp"
-#include "../scene/Scene.h"
 #include "../AABB.cuh"
 #include "Hex32Field.h"
+
+class Scene;
 
 struct BoundarySettings {
     bool buildOnInit        = true;
