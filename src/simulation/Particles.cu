@@ -1,6 +1,8 @@
 #include "simulation/Particles.cuh"
 
 #include <cstdio>
+#include <thrust/transform_reduce.h>
+#include <thrust/iterator/counting_iterator.h>
 
 #include "../../include/simulation/scene/ForceField.h"
 #include "rendering/RendererParticle.h"
@@ -17,6 +19,7 @@ __global__ void initParticlesKernel(
     ParticleSpawn spawn,
     ParticlesGPU particles,
     int* particleCount,
+    bool hasBoundary,
     const Hex32Field sdfMap,
     const AABBView domain,
     const glm::ivec3 gridCount,
@@ -41,37 +44,39 @@ __global__ void initParticlesKernel(
     }
 
     // Skip particles which would spawn inside boundaries
-    glm::vec3 boundaryCellSize = domain.size / static_cast<glm::vec3>(sdfMap.resolution);
+    if (hasBoundary) {
+        glm::vec3 boundaryCellSize = domain.size / static_cast<glm::vec3>(sdfMap.resolution);
 
-    // Determine boundary cell coords and clamp to valid range
-    int boundaryCellX = max(0, min(static_cast<int>((pos.x - domain.min.x) / boundaryCellSize.x), sdfMap.resolution.x - 1));
-    int boundaryCellY = max(0, min(static_cast<int>((pos.y - domain.min.y) / boundaryCellSize.y), sdfMap.resolution.y - 1));
-    int boundaryCellZ = max(0, min(static_cast<int>((pos.z - domain.min.z) / boundaryCellSize.z), sdfMap.resolution.z - 1));
+        // Determine boundary cell coords and clamp to valid range
+        int boundaryCellX = max(0, min(static_cast<int>((pos.x - domain.min.x) / boundaryCellSize.x), sdfMap.resolution.x - 1));
+        int boundaryCellY = max(0, min(static_cast<int>((pos.y - domain.min.y) / boundaryCellSize.y), sdfMap.resolution.y - 1));
+        int boundaryCellZ = max(0, min(static_cast<int>((pos.z - domain.min.z) / boundaryCellSize.z), sdfMap.resolution.z - 1));
 
-    int boundaryCellId = boundaryCellX
-                    + boundaryCellY * sdfMap.resolution.x
-                    + boundaryCellZ * sdfMap.resolution.x * sdfMap.resolution.y;
+        int boundaryCellId = boundaryCellX
+                        + boundaryCellY * sdfMap.resolution.x
+                        + boundaryCellZ * sdfMap.resolution.x * sdfMap.resolution.y;
 
-    Hex32Cell* sdfCell      = &sdfMap.d_cells[boundaryCellId];
+        Hex32Cell* sdfCell      = &sdfMap.d_cells[boundaryCellId];
 
-    if (sdfCell->used) {
-        glm::vec3 boundaryCellMin = domain.min + glm::vec3(boundaryCellX, boundaryCellY, boundaryCellZ) * boundaryCellSize;
-        glm::vec3 boundaryCellMax = boundaryCellMin + boundaryCellSize;
+        if (sdfCell->used) {
+            glm::vec3 boundaryCellMin = domain.min + glm::vec3(boundaryCellX, boundaryCellY, boundaryCellZ) * boundaryCellSize;
+            glm::vec3 boundaryCellMax = boundaryCellMin + boundaryCellSize;
 
-        glm::vec3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, pos);
-        isoparametricCoords.x = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.x));
-        isoparametricCoords.y = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.y));
-        isoparametricCoords.z = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.z));
+            glm::vec3 isoparametricCoords = T(boundaryCellMin, boundaryCellMax, pos);
+            isoparametricCoords.x = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.x));
+            isoparametricCoords.y = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.y));
+            isoparametricCoords.z = fmaxf(-1.0f, fminf(1.0f, isoparametricCoords.z));
 
-        float interpolatedSDF = interpolateHex32(
-            isoparametricCoords.x,
-            isoparametricCoords.y,
-            isoparametricCoords.z,
-            sdfCell->nodes
-        );
+            float interpolatedSDF = interpolateHex32(
+                isoparametricCoords.x,
+                isoparametricCoords.y,
+                isoparametricCoords.z,
+                sdfCell->nodes
+            );
 
-        if (interpolatedSDF <= h)
-            return;
+            if (interpolatedSDF <= h)
+                return;
+        }
     }
 
     if (spawn.hasShape && calculateSDF(pos, spawn.triangleCount, spawn.d_shapeTriangles) > 0.0)
@@ -622,4 +627,35 @@ __global__ void topSurfaceParticlesKernel(
     }
 
     flags[id].y = 1.0;
+}
+
+struct AccelerationSq {
+    const glm::vec3* pf;
+    const glm::vec3* vf;
+    const glm::vec3* stf;
+
+    __device__ float operator()(int i) const {
+        glm::vec3 f = pf[i] + vf[i] + stf[i];
+        return f.x * f.x + f.y * f.y + f.z * f.z;
+    }
+};
+
+float calculateMaxAcceleration(
+    int numParticles,
+    const glm::vec3* pressureForce,
+    const glm::vec3* viscosityForce,
+    const glm::vec3* surfaceTensionForce
+) {
+    const thrust::counting_iterator<int> begin(0);
+    const thrust::counting_iterator<int> end(numParticles);
+
+    const float maxAcc = thrust::transform_reduce(
+        begin,
+        end,
+        AccelerationSq{pressureForce, viscosityForce, surfaceTensionForce},
+        0.0f,
+        thrust::maximum<float>()
+    );
+
+    return sqrtf(maxAcc);
 }

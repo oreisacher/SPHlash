@@ -3,16 +3,37 @@
 //
 
 #include "core/Editor.h"
-#include "../../include/simulation/scene/nodes/BoundingBoxNode.h"
-#include "../../include/simulation/scene/nodes/BoundingBoxParticleSpawnNode.h"
-#include "../../include/simulation/scene/nodes/ModelParticleSpawnNode.h"
-#include "../../include/simulation/boundaries/BoundaryBuilder.h"
-#include "../../include/ui/panels/SimulationPanel.h"
+#include "simulation/scene/nodes/BoundingBoxNode.h"
+#include "simulation/scene/nodes/BoundingBoxParticleSpawnNode.h"
+#include "simulation/scene/nodes/ModelParticleSpawnNode.h"
+#include "simulation/boundaries/BoundaryBuilder.h"
+#include "ui/panels/SimulationPanel.h"
 #include <memory>
 
 Editor::Editor(Scene* scene, FluidSimulation* sim)
     : scene(scene), simulation(sim)
 { }
+
+void Editor::init() {
+    // Build boundary map
+    if (boundryBuilder.settings.buildOnInit)
+        buildBoundaryDensityMap();
+
+    // Init simulation
+    simulation->init();
+
+    // Call init function of each node
+    for (const auto& node : scene->getSceneNodes())
+        node->init();
+}
+
+void Editor::reset() const {
+    simulation->reset();
+
+    // Reset data of query nodes
+    for (const auto& node : scene->getQueryNodes())
+        node->reset();
+}
 
 Scene* Editor::getScene() const {
     return scene;
@@ -44,6 +65,12 @@ void Editor::addParticleSpawn(const std::string& path) {
     auto modelParticleSpawnNode = std::make_unique<ModelParticleSpawnNode>(std::string("Particle Spawn"), model);
     selectedNode = modelParticleSpawnNode.get();
     scene->addSceneNode(std::move(modelParticleSpawnNode));
+}
+
+void Editor::addQuery() {
+    auto queryNode = std::make_unique<QueryNode>(simulation);
+    selectedNode = queryNode.get();
+    scene->addSceneNode(std::move(queryNode));
 }
 
 void Editor::updateRenderingSize(int width, int height) const {

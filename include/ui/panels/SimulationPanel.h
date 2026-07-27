@@ -13,7 +13,7 @@ class SimulationPanel : public UIPanel {
 public:
     explicit SimulationPanel(Editor* editor, Renderer* renderer);
 
-    void preDraw(double deltaTime) override;
+    void update(double deltaTime) override;
     void draw() override;
     void postDraw(double deltaTime) override;
 

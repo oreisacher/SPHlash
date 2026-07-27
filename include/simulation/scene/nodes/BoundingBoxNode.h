@@ -6,9 +6,9 @@
 #define SPHLASH_AREAMODEL_H
 
 #include "../IBounded.h"
-#include "../../../assets/Material.h"
-#include "../../../assets/Mesh.h"
 #include "../Transform.h"
+#include "assets/Material.h"
+#include "assets/Mesh.h"
 #include "SceneNode.h"
 
 class BoundingBoxNode : public Transform, public SceneNode, public IBounded {

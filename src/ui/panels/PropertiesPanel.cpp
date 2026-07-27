@@ -2,12 +2,12 @@
 // Created by ruut on 5/31/26.
 //
 
-#include "../../../include/ui/panels/PropertiesPanel.h"
+#include "ui/panels/PropertiesPanel.h"
 #include "imgui.h"
 
 PropertiesPanel::PropertiesPanel(Editor* editor) : UIPanel("Properties"), editor(editor) { }
 
-void PropertiesPanel::preDraw(double deltaTime) {
+void PropertiesPanel::update(double deltaTime) {
     if (editor->getSelected() != selected) {
         selected = editor->getSelected();
 

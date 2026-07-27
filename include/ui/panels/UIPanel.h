@@ -16,7 +16,7 @@ public:
 
     virtual ~UIPanel();
 
-    virtual void preDraw(double deltaTime) {};
+    virtual void update(double deltaTime) {};
     virtual void draw() = 0;
     virtual void postDraw(double deltaTime) {};
     virtual void drawMenu() {};

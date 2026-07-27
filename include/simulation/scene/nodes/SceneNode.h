@@ -6,7 +6,7 @@
 #define SPHLASH_SCENENODE_H
 
 #include "../ISelectable.h"
-#include "../../../rendering/IRenderable.h"
+#include "rendering/IRenderable.h"
 #include <unordered_set>
 #include <nlohmann/json.hpp>
 
@@ -18,6 +18,7 @@ public:
     SceneNode(const nlohmann::json j);
     ~SceneNode() override = default;
 
+    virtual void init() {};
     virtual void update(float deltaTime) = 0;
 
     // --- Name ---

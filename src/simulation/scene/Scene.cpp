@@ -2,18 +2,17 @@
 // Created by ruut on 4/29/26.
 //
 
-#include "../../../include/simulation/scene/Scene.h"
-#include "../../../include/simulation/FluidSimulation.h"
-#include "../../../include/simulation/scene/nodes/BoundingBoxParticleSpawnNode.h"
-#include "../../../include/simulation/scene/nodes/ForceFieldNode.h"
-#include "../../../include/simulation/scene/nodes/ModelNode.h"
-#include "../../../include/simulation/scene/nodes/ModelParticleSpawnNode.h"
-#include "../../../include/core/Config.h"
+#include "simulation/scene/Scene.h"
+#include "simulation/FluidSimulation.h"
+#include "simulation/scene/nodes/BoundingBoxParticleSpawnNode.h"
+#include "simulation/scene/nodes/ForceFieldNode.h"
+#include "simulation/scene/nodes/ModelNode.h"
+#include "simulation/scene/nodes/ModelParticleSpawnNode.h"
+#include "simulation/scene/nodes/ParticlesNode.h"
+#include "simulation/scene/nodes/SimulationDomainNode.h"
+#include "simulation/scene/nodes/SkyboxNode.h"
+#include "core/Config.h"
 #include <algorithm>
-
-#include "../../../include/simulation/scene/nodes/ParticlesNode.h"
-#include "../../../include/simulation/scene/nodes/SimulationDomainNode.h"
-#include "../../../include/simulation/scene/nodes/SkyboxNode.h"
 
 Scene::Scene(Window* window) {
     // Add Skybox Node to Scene
@@ -66,6 +65,9 @@ void Scene::addSceneNode(std::unique_ptr<SceneNode> node) {
     if (auto* particleSpawn = dynamic_cast<IParticleSpawn*>(node.get()))
         particleSpawns.push_back(particleSpawn);
 
+    if (auto* queryNode = dynamic_cast<QueryNode*>(node.get()))
+        queryNodes.push_back(queryNode);
+
     node->scene = this;
     sceneNodes.push_back(std::move(node));
 }
@@ -74,6 +76,7 @@ void Scene::removeSceneNode(const SceneNode* node) {
     std::erase_if(models,         [&](const ModelNode* n)       { return n == node; });
     std::erase_if(boundingBoxes,  [&](const BoundingBoxNode* n) { return n == node; });
     std::erase_if(forceFields,    [&](const ForceFieldNode* n)  { return n == node; });
+    std::erase_if(queryNodes,     [&](const QueryNode* n)       { return n == node; });
 
     if (const auto* ps = dynamic_cast<const IParticleSpawn*>(node))
         std::erase_if(particleSpawns, [&](const IParticleSpawn* n) { return n == ps; });
@@ -112,6 +115,10 @@ std::vector<SceneNode*> Scene::getSceneNodes() const {
         result.push_back(node.get());
 
     return result;
+}
+
+std::vector<QueryNode*> Scene::getQueryNodes() const {
+    return queryNodes;
 }
 
 void Scene::saveScene(const std::string& path) const {
@@ -192,6 +199,9 @@ std::unique_ptr<SceneNode> Scene::nodeFromJson(const nlohmann::json& j) {
 
     if (type == "SimulationDomainNode")
         return std::make_unique<SimulationDomainNode>(j);
+
+    if (type == "QueryNode")
+        return std::make_unique<QueryNode>(j);
 
     throw std::runtime_error("Unknown node type: " + type);
 }

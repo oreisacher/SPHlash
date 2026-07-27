@@ -7,7 +7,7 @@
 
 #include <cmath>
 #include "UIPanel.h"
-#include "../../simulation/FluidSimulation.h"
+#include "simulation/FluidSimulation.h"
 
 class Shader;
 class Renderer;
@@ -17,7 +17,7 @@ class ParticlesPanel : public UIPanel {
 public:
     explicit ParticlesPanel(FluidSimulation* simulation, ParticlesNode* particles);
 
-    void preDraw(double deltaTime) override;
+    void update(double deltaTime) override;
     void draw() override;
 
 private:

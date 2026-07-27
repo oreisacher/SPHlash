@@ -2,7 +2,7 @@
 // Created by ruut on 5/31/26.
 //
 
-#include "../../../include/simulation/scene/Properties.h"
+#include "simulation/scene/Properties.h"
 #include "imgui.h"
 #include "ImGuiFileDialog.h"
 #include "glm/gtc/type_ptr.hpp"
@@ -83,6 +83,49 @@ void StringProperty::draw() {
     std::string v = get();
     if (ImGui::InputText(id.c_str(), &v))
         set(v);
+}
+
+void EnumProperty::draw() {
+    ImGui::Text("%s:", name.c_str());
+    const std::string id = "##" + name;
+
+    int v = get();
+    if (ImGui::BeginCombo(id.c_str(), items[v].c_str())) {
+        for (int i = 0; i < items.size(); i++) {
+            if (ImGui::Selectable(items[i].c_str(), v == i))
+                set(i);
+
+            if (v == i)
+                ImGui::SetItemDefaultFocus();
+        }
+
+        ImGui::EndCombo();
+    }
+}
+
+void ButtonProperty::draw() {
+    float totalWidth = ImGui::GetContentRegionAvail().x;
+
+    if (ImGui::Button(name.c_str(), ImVec2(totalWidth, 0)))
+        callback();
+}
+
+void DialogProperty::draw() {
+    float totalWidth = ImGui::GetContentRegionAvail().x;
+
+    if (ImGuiFileDialog::Instance()->Display(name.c_str())) {
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            callback(ImGuiFileDialog::Instance()->GetFilePathName());
+        }
+
+        ImGuiFileDialog::Instance()->Close();
+    }
+
+    if (ImGui::Button(name.c_str(), ImVec2(totalWidth, 0))) {
+        IGFD::FileDialogConfig config;
+        config.path = ".";
+        ImGuiFileDialog::Instance()->OpenDialog(name.c_str(), "Choose location", filters.c_str(), config);
+    }
 }
 
 void Properties::addSection(const std::string& section) {

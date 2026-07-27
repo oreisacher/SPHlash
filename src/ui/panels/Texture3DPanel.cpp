@@ -17,7 +17,7 @@ Texture3DPanel::Texture3DPanel(const std::string& name, GLuint texture, int widt
     shader = Shader::createTexture3DSlice();
 }
 
-void Texture3DPanel::preDraw(double deltaTime) {
+void Texture3DPanel::update(double deltaTime) {
     if (!isDirty)
         return;
 

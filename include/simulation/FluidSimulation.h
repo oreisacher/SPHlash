@@ -52,16 +52,6 @@ struct SimulationSettings {
     float safetyFactor = 0.25f;
 };
 
-struct FrameMetrics {
-    float averageDensityError = 0.0;
-    float averageDensity = 0.0f;
-    float densityStandardDeviation = 0.0f;
-
-#ifdef METRIC_AVG_HEIGHT
-    float avgTopSurfaceHeight = 0.0f;
-# endif
-};
-
 class FluidSimulation {
 public:
     FluidSimulation(Scene* scene);
@@ -107,19 +97,18 @@ public:
     bool computeVoxelField(const VoxelField& field) const;
 
     ParticleHost getParticle(int id) const;
+    ParticlesGPU getParticlesGPU() const;
 
     SimulationSettings settings;
 
     inline static const char* SimulationDomainTag = "simulation_domain";
 
-    FrameMetrics getFrameMetrics() const;
 private:
     Scene* scene;
 
     int particleCount = 0;
 
     float cfl = 0;
-    FrameMetrics metrics;
 
     // --- Simulation State ---
     SimulationState state = UNINITIALIZED;

@@ -12,7 +12,7 @@ SimulationPanel::SimulationPanel(Editor* editor, Renderer* renderer)
     : UIPanel("Simulation"), editor(editor), renderer(renderer)
 { }
 
-void SimulationPanel::preDraw(double deltaTime) {}
+void SimulationPanel::update(double deltaTime) {}
 
 void SimulationPanel::draw() {
     if (!visible)

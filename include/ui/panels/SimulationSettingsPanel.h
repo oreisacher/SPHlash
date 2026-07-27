@@ -14,7 +14,7 @@ class SimulationSettingsPanel : public UIPanel {
 public:
     explicit SimulationSettingsPanel(Editor* editor, FluidSimulation* simulation, Renderer* renderer);
 
-    void preDraw(double deltaTime) override;
+    void update(double deltaTime) override;
     void draw() override;
 
 private:

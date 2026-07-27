@@ -14,6 +14,9 @@ class Editor {
 public:
     Editor(Scene* scene, FluidSimulation* sim);
 
+    void init();
+    void reset() const;
+
     Scene* getScene() const;
 
     void setSelected(SceneNode* node);
@@ -38,8 +41,12 @@ public:
     // --- Particle Spawns ---
     void addParticleSpawn(const std::string& path);
 
+    // --- Query Node ---
+    void addQuery();
+
     // --- Window Resizes ---
     void updateRenderingSize(int width, int height) const;
+
 private:
     Scene* scene;
     FluidSimulation* simulation;

@@ -6,15 +6,15 @@
 #define FLUIDSIMSPH_CONTROLPANEL_H
 
 #include "UIPanel.h"
-#include "../../core/Editor.h"
-#include "../../rendering/FluidSurfaceMesher.h"
-#include "../../simulation/FluidSimulation.h"
+#include "core/Editor.h"
+#include "rendering/FluidSurfaceMesher.h"
+#include "simulation/FluidSimulation.h"
 
 class ControlPanel : public UIPanel {
 public:
     explicit ControlPanel(Editor* editor, FluidSimulation* simulation, Renderer* renderer);
 
-    void preDraw(double deltaTime) override;
+    void update(double deltaTime) override;
     void draw() override;
 
 private:

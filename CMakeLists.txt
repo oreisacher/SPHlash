@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 3.22)
 project(SPHlash LANGUAGES CXX C CUDA)
 
 option(ENABLE_CUDA_DEBUG "Enable Cuda debug checks for kernel calls" OFF)
-option(METRIC_DENSITY "Enable metrics related to density" ON)
-option(METRIC_AVG_HEIGHT "Enable advanced metric for average height of top surface particles" OFF)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CUDA_STANDARD 17)

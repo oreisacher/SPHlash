@@ -13,7 +13,7 @@ class RenderingSettingsPanel : public UIPanel {
 public:
     explicit RenderingSettingsPanel(ParticlesNode* particles);
 
-    void preDraw(double deltaTime) override;
+    void update(double deltaTime) override;
     void draw() override;
 
 private:

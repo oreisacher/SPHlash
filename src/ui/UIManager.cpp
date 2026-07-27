@@ -157,7 +157,7 @@ void UIManager::preDraw(double deltaTime) {
         });
 
     for (auto& panel : panels)
-        panel->preDraw(deltaTime);
+        panel->update(deltaTime);
 }
 
 void UIManager::draw() const {

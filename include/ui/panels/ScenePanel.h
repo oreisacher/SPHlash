@@ -13,7 +13,7 @@ class ScenePanel : public UIPanel {
 public:
     explicit ScenePanel(Editor* editor, Renderer* renderer);
 
-    void preDraw(double deltaTime) override;
+    void update(double deltaTime) override;
     void draw() override;
     void drawMenu() override;
 

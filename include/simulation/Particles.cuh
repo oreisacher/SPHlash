@@ -15,6 +15,7 @@ __global__ void initParticlesKernel(
     ParticleSpawn spawn,
     ParticlesGPU particles,
     int* particleCount,
+    bool hasBoundary,
     Hex32Field sdfMap,
     AABBView domain,
     glm::ivec3 gridCount,
@@ -110,6 +111,13 @@ __global__ void topSurfaceParticlesKernel(
     const glm::vec3* position,
     glm::vec4* flags,
     const int* hashes, const int* offsets, float h
+);
+
+float calculateMaxAcceleration(
+    int numParticles,
+    const glm::vec3* pressureForce,
+    const glm::vec3* viscosityForce,
+    const glm::vec3* surfaceTensionForce
 );
 
 #endif

@@ -10,7 +10,7 @@ ControlPanel::ControlPanel(Editor* editor, FluidSimulation* simulation, Renderer
     : UIPanel("Controls"), editor(editor), simulation(simulation), renderer(renderer) {
 }
 
-void ControlPanel::preDraw(double deltaTime) { }
+void ControlPanel::update(double deltaTime) { }
 
 void ControlPanel::draw() {
     if (!visible)
@@ -21,16 +21,13 @@ void ControlPanel::draw() {
     ImGui::PushItemWidth(-FLT_MIN);
     float totalWidth = ImGui::GetContentRegionAvail().x;
 
-    if (ImGui::Button("Init Simulation", ImVec2(totalWidth, 0))) {
-        // Build boundary map
-        if (editor->getBoundaryBuilder()->settings.buildOnInit)
-            editor->buildBoundaryDensityMap();
-
-        // Init simulation
-        simulation->init();
-    }
-
     const SimulationState simulationState = simulation->getState();
+
+    if (ImGui::Button("Init Simulation", ImVec2(totalWidth, 0)))
+        editor->init();
+
+    if (ImGui::IsKeyPressed(ImGuiKey_R) && simulationState == UNINITIALIZED)
+        editor->init();
 
     ImGui::BeginDisabled(simulationState == UNINITIALIZED);
 
@@ -41,10 +38,10 @@ void ControlPanel::draw() {
         simulationState == PAUSED ? simulation->start() : simulation->pause();
 
     if (ImGui::Button("Reset Simulation", ImVec2(totalWidth, 0)))
-        simulation->reset();
+        editor->reset();
 
     if (ImGui::IsKeyPressed(ImGuiKey_R) && simulationState != UNINITIALIZED)
-        simulation->reset();
+        editor->reset();
 
     ImGui::EndDisabled();
 

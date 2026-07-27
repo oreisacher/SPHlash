@@ -7,15 +7,16 @@
 #include <format>
 #include "core/Input.h"
 #include "core/Time.h"
-#include "../../include/ui/panels/ControlPanel.h"
-#include "../../include/ui/panels/PropertiesPanel.h"
-#include "../../include/ui/panels/ScenePanel.h"
+#include "ui/panels/ControlPanel.h"
+#include "ui/panels/PropertiesPanel.h"
+#include "ui/panels/ScenePanel.h"
 #include "ui/panels/RenderingSettingsPanel.h"
-#include "../../include/ui/panels/SimulationPanel.h"
+#include "ui/panels/SimulationPanel.h"
 #include "ui/panels/ParticlesPanel.h"
-#include "../../include/ui/panels/SimulationSettingsPanel.h"
-#include "../../include/ui/panels/StatisticsPanel.h"
-#include "../../include/utils/Logger.h"
+#include "ui/panels/QueryDataPanel.h"
+#include "ui/panels/SimulationSettingsPanel.h"
+#include "ui/panels/StatisticsPanel.h"
+#include "utils/Logger.h"
 
 #define GLAD_GL_IMPLEMENTATION
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -51,6 +52,7 @@ Application::Application() {
     _ui->addPanel(new SimulationPanel            (_editor, _renderer));
     _ui->addPanel(new ControlPanel               (_editor, _simulation, _renderer));
     _ui->addPanel(new StatisticsPanel            (_simulation));
+    _ui->addPanel(new QueryDataPanel             (_editor));
     _ui->addPanel(new SimulationSettingsPanel    (_editor, _simulation, _renderer));
     _ui->addPanel(new RenderingSettingsPanel     (_scene->getParticlesNode()));
     _ui->addPanel(new ParticlesPanel             (_simulation, _scene->getParticlesNode()));

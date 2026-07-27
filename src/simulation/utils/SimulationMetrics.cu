@@ -1,173 +1,82 @@
-#include "../../../include/simulation/utils/SimulationMetrics.h"
-
-#include <thrust/execution_policy.h>
-#include <thrust/transform_reduce.h>
+#include "simulation/utils/SimulationMetrics.cuh"
 #include "glm/vec3.hpp"
-#include "glm/vec4.hpp"
+#include "thrust/transform_reduce.h"
 
-struct DensityError {
-    const glm::vec4* properties;
-    float restDensity;
+__device__
+Metrics operator+(const Metrics& lhs, const Metrics& rhs) {
+    Metrics result;
 
-    __device__ float operator()(const int i) const {
-        return fabsf(properties[i].y - restDensity) / restDensity;
-    }
-};
+    result.count = lhs.count + rhs.count;
 
-float calculateAverageDensityError(
-    const int numParticles,
-    const glm::vec4* properties,
-    const float p_0
-) {
-    const thrust::counting_iterator<int> begin(0);
-    const thrust::counting_iterator<int> end(numParticles);
+    result.position = lhs.position + rhs.position;
+    result.velocity = lhs.velocity + rhs.velocity;
+    result.pressureForce = lhs.pressureForce + rhs.pressureForce;
+    result.viscosityForce = lhs.viscosityForce + rhs.viscosityForce;
+    result.surfaceTensionForce = lhs.surfaceTensionForce + rhs.surfaceTensionForce;
 
-    float averageDensityError = thrust::transform_reduce(
-        begin,
-        end,
-        DensityError { properties, p_0 },
-        0.0f,
-        thrust::plus<float>()
-    );
+    result.density = lhs.density + rhs.density;
+    result.densityError = lhs.densityError + rhs.densityError;
+    result.pressure = lhs.pressure + rhs.pressure;
 
-    return averageDensityError / numParticles;
+    return result;
 }
 
-struct DensitySquaredDeviation {
-    const glm::vec4* properties;
-    const float avgDensity;
-
-    __device__ float operator()(const int i) const {
-        float diff = properties[i].y - avgDensity;
-        return diff * diff;
-    }
-};
-
-float calculateDensityStandardDeviation(
-    const int numParticles,
-    const glm::vec4* properties,
-    const float avgDensity
-) {
-    const thrust::counting_iterator<int> begin(0);
-    const thrust::counting_iterator<int> end(numParticles);
-
-    float densityStdDeviation = thrust::transform_reduce(
-        begin,
-        end,
-        DensitySquaredDeviation { properties, avgDensity },
-        0.0f,
-        thrust::plus<float>()
-    );
-
-    return sqrt(densityStdDeviation / numParticles);
-}
-
-struct AccelerationSq {
-    const glm::vec3* pf;
-    const glm::vec3* vf;
-    const glm::vec3* stf;
-
-    __device__ float operator()(int i) const {
-        glm::vec3 f = pf[i] + vf[i] + stf[i];
-        return f.x * f.x + f.y * f.y + f.z * f.z;
-    }
-};
-
-float calculateMaxAcceleration(
+__global__ void metricsKernel (
     int numParticles,
-    const glm::vec3* pressureForce,
-    const glm::vec3* viscosityForce,
-    const glm::vec3* surfaceTensionForce
+    ParticlesGPU particles,
+    int filter,
+    float restDensity,
+    AABBView area,
+    Metrics* blockResults
 ) {
-    const thrust::counting_iterator<int> begin(0);
-    const thrust::counting_iterator<int> end(numParticles);
+    __shared__ Metrics shared[256];
 
-    const float maxAcc = thrust::transform_reduce(
-        begin,
-        end,
-        AccelerationSq{pressureForce, viscosityForce, surfaceTensionForce},
-        0.0f,
-        thrust::maximum<float>()
-    );
+    int id = blockIdx.x * blockDim.x + threadIdx.x;
 
-    return sqrtf(maxAcc);
-}
+    Metrics local{};
 
-struct DensitySum {
-    const glm::vec4* properties;
+    if (id < numParticles) {
+        bool include = true;
 
-    __device__ float operator()(const int i) const {
-        return properties[i].y;
+        glm::vec3 pos = particles.d_position[id];
+
+        // Only consider particles inside query bb
+        if (pos.x < area.min.x || pos.x > area.max.x ||
+            pos.y < area.min.y || pos.y > area.max.y ||
+            pos.z < area.min.z || pos.z > area.max.z )
+            include = false;
+
+        // Top Surface Filter
+        if (filter == 1 && particles.d_flags[id].y != 1.0)
+            include = false;
+
+        if (include) {
+            local.count = 1;
+
+            local.position = pos;
+            local.velocity = particles.d_velocity[id];
+            local.pressureForce = particles.d_pressureForce[id];
+            local.viscosityForce = particles.d_viscosityForce[id];
+            local.surfaceTensionForce = particles.d_surfaceTensionForce[id];
+            local.density = particles.d_properties[id].y;
+            local.pressure = particles.d_properties[id].z;
+
+            local.densityError = fabsf(particles.d_properties[id].y - restDensity) / restDensity;
+        }
     }
-};
 
-float calculateAverageDensity(
-    int numParticles,
-    const glm::vec4* properties
-) {
-    const thrust::counting_iterator<int> begin(0);
-    const thrust::counting_iterator<int> end(numParticles);
+    shared[threadIdx.x] = local;
+    __syncthreads();
 
-    float totalDensity = thrust::transform_reduce(
-        begin,
-        end,
-        DensitySum { properties },
-        0.0f,
-        thrust::plus<float>()
-    );
-
-    return totalDensity / static_cast<float>(numParticles);
-}
-
-struct HeightCount {
-    float height;
-    int count;
-
-    __host__ __device__
-    HeightCount(float h = 0.0f, int c = 0) : height(h), count(c) {}
-};
-
-struct TopSurfaceHeight {
-    const glm::vec3* position;
-    const glm::vec4* flags;
-
-    __device__ HeightCount operator()(const int i) const {
-        if (flags[i].y > 0.5f) {
-            return { position[i].y, 1 };
+    // Parallel reduction
+    for (int stride = 256 / 2; stride > 0; stride >>= 1) {
+        if (threadIdx.x < stride) {
+            shared[threadIdx.x] = shared[threadIdx.x] + shared[threadIdx.x + stride];
         }
 
-        return { 0.0f, 0 };
+        __syncthreads();
     }
-};
 
-struct HeightCountAdd {
-    __host__ __device__
-    HeightCount operator()(const HeightCount& a, const HeightCount& b) const {
-        return HeightCount(
-            a.height + b.height,
-            a.count + b.count
-        );
-    }
-};
-
-float calculateAverageTopSurfaceHeight(
-    int numParticles,
-    const glm::vec3* position,
-    const glm::vec4* flags
-) {
-    auto begin = thrust::counting_iterator<int>(0);
-    auto end = begin + numParticles;
-
-    HeightCount result = thrust::transform_reduce(
-        begin,
-        end,
-        TopSurfaceHeight{position, flags},
-        HeightCount(),
-        HeightCountAdd()
-    );
-
-    if (result.count == 0)
-        return 0.0f;
-
-    return result.height / static_cast<float>(result.count);
+    if (threadIdx.x == 0)
+        blockResults[blockIdx.x] = shared[0];
 }

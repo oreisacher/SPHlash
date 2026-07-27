@@ -2,18 +2,18 @@
 // Created by ruut on 4/13/26.
 //
 
-#include "../../../include/ui/panels/ScenePanel.h"
+#include "ui/panels/ScenePanel.h"
+#include "ui/panels/PropertiesPanel.h"
+#include "core/Editor.h"
+#include "simulation/scene/Scene.h"
 #include "ImGuiFileDialog.h"
-#include "../../../include/ui/panels/PropertiesPanel.h"
-#include "../../../include/core/Editor.h"
-#include "../../../include/simulation/scene/Scene.h"
 #include "imgui.h"
 
 ScenePanel::ScenePanel(Editor* editor, Renderer* renderer)
     : UIPanel("Scene"), editor(editor), renderer(renderer)
 { }
 
-void ScenePanel::preDraw(double deltaTime) { }
+void ScenePanel::update(double deltaTime) { }
 
 void ScenePanel::draw() {
     if (!visible)
@@ -131,6 +131,11 @@ void ScenePanel::draw() {
     // --- Force Fields ---
     if (ImGui::Button("Add Force Field", ImVec2(totalWidth, 0))) {
         editor->addForceField();
+    }
+
+    // --- Queries ---
+    if (ImGui::Button("Add Query", ImVec2(totalWidth, 0))) {
+        editor->addQuery();
     }
 
     // --- Load & Save File Dialogs ---

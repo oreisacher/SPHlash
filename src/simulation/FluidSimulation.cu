@@ -14,8 +14,7 @@
 #include "../../include/utils/CudaUtils.h"
 #include <cuda_gl_interop.h>
 #include <cub/device/device_radix_sort.cuh>
-#include "simulation/utils/Hex32.cuh"
-#include "../../include/simulation/utils/SimulationMetrics.h"
+#include "../../include/simulation/utils/SimulationMetrics.cuh"
 #include "simulation/Particles.cuh"
 #include "simulation/ParticlesHost.h"
 #include "simulation/VoxelField.cuh"
@@ -177,27 +176,6 @@ void FluidSimulation::update(const float deltaTime) {
 
     for (int i = 0 ; i < settings.simulationSteps ; i++) {
         updateParticles();
-
-        // --- Frame Metrics ---
-#ifdef METRIC_DENSITY
-        metrics.averageDensity = calculateAverageDensity(particleCount, particles.d_properties);
-
-        metrics.averageDensityError = calculateAverageDensityError(
-            particleCount,
-            particles.d_properties,
-            settings.p_0
-        );
-
-        metrics.densityStandardDeviation = calculateDensityStandardDeviation(particleCount, particles.d_properties, metrics.averageDensity);
-#endif
-
-#ifdef METRIC_AVG_HEIGHT
-        metrics.avgTopSurfaceHeight = calculateAverageTopSurfaceHeight(
-            particleCount,
-            particles.d_position,
-            particles.d_flags
-        );
-#endif
 
         // --- CFL ---
         float cs = 10.0f * settings.maxVelocity;
@@ -454,8 +432,8 @@ ParticleHost FluidSimulation::getParticle(const int id) const {
     return p;
 }
 
-FrameMetrics FluidSimulation::getFrameMetrics() const {
-    return metrics;
+ParticlesGPU FluidSimulation::getParticlesGPU() const {
+    return particles;
 }
 
 bool FluidSimulation::initParticles() {
@@ -494,6 +472,7 @@ bool FluidSimulation::initParticles() {
             cudaSpawn,
             spawnParticles,
             d_spawnParticleCount,
+            sdfMap.d_cells != nullptr,
             sdfMap,
             scene->getSimulationDomain()->getWorldBoundingBox().getAABBView(),
             count,

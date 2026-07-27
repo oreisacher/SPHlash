@@ -8,6 +8,7 @@
 #include <vector>
 #include <nlohmann/json_fwd.hpp>
 #include "nodes/CameraNode.h"
+#include "nodes/QueryNode.h"
 
 class IParticleSpawn;
 class ForceFieldNode;
@@ -35,6 +36,7 @@ public:
     std::vector<ForceFieldNode*> getForceFields() const;
     std::vector<IParticleSpawn*> getParticleSpawns() const;
     std::vector<SceneNode*> getSceneNodes() const;
+    std::vector<QueryNode*> getQueryNodes() const;
 
     void saveScene(const std::string& path) const;
     void loadScene(const std::string& path);
@@ -53,6 +55,7 @@ private:
     std::vector<BoundingBoxNode*>   boundingBoxes       = {};
     std::vector<ForceFieldNode*>    forceFields         = {};
     std::vector<IParticleSpawn*>    particleSpawns      = {};
+    std::vector<QueryNode*>         queryNodes          = {};
 
     std::unique_ptr<SceneNode> nodeFromJson(const nlohmann::json& j);
 };

@@ -99,6 +99,41 @@ struct StringProperty : Property {
     void draw() override;
 };
 
+struct EnumProperty : Property {
+    EnumProperty(const std::string& name, std::function<int()> get, std::function<void (int)> set, const std::vector<std::string>& items)
+        : name(name), get(std::move(get)), set(std::move(set)), items(items)
+    {};
+
+    std::string                         name;
+    std::function<int()>                get;
+    std::function<void (int)>           set;
+
+    std::vector<std::string> items;
+
+    void draw() override;
+};
+
+struct ButtonProperty : Property {
+    ButtonProperty(const std::string& name, const std::function<void()>& callback)
+        : name(name), callback(callback) {};
+
+    std::string name;
+    std::function<void()> callback;
+
+    void draw() override;
+};
+
+struct DialogProperty : Property {
+    DialogProperty(const std::string& name, const std::function<void(std::string)>& callback, const std::string& filters)
+    : name(name), callback(callback), filters(filters) {};
+
+    std::string name;
+    std::function<void(std::string)> callback;
+    std::string filters;
+
+    void draw() override;
+};
+
 struct Section {
     std::string name;
     int index;
