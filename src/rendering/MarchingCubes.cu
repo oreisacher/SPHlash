@@ -166,7 +166,7 @@ __global__ void marchingCubesKernel(
             glm::vec3 edge1 = v1 - v0;
             glm::vec3 edge2 = v2 - v0;
 
-            glm::vec3 faceNormal = edge1 * edge2 - edge1 * edge2;
+            glm::vec3 faceNormal = glm::cross(edge1, edge2);
             float length = glm::length(faceNormal);
 
             if (length > 1e-6f) {

@@ -24,7 +24,6 @@ public:
     void reset();
 
     void update(float deltaTime) override;
-    void draw(const glm::mat4& view, const glm::mat4& projection) const override;
 
     void setHover(bool hover);
     void setAspectRatio(float aspect);

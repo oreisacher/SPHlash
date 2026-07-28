@@ -2,18 +2,19 @@
 // Created by ruut on 3/16/26.
 //
 
-#include "../../../include/ui/panels/SimulationSettingsPanel.h"
-#include "../../../include/simulation/FluidSimulation.h"
+#include "ui/panels/SimulationSettingsPanel.h"
+#include "simulation/FluidSimulationNode.h"
 #include "ImGuiFileDialog.h"
-#include "../../../include/ui/UIManager.h"
+#include "ui/UIManager.h"
 #include "glm/gtc/type_ptr.inl"
 #include "imgui.h"
-#include "../../../include/core/Editor.h"
-#include "../../../include/rendering/Renderer.h"
+#include "core/Editor.h"
+#include "rendering/Renderer.h"
 
-SimulationSettingsPanel::SimulationSettingsPanel(Editor* editor, FluidSimulation* simulation, Renderer* renderer)
-    : UIPanel("Simulation Settings"), editor(editor), simulation(simulation), renderer(renderer)
+SimulationSettingsPanel::SimulationSettingsPanel(Editor* editor, Renderer* renderer)
+    : UIPanel("Simulation Settings"), editor(editor), renderer(renderer)
 {
+    simulation = editor->getScene()->getNode<SimulationNode>();
     boundaryBuilder = editor->getBoundaryBuilder();
 }
 

@@ -8,15 +8,18 @@
 #include "../IBounded.h"
 #include "../Transform.h"
 #include "SceneNode.h"
+#include "rendering/IRenderable.h"
 
 class BoundingBoxNode;
 struct Triangle;
 class Model;
 
-class ModelNode : public Transform, public SceneNode, public IBounded {
+class ModelNode : public Transform, public SceneNode, public IBounded, public IRenderable  {
 public:
     ModelNode(const std::string& name, const std::shared_ptr<Model>& model);
     ModelNode(const nlohmann::json json);
+
+    void onAddedToScene() override;
 
     Model* getModel() const;
     std::vector<Triangle> getWorldSpaceTriangles() const;
@@ -38,6 +41,7 @@ public:
 
     nlohmann::json toJson() const override;
     std::string getTypeName() const override;
+    SceneNode* getNode() override;
 
 protected:
     std::shared_ptr<Model> model;

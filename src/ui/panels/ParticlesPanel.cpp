@@ -4,17 +4,18 @@
 
 #include "ui/panels/ParticlesPanel.h"
 #include "assets/Shader.h"
-#include "simulation/FluidSimulation.h"
+#include "simulation/FluidSimulationNode.h"
 #include "simulation/scene/nodes/ParticlesNode.h"
 #include "imgui.h"
 #include <format>
 
 #include "core/Input.h"
 
-ParticlesPanel::ParticlesPanel(FluidSimulation* simulation, ParticlesNode* particles)
-    : UIPanel("Particles"), simulation(simulation)
+ParticlesPanel::ParticlesPanel(const Editor* editor)
+    : UIPanel("Particles")
 {
-    particlesShader = particles->getParticleShader();
+    simulation = editor->getScene()->getNode<SimulationNode>();
+    particlesShader = editor->getScene()->getNode<ParticlesNode>()->getParticleShader();
 }
 
 void ParticlesPanel::update(double deltaTime) {

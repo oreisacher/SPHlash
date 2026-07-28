@@ -2,12 +2,15 @@
 // Created by ruut on 3/16/26.
 //
 
-#include "../../../include/ui/panels/StatisticsPanel.h"
+#include "ui/panels/StatisticsPanel.h"
 #include <format>
 #include "imgui.h"
+#include "core/Editor.h"
 
-StatisticsPanel::StatisticsPanel(FluidSimulation* simulation)
-    : UIPanel("Statistics"), simulation(simulation) {
+StatisticsPanel::StatisticsPanel(Editor* editor)
+    : UIPanel("Statistics")
+{
+    simulation = editor->getScene()->getNode<SimulationNode>();
 }
 
 void StatisticsPanel::update(double deltaTime) {

@@ -6,8 +6,9 @@
 #include "ui/panels/ControlPanel.h"
 #include "rendering/Renderer.h"
 
-ControlPanel::ControlPanel(Editor* editor, FluidSimulation* simulation, Renderer* renderer)
-    : UIPanel("Controls"), editor(editor), simulation(simulation), renderer(renderer) {
+ControlPanel::ControlPanel(Editor* editor, Renderer* renderer)
+    : UIPanel("Controls"), editor(editor), renderer(renderer) {
+    simulation = editor->getScene()->getNode<SimulationNode>();
 }
 
 void ControlPanel::update(double deltaTime) { }

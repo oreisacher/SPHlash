@@ -10,17 +10,17 @@
 #include "ui/panels/SimulationPanel.h"
 #include <memory>
 
-Editor::Editor(Scene* scene, FluidSimulation* sim)
-    : scene(scene), simulation(sim)
+Editor::Editor(Scene* scene)
+    : scene(scene)
 { }
 
-void Editor::init() {
+void Editor::init() const {
     // Build boundary map
     if (boundryBuilder.settings.buildOnInit)
         buildBoundaryDensityMap();
 
     // Init simulation
-    simulation->init();
+    scene->getNode<SimulationNode>()->initSimulation();
 
     // Call init function of each node
     for (const auto& node : scene->getSceneNodes())
@@ -28,7 +28,7 @@ void Editor::init() {
 }
 
 void Editor::reset() const {
-    simulation->reset();
+    scene->getNode<SimulationNode>()->reset();
 
     // Reset data of query nodes
     for (const auto& node : scene->getQueryNodes())
@@ -44,12 +44,12 @@ void Editor::addForceField() {
 
     selectedNode = forceFieldNode.get();
     scene->addSceneNode(std::move(forceFieldNode));
-    simulation->rebuildForceFieldBuffer();
+    scene->getNode<SimulationNode>()->rebuildForceFieldBuffer();
 }
 
 void Editor::removeForceField(const ForceFieldNode* forceFieldNode) const {
     scene->removeSceneNode(forceFieldNode);
-    simulation->rebuildForceFieldBuffer();
+    scene->getNode<SimulationNode>()->rebuildForceFieldBuffer();
 }
 
 void Editor::addParticleSpawn(const std::string& path) {
@@ -68,14 +68,15 @@ void Editor::addParticleSpawn(const std::string& path) {
 }
 
 void Editor::addQuery() {
-    auto queryNode = std::make_unique<QueryNode>(simulation);
+    auto queryNode = std::make_unique<QueryNode>();
     selectedNode = queryNode.get();
     scene->addSceneNode(std::move(queryNode));
 }
 
 void Editor::updateRenderingSize(int width, int height) const {
     for (auto* node : scene->getSceneNodes())
-        node->updateSize(width, height);
+        if (auto *r = dynamic_cast<IRenderable*>(node))
+            r->updateSize(width, height);
 }
 
 void Editor::addBoundary(const std::string& path) {
@@ -107,6 +108,11 @@ BoundaryBuilder* Editor::getBoundaryBuilder() {
 }
 
 void Editor::buildBoundaryDensityMap() const {
+    auto simulation = scene->getNode<SimulationNode>();
+
+    if (!simulation)
+        return;
+
     Hex32Field sdfMap;
     if (!boundryBuilder.constructSDFMap(scene, scene->getSimulationDomain()->getWorldBoundingBox(), simulation->settings.h, sdfMap)) {
         // No Models are present > Clear current boundaries of simulation
@@ -126,9 +132,9 @@ void Editor::buildBoundaryDensityMap() const {
 }
 
 void Editor::clearBoundaryDensityMap() const {
-    simulation->clearBoundaryField();
+    scene->getNode<SimulationNode>()->clearBoundaryField();
 }
 
 Hex32Field Editor::getBoundaryDensityMap() const {
-    return simulation->getBoundaryField();
+    return scene->getNode<SimulationNode>()->getBoundaryField();
 }

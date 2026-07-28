@@ -59,3 +59,7 @@ int SkyboxNode::getRenderPriority() const {
 std::string SkyboxNode::getDefaultName() const {
     return "Skybox";
 }
+
+SceneNode* SkyboxNode::getNode() {
+    return this;
+}

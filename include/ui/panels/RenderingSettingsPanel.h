@@ -8,10 +8,11 @@
 #include "UIPanel.h"
 #include "../../rendering/Renderer.h"
 #include "../../rendering/FluidSurfaceMesher.h"
+#include "core/Editor.h"
 
 class RenderingSettingsPanel : public UIPanel {
 public:
-    explicit RenderingSettingsPanel(ParticlesNode* particles);
+    explicit RenderingSettingsPanel(const Editor* editor);
 
     void update(double deltaTime) override;
     void draw() override;

@@ -4,7 +4,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include "../../../include/simulation/scene/Transform.h"
+#include "simulation/scene/Transform.h"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtx/matrix_decompose.hpp"
 

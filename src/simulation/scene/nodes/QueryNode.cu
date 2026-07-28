@@ -8,15 +8,21 @@
 #include "simulation/utils/SimulationMetrics.cuh"
 #include "utils/Logger.h"
 #include <fstream>
+#include "simulation/scene/Scene.h"
 
-QueryNode::QueryNode(FluidSimulation* simulation)
-    : BoundingBoxNode("QueryNode", glm::vec3(0.0, 0.0, 0.7)), simulation(simulation)
-{
-    QueryNode::init();
-}
+QueryNode::QueryNode()
+    : BoundingBoxNode("QueryNode", glm::vec3(0.0, 0.0, 0.7))
+{ }
 
 QueryNode::QueryNode(const nlohmann::json json) : BoundingBoxNode(json) {
     filter = json.value("filter", filter);
+}
+
+void QueryNode::onAddedToScene() {
+    simulation = scene->getNode<SimulationNode>();
+
+    if (!simulation)
+        return;
 
     QueryNode::init();
 }

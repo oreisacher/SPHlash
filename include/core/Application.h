@@ -6,11 +6,10 @@
 #define FLUIDSIMSPH_APPLICATION_H
 
 #include "Editor.h"
-#include "../rendering/Renderer.h"
-#include "../simulation/scene/Scene.h"
-#include "../simulation/FluidSimulation.h"
-#include "../ui/UIManager.h"
-#include "../simulation/scene/nodes/CameraNode.h"
+#include "rendering/Renderer.h"
+#include "simulation/scene/Scene.h"
+#include "ui/UIManager.h"
+#include "simulation/scene/nodes/CameraNode.h"
 
 class Application {
 public:
@@ -21,14 +20,11 @@ public:
 
 private:
     Editor* _editor                 = nullptr;
-    FluidSimulation* _simulation    = nullptr;
     Renderer* _renderer             = nullptr;
+    Scene* _scene                   = nullptr;
 
     UIManager* _ui                  = nullptr;
     Window* _window                 = nullptr;
-
-    Scene* _scene                   = nullptr;
-    CameraNode* _camera             = nullptr;
 };
 
 #endif //FLUIDSIMSPH_APPLICATION_H

@@ -6,8 +6,8 @@
 #define SPHLASH_MODELSPANEL_H
 
 #include "UIPanel.h"
-#include "../../core/Editor.h"
-#include "../../rendering/Renderer.h"
+#include "core/Editor.h"
+#include "rendering/Renderer.h"
 
 class ScenePanel : public UIPanel {
 public:

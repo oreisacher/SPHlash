@@ -151,3 +151,7 @@ std::string ForceFieldNode::getTypeName() const {
     return "ForceFieldNode";
 }
 
+SceneNode* ForceFieldNode::getNode() {
+    return this;
+}
+

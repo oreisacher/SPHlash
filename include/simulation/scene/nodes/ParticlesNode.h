@@ -10,10 +10,11 @@
 #include "rendering/FluidSurfaceScreenSpace.h"
 #include "glm/vec4.hpp"
 #include "SceneNode.h"
+#include "rendering/IRenderable.h"
 
 class Model;
 class Shader;
-class FluidSimulation;
+class SimulationNode;
 
 enum RenderMode {
     SOLID_COLOR_PARTICLES,
@@ -52,9 +53,9 @@ struct RenderingSettings {
     generating the surface via Marching Cubes algorithm or Screen Space method is delegated to
     the respective class.
 */
-class ParticlesNode : public SceneNode {
+class ParticlesNode : public SceneNode, public IRenderable  {
 public:
-    ParticlesNode(FluidSimulation* simulation);
+    ParticlesNode(SimulationNode* simulation);
 
     void update(float deltaTime) override;
     void draw(const glm::mat4& view, const glm::mat4& projection) const override;
@@ -72,12 +73,14 @@ public:
     int getRenderPriority() const override;
     void updateSize(int width, int height) override;
 
+    SceneNode* getNode() override;
+
     RenderingSettings settings;
 
 private:
     void setupInstancing();
 
-    FluidSimulation* simulation;
+    SimulationNode* simulation;
 
     FluidSurfaceMesher mesher;
     FluidSurfaceScreenSpace screenSpace;

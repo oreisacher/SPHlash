@@ -5,11 +5,11 @@
 #ifndef SPHLASH_SKYBOXNODE_H
 #define SPHLASH_SKYBOXNODE_H
 
-#include "../../../assets/Model.h"
-#include "../../../assets/Texture.h"
+#include "assets/Model.h"
+#include "assets/Texture.h"
 #include "SceneNode.h"
 
-class SkyboxNode : public SceneNode {
+class SkyboxNode : public SceneNode, public IRenderable  {
 public:
     SkyboxNode();
 
@@ -20,6 +20,8 @@ public:
 
     int getRenderPriority() const override;
     std::string getDefaultName() const override;
+
+    SceneNode* getNode() override;
 
 private:
     std::shared_ptr<Model> skyboxModel;

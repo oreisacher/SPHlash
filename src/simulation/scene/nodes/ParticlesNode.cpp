@@ -10,7 +10,7 @@
 #include "simulation/scene/Properties.h"
 #include "simulation/scene/Scene.h"
 
-ParticlesNode::ParticlesNode(FluidSimulation* simulation) : simulation(simulation), mesher(simulation) {
+ParticlesNode::ParticlesNode(SimulationNode* simulation) : simulation(simulation), mesher(simulation) {
     // --- Models ---
     particleModel = std::make_shared<Model>("Particle", Mesh::createSphere("Particle Mesh", 4, 2));
 
@@ -25,6 +25,7 @@ ParticlesNode::ParticlesNode(FluidSimulation* simulation) : simulation(simulatio
     visible = false;
     sceneGraphVisible = false;
     savable = false;
+    deletable = false;
     addTag("fluid");
 
     setupInstancing();
@@ -125,6 +126,10 @@ void ParticlesNode::setupInstancing() {
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+SceneNode* ParticlesNode::getNode() {
+    return this;
 }
 
 void ParticlesNode::updateSize(int width, int height) {

@@ -11,7 +11,7 @@
 #include "glm/fwd.hpp"
 
 class Scene;
-class FluidSimulation;
+class SimulationNode;
 
 class Renderer {
 public:
@@ -25,7 +25,7 @@ public:
     void setSize(int width, int height) const;
 
 private:
-    void renderNode(const SceneNode* node, const glm::mat4& view, const glm::mat4& projection) const;
+    void renderNode(IRenderable* renderable, const glm::mat4& view, const glm::mat4& projection);
 
     Framebuffer* framebuffer;
 };

@@ -6,13 +6,12 @@
 #define SPHLASH_SCENENODE_H
 
 #include "../ISelectable.h"
-#include "rendering/IRenderable.h"
 #include <unordered_set>
 #include <nlohmann/json.hpp>
 
 class Scene;
 
-class SceneNode : public ISelectable, public IRenderable {
+class SceneNode : public ISelectable {
 public:
     SceneNode() = default;
     SceneNode(const nlohmann::json j);
@@ -20,6 +19,8 @@ public:
 
     virtual void init() {};
     virtual void update(float deltaTime) = 0;
+
+    virtual void onAddedToScene() {};
 
     // --- Name ---
     const std::string& getName() const;
@@ -56,7 +57,7 @@ public:
     virtual nlohmann::json toJson() const;
     virtual std::string getTypeName() const;
 
-    std::vector<SceneNode*> getChildren() const;
+    // std::vector<SceneNode*> getChildren() const;
     Properties buildProperties() override;
 
 protected:
@@ -72,8 +73,6 @@ protected:
     bool gizmoEnabled = true;
 
     std::unordered_set<std::string> tags = {};
-
-    std::vector<std::unique_ptr<SceneNode>> children;
 
     friend class Scene;
 };

@@ -2,7 +2,7 @@
 // Created by ruut on 7/4/26.
 //
 
-#include "../../../../include/simulation/scene/nodes/SimulationDomainNode.h"
+#include "simulation/scene/nodes/SimulationDomainNode.h"
 
 SimulationDomainNode::SimulationDomainNode()
     : BoundingBoxNode("Simulation Domain", glm::vec4(0.2f, 0.6f, 1.0f, 1.0f))
@@ -23,4 +23,8 @@ std::string SimulationDomainNode::getTypeName() const {
 
 std::string SimulationDomainNode::getDefaultName() const {
     return "Simulation Domain";
+}
+
+SceneNode* SimulationDomainNode::getNode() {
+    return this;
 }

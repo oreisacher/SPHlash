@@ -8,6 +8,8 @@
 #include "rendering/Renderer.h"
 #include <glad/gl.h>
 #include <vector>
+
+#include "rendering/IRenderable.h"
 #include "simulation/scene/Scene.h"
 #include "simulation/scene/nodes/SkyboxNode.h"
 
@@ -30,14 +32,13 @@ Renderer::~Renderer() {
     delete framebuffer;
 }
 
-void Renderer::renderNode(const SceneNode* node, const glm::mat4& view, const glm::mat4& projection) const {
-    if (!node->isVisible())
-        return;
-
-    node->draw(view, projection);
-
-    for (const auto& child : node->getChildren())
-        renderNode(child, view, projection);
+void Renderer::renderNode(IRenderable* renderable, const glm::mat4& view, const glm::mat4& projection) {
+    // auto node = renderable->getNode();
+    //
+    // if (!node->isVisible())
+    //     return;
+    //
+    // renderable->draw(view, projection);
 }
 
 void Renderer::render(const Scene* scene) const {
@@ -51,14 +52,23 @@ void Renderer::render(const Scene* scene) const {
     auto view = camera->getViewMatrix();
     auto projection = camera->getProjectionMatrix();
 
-    auto nodes = scene->getSceneNodes();
+    std::vector<IRenderable*> renderables;
+    for (SceneNode* node : scene->getSceneNodes())
+        if (auto* r = dynamic_cast<IRenderable*>(node))
+            renderables.push_back(r);
 
-    std::sort(nodes.begin(), nodes.end(), [](const SceneNode* a, const SceneNode* b) {
+    std::ranges::sort(renderables, [](auto* a, auto* b) {
         return a->getRenderPriority() < b->getRenderPriority();
     });
 
-    for (const auto& node : nodes)
-        renderNode(node, view, projection);
+    for (auto* r : renderables) {
+        auto node = r->getNode();
+
+        if (!node->isVisible())
+            continue;
+
+        r->draw(view, projection);
+    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

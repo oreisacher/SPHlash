@@ -152,8 +152,6 @@ void CameraNode::update(float deltaTime) {
     updateVectors();
 }
 
-void CameraNode::draw(const glm::mat4& view, const glm::mat4& projection) const { }
-
 void CameraNode::setHover(bool hover) {
     this->updateMouse = hover;
 }

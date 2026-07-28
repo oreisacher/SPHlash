@@ -38,6 +38,30 @@ public:
     std::vector<SceneNode*> getSceneNodes() const;
     std::vector<QueryNode*> getQueryNodes() const;
 
+    // Returns the first node of type T
+    template<typename T>
+    T* getNode() {
+        for (auto node : getSceneNodes()) {
+            if (dynamic_cast<T*>(node)) {
+                return dynamic_cast<T*>(node);
+            }
+        }
+
+        return nullptr;
+    }
+
+    // Returns the all node of type T
+    template<typename T>
+    std::vector<T*> getNodes() {
+        std::vector<T*> nodes;
+
+        for (auto node : getSceneNodes())
+            if (auto n = dynamic_cast<T*>(node))
+                nodes.push_back(n);
+
+        return nodes;
+    }
+
     void saveScene(const std::string& path) const;
     void loadScene(const std::string& path);
     void resetScene();
@@ -48,6 +72,7 @@ private:
     std::vector<std::unique_ptr<SceneNode>> sceneNodes  = {};
 
     // --- Node Cache ---
+    SimulationNode*            simulationNode      = nullptr;
     CameraNode*                     camera              = nullptr;
     BoundingBoxNode*                simulationDomain    = nullptr;
     ParticlesNode*                  particles           = nullptr;

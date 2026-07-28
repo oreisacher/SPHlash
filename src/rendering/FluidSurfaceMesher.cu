@@ -2,14 +2,14 @@
 // Created by ruut on 4/27/26.
 //
 
-#include "../../include/simulation/scene/nodes/BoundingBoxNode.h"
+#include "simulation/scene/nodes/BoundingBoxNode.h"
 #include "rendering/FluidSurfaceMesher.h"
 #include <cuda_runtime.h>
 #include "assets/Model.h"
-#include "../../include/rendering/MarchingCubes.h"
-#include "../../include/simulation/FluidSimulation.h"
+#include "rendering/MarchingCubes.h"
+#include "simulation/SimulationNode.h"
 
-FluidSurfaceMesher::FluidSurfaceMesher(FluidSimulation* simulation)
+FluidSurfaceMesher::FluidSurfaceMesher(SimulationNode* simulation)
     : simulation(simulation)
 {
     // Init voxel field

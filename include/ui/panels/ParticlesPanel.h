@@ -7,21 +7,22 @@
 
 #include <cmath>
 #include "UIPanel.h"
-#include "simulation/FluidSimulation.h"
+#include "core/Editor.h"
+#include "simulation/SimulationNode.h"
 
 class Shader;
 class Renderer;
-class FluidSimulation;
+class SimulationNode;
 
 class ParticlesPanel : public UIPanel {
 public:
-    explicit ParticlesPanel(FluidSimulation* simulation, ParticlesNode* particles);
+    explicit ParticlesPanel(const Editor* editor);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
-    FluidSimulation* simulation;
+    SimulationNode* simulation = nullptr;
     Shader* particlesShader;
 
     ParticleHost particle;
@@ -30,28 +31,6 @@ private:
 
     bool showParticles = false;
     int selectedParticle = 0;
-
-#ifdef METRIC_DENSITY
-    // Average Density
-    std::vector<float> averageDensity;
-    float minAvgDensity = INFINITY;
-    float maxAvgDensity = -INFINITY;
-
-    // Average Density Error
-    std::vector<float> averageDensityError;
-    float minDensityError = INFINITY;
-    float maxDensityError = -INFINITY;
-
-    // Density Standard Deviation
-    std::vector<float> densityStandardDeviation;
-    float minDensityStandardDeviation = INFINITY;
-    float maxDensityStandardDeviation = -INFINITY;
-#endif
-
-#ifdef METRIC_AVG_HEIGHT
-    // Average Top Surface Height
-    std::vector<float> averageTopSurfaceHeigth;
-#endif
 };
 
 #endif //FLUIDSIMSPH_PARTICLESPANEL_H

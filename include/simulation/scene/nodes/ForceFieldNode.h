@@ -9,8 +9,9 @@
 #include "../Transform.h"
 #include "SceneNode.h"
 #include "../ForceField.h"
+#include "rendering/IRenderable.h"
 
-class ForceFieldNode : public Transform, public SceneNode {
+class ForceFieldNode : public Transform, public SceneNode, public IRenderable {
 public:
     ForceFieldNode(const std::string& name);
     explicit ForceFieldNode(const nlohmann::json json);
@@ -27,6 +28,7 @@ public:
 
     nlohmann::json toJson() const override;
     std::string getTypeName() const override;
+    SceneNode* getNode() override;
 
 private:
     std::unique_ptr<Model> model;

@@ -6,7 +6,7 @@
 #define SPHLASH_QUERYNODE_H
 
 #include "BoundingBoxNode.h"
-#include "simulation/FluidSimulation.h"
+#include "simulation/SimulationNode.h"
 
 struct Metrics {
     int count = 0;
@@ -41,8 +41,10 @@ inline std::ostream& operator<<(std::ostream& os, const Metrics& m) {
 
 class QueryNode : public BoundingBoxNode {
 public:
-    QueryNode(FluidSimulation* simulation);
+    QueryNode();
     explicit QueryNode(const nlohmann::json json);
+
+    void onAddedToScene() override;
 
     void init() override;
     void update(float deltaTime) override;
@@ -58,10 +60,10 @@ public:
     std::string getTypeName() const override;
 
 private:
-    FluidSimulation* simulation;
+    SimulationNode* simulation = nullptr;
     int filter = 0;
 
-    std::vector<Metrics> history;
+    std::vector<Metrics> history = {};
 
     Metrics* d_blockMetric  = nullptr;
     Metrics* d_result       = nullptr;

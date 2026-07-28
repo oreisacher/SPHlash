@@ -10,8 +10,9 @@
 #include "assets/Material.h"
 #include "assets/Mesh.h"
 #include "SceneNode.h"
+#include "rendering/IRenderable.h"
 
-class BoundingBoxNode : public Transform, public SceneNode, public IBounded {
+class BoundingBoxNode : public Transform, public SceneNode, public IBounded, public IRenderable  {
 public:
     BoundingBoxNode(const std::string& name, glm::vec3 color);
     BoundingBoxNode(const nlohmann::json json);
@@ -31,6 +32,7 @@ public:
 
     nlohmann::json toJson() const override;
     std::string getTypeName() const override;
+    SceneNode* getNode() override;
 
 protected:
     std::unique_ptr<Mesh> mesh;

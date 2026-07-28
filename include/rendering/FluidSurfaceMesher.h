@@ -14,7 +14,7 @@ class Mesh;
 class ModelNode;
 class Scene;
 class Renderer;
-class FluidSimulation;
+class SimulationNode;
 
 struct MesherSettings {
     glm::ivec3 resolution = { 128, 128, 128 };
@@ -30,7 +30,7 @@ struct MesherSettings {
 
 class FluidSurfaceMesher {
 public:
-    FluidSurfaceMesher(FluidSimulation* simulation);
+    FluidSurfaceMesher(SimulationNode* simulation);
     ~FluidSurfaceMesher();
 
     void updateMesh(const AABB& domain) const;
@@ -42,7 +42,7 @@ public:
 
     MesherSettings settings;
 private:
-    FluidSimulation* simulation;
+    SimulationNode* simulation;
 
     Mesh* surfaceMesh;
     std::shared_ptr<Model> surfaceModel;

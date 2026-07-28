@@ -3,7 +3,7 @@
 //
 
 #include "simulation/scene/Scene.h"
-#include "simulation/FluidSimulation.h"
+#include "simulation/SimulationNode.h"
 #include "simulation/scene/nodes/BoundingBoxParticleSpawnNode.h"
 #include "simulation/scene/nodes/ForceFieldNode.h"
 #include "simulation/scene/nodes/ModelNode.h"
@@ -22,10 +22,6 @@ Scene::Scene(Window* window) {
     // --- Camera ---
     auto cameraNode = std::make_unique<CameraNode>(window, glm::vec3(0.0f, 0.0, 1.0f));
     addSceneNode(std::move(cameraNode));
-
-    // --- Simulation ---
-    auto simulationDomain = std::make_unique<SimulationDomainNode>();
-    addSceneNode(std::move(simulationDomain));
 }
 
 void Scene::update(float deltaTime) const {
@@ -38,6 +34,9 @@ CameraNode* Scene::getCamera() const {
 }
 
 void Scene::addSceneNode(std::unique_ptr<SceneNode> node) {
+    if (auto *simulation = dynamic_cast<SimulationNode*>(node.get()))
+        this->simulationNode = simulation;
+
     if (auto *camera = dynamic_cast<CameraNode*>(node.get()))
         this->camera = camera;
 
@@ -69,6 +68,7 @@ void Scene::addSceneNode(std::unique_ptr<SceneNode> node) {
         queryNodes.push_back(queryNode);
 
     node->scene = this;
+    node->onAddedToScene();
     sceneNodes.push_back(std::move(node));
 }
 
@@ -131,7 +131,7 @@ void Scene::saveScene(const std::string& path) const {
             continue;
 
         // Skip simulation domain as saved separately
-        if (sceneNodes[i]->hasTag(FluidSimulation::SimulationDomainTag))
+        if (sceneNodes[i]->hasTag(SimulationNode::SimulationDomainTag))
             continue;
 
         nodes.push_back(sceneNodes[i]->toJson());

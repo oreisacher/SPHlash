@@ -8,18 +8,18 @@
 #include "UIPanel.h"
 #include "core/Editor.h"
 #include "rendering/FluidSurfaceMesher.h"
-#include "simulation/FluidSimulation.h"
+#include "simulation/SimulationNode.h"
 
 class ControlPanel : public UIPanel {
 public:
-    explicit ControlPanel(Editor* editor, FluidSimulation* simulation, Renderer* renderer);
+    explicit ControlPanel(Editor* editor, Renderer* renderer);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
     Editor* editor;
-    FluidSimulation* simulation;
+    SimulationNode* simulation;
     Renderer* renderer;
 
     float timeStep = 0.0;

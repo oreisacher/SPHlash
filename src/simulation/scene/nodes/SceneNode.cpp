@@ -85,14 +85,14 @@ std::string SceneNode::getTypeName() const {
     return "SceneNode";
 }
 
-std::vector<SceneNode*> SceneNode::getChildren() const {
-    std::vector<SceneNode*> result;
-
-    for (auto &c : children)
-        result.push_back(c.get());
-
-    return result;
-}
+// std::vector<SceneNode*> SceneNode::getChildren() const {
+//     std::vector<SceneNode*> result;
+//
+//     for (auto &c : children)
+//         result.push_back(c.get());
+//
+//     return result;
+// }
 
 Properties SceneNode::buildProperties() {
     Properties properties;

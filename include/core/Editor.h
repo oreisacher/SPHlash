@@ -8,13 +8,12 @@
 #include "simulation/scene/nodes/ForceFieldNode.h"
 #include "simulation/scene/Scene.h"
 #include "simulation/boundaries/BoundaryBuilder.h"
-#include "simulation/FluidSimulation.h"
 
 class Editor {
 public:
-    Editor(Scene* scene, FluidSimulation* sim);
+    Editor(Scene* scene);
 
-    void init();
+    void init() const;
     void reset() const;
 
     Scene* getScene() const;
@@ -49,7 +48,6 @@ public:
 
 private:
     Scene* scene;
-    FluidSimulation* simulation;
     BoundaryBuilder boundryBuilder;
 
     SceneNode* selectedNode = nullptr;

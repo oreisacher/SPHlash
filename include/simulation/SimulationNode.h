@@ -8,6 +8,7 @@
 #include "ParticleHost.h"
 #include "ParticlesGPU.h"
 #include "boundaries/Hex32Field.h"
+#include "scene/nodes/SceneNode.h"
 
 #define THREADS_PER_BLOCK 256
 #define BLOCK_COUNT(particleCount) (particleCount + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK
@@ -52,12 +53,14 @@ struct SimulationSettings {
     float safetyFactor = 0.25f;
 };
 
-class FluidSimulation {
+class SimulationNode : public SceneNode {
 public:
-    FluidSimulation(Scene* scene);
-    ~FluidSimulation();
+    SimulationNode();
+    ~SimulationNode() override;
 
-    void init();
+    void onAddedToScene() override;
+
+    void initSimulation();
 
     /*
      * Calculates density, pressure, etc. values for the current particles.
@@ -70,7 +73,7 @@ public:
      * with updateParticles(). Then calculates SPH specific forces. Using CFL, updates the positions
      * and velocities of each particle.
      */
-    void update(float deltaTime);
+    void update(float deltaTime) override;
 
     void step(float deltaTime);
 
@@ -98,14 +101,13 @@ public:
 
     ParticleHost getParticle(int id) const;
     ParticlesGPU getParticlesGPU() const;
+    std::string getTypeName() const override;
 
     SimulationSettings settings;
 
     inline static const char* SimulationDomainTag = "simulation_domain";
 
 private:
-    Scene* scene;
-
     int particleCount = 0;
 
     float cfl = 0;
@@ -138,7 +140,7 @@ private:
     Hex32Field volumeMap;
 
     // --- Rendering ---
-    ParticlesNode* particlesNode;
+    ParticlesNode* particlesNode           = nullptr;
     cudaGraphicsResource* rendererResource = nullptr;
     RendererParticle* d_rendererParticles  = nullptr;
 };

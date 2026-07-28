@@ -12,14 +12,14 @@
 
 class SimulationSettingsPanel : public UIPanel {
 public:
-    explicit SimulationSettingsPanel(Editor* editor, FluidSimulation* simulation, Renderer* renderer);
+    explicit SimulationSettingsPanel(Editor* editor, Renderer* renderer);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
     Editor* editor;
-    FluidSimulation* simulation;
+    SimulationNode* simulation = nullptr;
     Renderer* renderer;
     BoundaryBuilder* boundaryBuilder;
 

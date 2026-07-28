@@ -40,31 +40,27 @@ Application::Application() {
     _scene = new Scene(_window);
 
     // Simulation
-    _simulation = new FluidSimulation(_scene);
+    _scene->addSceneNode(std::make_unique<SimulationNode>());
 
     // Rendering
     _renderer = new Renderer(_scene);
 
-    _editor = new Editor(_scene, _simulation);
+    _editor = new Editor(_scene);
 
     // Setup UI
     _ui = new UIManager(_window->getNativeWindow());
     _ui->addPanel(new SimulationPanel            (_editor, _renderer));
-    _ui->addPanel(new ControlPanel               (_editor, _simulation, _renderer));
-    _ui->addPanel(new StatisticsPanel            (_simulation));
+    _ui->addPanel(new ControlPanel               (_editor, _renderer));
+    _ui->addPanel(new StatisticsPanel            (_editor));
     _ui->addPanel(new QueryDataPanel             (_editor));
-    _ui->addPanel(new SimulationSettingsPanel    (_editor, _simulation, _renderer));
-    _ui->addPanel(new RenderingSettingsPanel     (_scene->getParticlesNode()));
-    _ui->addPanel(new ParticlesPanel             (_simulation, _scene->getParticlesNode()));
+    _ui->addPanel(new SimulationSettingsPanel    (_editor, _renderer));
+    _ui->addPanel(new RenderingSettingsPanel     (_editor));
+    _ui->addPanel(new ParticlesPanel             (_editor));
     _ui->addPanel(new PropertiesPanel            (_editor));
     _ui->addPanel(new ScenePanel                 (_editor, _renderer));
-
-    // Setup scene
-    _camera = _scene->getCamera();
 }
 
 Application::~Application() {
-    delete _simulation;
     delete _ui;
     delete _window;
     delete _editor;
@@ -77,13 +73,7 @@ void Application::run() const {
 
         _window->startFrame();
 
-        // Simulation
-        _simulation->update(deltaTime);
-
-        // Update SceneNodes
         _scene->update(deltaTime);
-
-        // Render simulation into texture
         _renderer->render(_scene);
 
         // Update & Draw UI

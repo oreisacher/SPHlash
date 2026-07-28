@@ -2,7 +2,7 @@
 // Created by ruut on 3/16/26.
 //
 
-#include "simulation/FluidSimulation.h"
+#include "simulation/FluidSimulationNode.h"
 #include <algorithm>
 #include <cuda_runtime.h>
 #include <iostream>
@@ -11,26 +11,27 @@
 #include "simulation/scene/nodes/BoundingBoxNode.h"
 #include "simulation/scene/nodes/ForceFieldNode.h"
 #include "simulation/scene/Scene.h"
-#include "../../include/utils/CudaUtils.h"
+#include "utils/CudaUtils.h"
 #include <cuda_gl_interop.h>
 #include <cub/device/device_radix_sort.cuh>
-#include "../../include/simulation/utils/SimulationMetrics.cuh"
 #include "simulation/Particles.cuh"
 #include "simulation/ParticlesHost.h"
 #include "simulation/VoxelField.cuh"
 #include "simulation/scene/IParticleSpawn.h"
 #include "simulation/scene/nodes/ParticlesNode.h"
+#include "simulation/scene/nodes/SimulationDomainNode.h"
 
-FluidSimulation::FluidSimulation(Scene* scene) : scene(scene) {
+SimulationNode::SimulationNode() {
+    this->name = "Simulation";
+
+    sceneGraphVisible = false;
+    deletable = false;
+    savable = false;
+
     cudaSetDevice(0);
-
-    // Setup particles node for rendering
-    auto particlesNode = std::make_unique<ParticlesNode>(this);
-    this->particlesNode = particlesNode.get();
-    scene->addSceneNode(std::move(particlesNode));
 }
 
-FluidSimulation::~FluidSimulation() {
+SimulationNode::~SimulationNode() {
     particles.free();
     sortedParticles.free();
 
@@ -45,7 +46,18 @@ FluidSimulation::~FluidSimulation() {
     cudaGraphicsUnmapResources(1, &rendererResource, nullptr);
 }
 
-void FluidSimulation::updateParticles() {
+void SimulationNode::onAddedToScene() {
+    // --- Simulation ---
+    auto simulationDomain = std::make_unique<SimulationDomainNode>();
+    scene->addSceneNode(std::move(simulationDomain));
+
+    // --- Particles ---
+    auto particlesNode = std::make_unique<ParticlesNode>(this);
+    this->particlesNode = particlesNode.get();
+    scene->addSceneNode(std::move(particlesNode));
+}
+
+void SimulationNode::updateParticles() {
     if (state == UNINITIALIZED)
         return;
 
@@ -165,7 +177,7 @@ void FluidSimulation::updateParticles() {
     std::swap(particles.d_surfaceTensionForce, sortedParticles.d_surfaceTensionForce);
 }
 
-void FluidSimulation::update(const float deltaTime) {
+void SimulationNode::update(const float deltaTime) {
     if (state == UNINITIALIZED  || state == PAUSED)
         return;
 
@@ -233,7 +245,7 @@ void FluidSimulation::update(const float deltaTime) {
     cudaGraphicsUnmapResources(1, &rendererResource);
 }
 
-void FluidSimulation::step(float deltaTime) {
+void SimulationNode::step(float deltaTime) {
     if (state == UNINITIALIZED)
         return;
 
@@ -242,7 +254,7 @@ void FluidSimulation::step(float deltaTime) {
     state = PAUSED;
 }
 
-void FluidSimulation::init() {
+void SimulationNode::initSimulation() {
     // Init particle spawns
     bool success = initParticles();
 
@@ -261,15 +273,15 @@ void FluidSimulation::init() {
     rebuildForceFieldBuffer();
 }
 
-void FluidSimulation::start() {
+void SimulationNode::start() {
     state = RUNNING;
 }
 
-void FluidSimulation::pause() {
+void SimulationNode::pause() {
     state = PAUSED;
 }
 
-void FluidSimulation::reset() {
+void SimulationNode::reset() {
     state = PAUSED;
 
     resetParticlesKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
@@ -305,11 +317,11 @@ void FluidSimulation::reset() {
 #endif
 }
 
-SimulationState FluidSimulation::getState() const {
+SimulationState SimulationNode::getState() const {
     return state;
 }
 
-void FluidSimulation::setRendererVBO(const GLuint vbo) {
+void SimulationNode::setRendererVBO(const GLuint vbo) {
     if (rendererResource) cudaGraphicsUnregisterResource(rendererResource);
 
 #ifdef DEBUG_CUDA
@@ -343,15 +355,15 @@ void FluidSimulation::setRendererVBO(const GLuint vbo) {
     CUDA_CHECK(cudaGraphicsUnmapResources(1, &rendererResource));
 }
 
-float FluidSimulation::getCFL() const {
+float SimulationNode::getCFL() const {
     return cfl;
 }
 
-int FluidSimulation::getParticleCount() const {
+int SimulationNode::getParticleCount() const {
     return particleCount;
 }
 
-void FluidSimulation::rebuildForceFieldBuffer() {
+void SimulationNode::rebuildForceFieldBuffer() {
     if (d_forceFields) cudaFree(d_forceFields);
 
     if (scene->getForceFields().size() == 0)
@@ -360,7 +372,7 @@ void FluidSimulation::rebuildForceFieldBuffer() {
     cudaMalloc(&d_forceFields, scene->getForceFields().size() * sizeof(ForceField));
 }
 
-void FluidSimulation::updateForceFieldBuffer() const {
+void SimulationNode::updateForceFieldBuffer() const {
     std::vector<ForceField> forceFields;
     forceFields.reserve(scene->getForceFields().size());
 
@@ -370,12 +382,12 @@ void FluidSimulation::updateForceFieldBuffer() const {
     cudaMemcpy(d_forceFields, forceFields.data(), forceFields.size() * sizeof(ForceField), cudaMemcpyHostToDevice);
 }
 
-void FluidSimulation::setBoundaryMaps(const Hex32Field& sdfMap, const Hex32Field& volumeMap) {
+void SimulationNode::setBoundaryMaps(const Hex32Field& sdfMap, const Hex32Field& volumeMap) {
     this->sdfMap = sdfMap;
     this->volumeMap = volumeMap;
 }
 
-void FluidSimulation::clearBoundaryField() {
+void SimulationNode::clearBoundaryField() {
     if (sdfMap.d_cells != nullptr) {
         cudaFree(sdfMap.d_cells);
         sdfMap.d_cells = nullptr;
@@ -389,11 +401,11 @@ void FluidSimulation::clearBoundaryField() {
     }
 }
 
-Hex32Field FluidSimulation::getBoundaryField() const {
+Hex32Field SimulationNode::getBoundaryField() const {
     return volumeMap;
 }
 
-bool FluidSimulation::computeVoxelField(const VoxelField& field) const {
+bool SimulationNode::computeVoxelField(const VoxelField& field) const {
     if (particleCount == 0 || state == UNINITIALIZED)
         return false;
 
@@ -420,7 +432,7 @@ bool FluidSimulation::computeVoxelField(const VoxelField& field) const {
     return true;
 }
 
-ParticleHost FluidSimulation::getParticle(const int id) const {
+ParticleHost SimulationNode::getParticle(const int id) const {
     if (state == UNINITIALIZED)
         return {};
 
@@ -432,11 +444,15 @@ ParticleHost FluidSimulation::getParticle(const int id) const {
     return p;
 }
 
-ParticlesGPU FluidSimulation::getParticlesGPU() const {
+ParticlesGPU SimulationNode::getParticlesGPU() const {
     return particles;
 }
 
-bool FluidSimulation::initParticles() {
+std::string SimulationNode::getTypeName() const {
+    return "SimulationNode";
+}
+
+bool SimulationNode::initParticles() {
 #ifdef DEBUG_CUDA
     cudaGetLastError();
 #endif

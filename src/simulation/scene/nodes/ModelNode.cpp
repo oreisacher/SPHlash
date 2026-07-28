@@ -2,9 +2,10 @@
 // Created by ruut on 6/1/26.
 //
 
-#include "../../../../include/simulation/scene/nodes/ModelNode.h"
-#include "../../../../include/simulation/scene/nodes/BoundingBoxNode.h"
-#include "../../../../include/assets/Model.h"
+#include "simulation/scene/nodes/ModelNode.h"
+#include "simulation/scene/nodes/BoundingBoxNode.h"
+#include "assets/Model.h"
+#include "simulation/scene/Scene.h"
 
 ModelNode::ModelNode(const std::string& name, const std::shared_ptr<Model>& model) {
     this->name = name;
@@ -13,11 +14,12 @@ ModelNode::ModelNode(const std::string& name, const std::shared_ptr<Model>& mode
     ModelNode::updateTransform();
 
     // Add bounding box node as child
-    auto bbNode = std::make_unique<BoundingBoxNode>("Bounding Box", glm::vec4(1.0f));
-    boundingBox = bbNode.get();
-    boundingBox->setTarget(this);
-    boundingBox->setVisible(false);
-    children.push_back(std::move(bbNode));
+    // auto bbNode = std::make_unique<BoundingBoxNode>("Bounding Box", glm::vec4(1.0f));
+    // boundingBox = bbNode.get();
+    // boundingBox->setTarget(this);
+    // boundingBox->setVisible(false);
+    // scene->addSceneNode(std::move(bbNode));
+    // children.push_back(std::move(bbNode));
 }
 
 ModelNode::ModelNode(const nlohmann::json json) : SceneNode(json) {
@@ -35,14 +37,24 @@ ModelNode::ModelNode(const nlohmann::json json) : SceneNode(json) {
     boundary = json.value("boundary", boundary);
     model = std::make_shared<Model>(json.value("path", "assets/models/suzanne.obj"));
 
+    // auto bbNode = std::make_unique<BoundingBoxNode>("Bounding Box", glm::vec4(1.0f));
+    // boundingBox = bbNode.get();
+    // boundingBox->setTarget(this);
+    // boundingBox->setVisible(false);
+    // scene->addSceneNode(std::move(bbNode));
+    // children.push_back(std::move(bbNode));
+
+    ModelNode::updateTransform();
+}
+
+void ModelNode::onAddedToScene() {
     // Add bounding box node as child
     auto bbNode = std::make_unique<BoundingBoxNode>("Bounding Box", glm::vec4(1.0f));
     boundingBox = bbNode.get();
     boundingBox->setTarget(this);
     boundingBox->setVisible(false);
-    children.push_back(std::move(bbNode));
-
-    ModelNode::updateTransform();
+    boundingBox->setSceneGraphVisible(false);
+    scene->addSceneNode(std::move(bbNode));
 }
 
 Model* ModelNode::getModel() const {
@@ -139,4 +151,8 @@ nlohmann::json ModelNode::toJson() const {
 
 std::string ModelNode::getTypeName() const {
     return "ModelNode";
+}
+
+SceneNode* ModelNode::getNode() {
+    return this;
 }

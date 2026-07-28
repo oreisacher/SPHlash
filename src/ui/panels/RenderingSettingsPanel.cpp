@@ -2,13 +2,14 @@
 // Created by ruut on 4/12/26.
 //
 
-#include "../../../include/ui/panels/RenderingSettingsPanel.h"
+#include "ui/panels/RenderingSettingsPanel.h"
 #include "imgui.h"
 #include "glm/gtc/type_ptr.hpp"
 
-RenderingSettingsPanel::RenderingSettingsPanel(ParticlesNode* particles)
-    : UIPanel("Rendering Settings"), particles(particles)
+RenderingSettingsPanel::RenderingSettingsPanel(const Editor* editor)
+    : UIPanel("Rendering Settings")
 {
+    particles = editor->getScene()->getNode<ParticlesNode>();
     surfaceMesher = particles->getSurfaceMesher();
     surfaceScreenSpace = particles->getSurfaceScreenSpace();
 }

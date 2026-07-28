@@ -6,7 +6,8 @@
 #define FLUIDSIMSPH_STATISTICSPANEL_H
 
 #include "UIPanel.h"
-#include "../../simulation/FluidSimulation.h"
+#include "simulation/SimulationNode.h"
+#include "core/Editor.h"
 
 #define UPDATE_TIME 0.2f
 #define FPS_TIMES_COUNT 100
@@ -14,13 +15,13 @@
 
 class StatisticsPanel : public UIPanel {
 public:
-    explicit StatisticsPanel(FluidSimulation* simulation);
+    explicit StatisticsPanel(Editor* editor);
 
     void update(double deltaTime) override;
     void draw() override;
 
 private:
-    FluidSimulation* simulation;
+    SimulationNode* simulation = nullptr;
 
     double fpsTimer = 0.0;
     int frames = 0;
