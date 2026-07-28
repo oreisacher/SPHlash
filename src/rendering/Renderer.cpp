@@ -8,8 +8,8 @@
 #include "rendering/Renderer.h"
 #include <glad/gl.h>
 #include <vector>
-#include "../../include/simulation/scene/Scene.h"
-#include "../../include/simulation/scene/nodes/SkyboxNode.h"
+#include "simulation/scene/Scene.h"
+#include "simulation/scene/nodes/SkyboxNode.h"
 
 Renderer::Renderer(Scene* scene) {
     // Setup OpenGL State

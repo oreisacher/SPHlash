@@ -2,18 +2,16 @@
 // Created by ruut on 3/14/26.
 //
 
-#include "../../include/rendering/Framebuffer.h"
-#include "../../include/ui/UIManager.h"
-
+#include "rendering/Framebuffer.h"
+#include "ui/UIManager.h"
 #include <algorithm>
-
 #include "imgui.h"
 #include "ImGuizmo.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_internal.h"
 #include "implot.h"
-#include "../../include/core/Input.h"
+#include "core/Input.h"
 
 UIManager::UIManager(GLFWwindow* window) {
     IMGUI_CHECKVERSION();
@@ -110,12 +108,15 @@ UIManager::UIManager(GLFWwindow* window) {
 
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.IniFilename = "layout.ini";
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 430");
 }
 
 UIManager::~UIManager() {
+    ImGui::SaveIniSettingsToDisk("layout.ini");
+
     for (auto& panel : panels)
         delete panel;
 }
@@ -175,35 +176,38 @@ void UIManager::draw() const {
     if (!layoutInitialized) {
         layoutInitialized = true;
 
-        ImGui::DockBuilderRemoveNode(dockspace_id);
-        ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
-        ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
+        if (ImGui::DockBuilderGetNode(dockspace_id) == nullptr ||
+            !ImGui::DockBuilderGetNode(dockspace_id)->IsSplitNode()) {
+            ImGui::DockBuilderRemoveNode(dockspace_id);
+            ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+            ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
 
-        ImGuiID dock_main = dockspace_id;
-        ImGuiID dock_left, dock_left_1, dock_left_2, dock_left_3;
-        ImGuiID dock_right, dock_right_1, dock_right_2, dock_right_3;
+            ImGuiID dock_main = dockspace_id;
+            ImGuiID dock_left, dock_left_1, dock_left_2, dock_left_3;
+            ImGuiID dock_right, dock_right_1, dock_right_2, dock_right_3;
 
-        ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Left, 0.20f, &dock_left, &dock_main);
-        ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Right, 0.30f, &dock_right, &dock_main);
+            ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Left, 0.20f, &dock_left, &dock_main);
+            ImGui::DockBuilderSplitNode(dock_main, ImGuiDir_Right, 0.30f, &dock_right, &dock_main);
 
-        // Left
-        ImGui::DockBuilderSplitNode(dock_left, ImGuiDir_Down, 0.85f, &dock_left_2, &dock_left_1);
-        ImGui::DockBuilderSplitNode(dock_left_2, ImGuiDir_Down, 0.50f, &dock_left_3, &dock_left_2);
+            // Left
+            ImGui::DockBuilderSplitNode(dock_left, ImGuiDir_Down, 0.85f, &dock_left_2, &dock_left_1);
+            ImGui::DockBuilderSplitNode(dock_left_2, ImGuiDir_Down, 0.50f, &dock_left_3, &dock_left_2);
 
-        // Right
-        ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Down,  0.40f, &dock_right_2, &dock_right_1);
-        ImGui::DockBuilderSplitNode(dock_right_2, ImGuiDir_Up,  0.70f, &dock_right_2, &dock_right_3);
+            // Right
+            ImGui::DockBuilderSplitNode(dock_right, ImGuiDir_Down,  0.40f, &dock_right_2, &dock_right_1);
+            ImGui::DockBuilderSplitNode(dock_right_2, ImGuiDir_Up,  0.70f, &dock_right_2, &dock_right_3);
 
-        ImGui::DockBuilderDockWindow("Simulation", dock_main);
-        ImGui::DockBuilderDockWindow("Simulation Settings", dock_right_1);
-        ImGui::DockBuilderDockWindow("Rendering Settings", dock_right_2);
-        ImGui::DockBuilderDockWindow("Particles", dock_right_1);
-        ImGui::DockBuilderDockWindow("Statistics", dock_right_3);
-        ImGui::DockBuilderDockWindow("Controls", dock_left_1);
-        ImGui::DockBuilderDockWindow("Scene", dock_left_2);
-        ImGui::DockBuilderDockWindow("Properties", dock_left_3);
+            ImGui::DockBuilderDockWindow("Simulation", dock_main);
+            ImGui::DockBuilderDockWindow("Simulation Settings", dock_right_1);
+            ImGui::DockBuilderDockWindow("Rendering Settings", dock_right_2);
+            ImGui::DockBuilderDockWindow("Particles", dock_right_1);
+            ImGui::DockBuilderDockWindow("Statistics", dock_right_3);
+            ImGui::DockBuilderDockWindow("Controls", dock_left_1);
+            ImGui::DockBuilderDockWindow("Scene", dock_left_2);
+            ImGui::DockBuilderDockWindow("Properties", dock_left_3);
 
-        ImGui::DockBuilderFinish(dockspace_id);
+            ImGui::DockBuilderFinish(dockspace_id);
+        }
     }
 
     ImGuiIO& io = ImGui::GetIO();

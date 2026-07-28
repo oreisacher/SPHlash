@@ -4,10 +4,10 @@
 
 #include "simulation/scene/nodes/QueryNode.h"
 #include <cuda_runtime_api.h>
-#include <c++/16/fstream>
 #include <cub/device/device_reduce.cuh>
 #include "simulation/utils/SimulationMetrics.cuh"
 #include "utils/Logger.h"
+#include <fstream>
 
 QueryNode::QueryNode(FluidSimulation* simulation)
     : BoundingBoxNode("QueryNode", glm::vec3(0.0, 0.0, 0.7)), simulation(simulation)

@@ -25,7 +25,6 @@ public:
     void setSize(int width, int height) const;
 
 private:
-    void setupParticles(Scene& scene, FluidSimulation* simulation);
     void renderNode(const SceneNode* node, const glm::mat4& view, const glm::mat4& projection) const;
 
     Framebuffer* framebuffer;
