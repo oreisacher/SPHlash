@@ -4,7 +4,7 @@
 
 #include "ui/panels/ParticlesPanel.h"
 #include "assets/Shader.h"
-#include "simulation/FluidSimulationNode.h"
+#include "simulation/SimulationNode.h"
 #include "simulation/scene/nodes/ParticlesNode.h"
 #include "imgui.h"
 #include <format>

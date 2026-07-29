@@ -2,7 +2,7 @@
 // Created by ruut on 3/16/26.
 //
 
-#include "simulation/FluidSimulationNode.h"
+#include "simulation/SimulationNode.h"
 #include <algorithm>
 #include <cuda_runtime.h>
 #include <iostream>

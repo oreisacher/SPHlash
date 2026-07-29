@@ -3,7 +3,7 @@
 //
 
 #include "ui/panels/SimulationSettingsPanel.h"
-#include "simulation/FluidSimulationNode.h"
+#include "simulation/SimulationNode.h"
 #include "ImGuiFileDialog.h"
 #include "ui/UIManager.h"
 #include "glm/gtc/type_ptr.inl"
