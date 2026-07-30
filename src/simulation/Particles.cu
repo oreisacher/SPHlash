@@ -626,34 +626,3 @@ __global__ void topSurfaceParticlesKernel(
 
     flags[id].y = 1.0;
 }
-
-struct AccelerationSq {
-    const glm::vec3* pf;
-    const glm::vec3* vf;
-    const glm::vec3* stf;
-
-    __device__ float operator()(int i) const {
-        glm::vec3 f = pf[i] + vf[i] + stf[i];
-        return f.x * f.x + f.y * f.y + f.z * f.z;
-    }
-};
-
-float calculateMaxAcceleration(
-    int numParticles,
-    const glm::vec3* pressureForce,
-    const glm::vec3* viscosityForce,
-    const glm::vec3* surfaceTensionForce
-) {
-    const thrust::counting_iterator<int> begin(0);
-    const thrust::counting_iterator<int> end(numParticles);
-
-    const float maxAcc = thrust::transform_reduce(
-        begin,
-        end,
-        AccelerationSq{pressureForce, viscosityForce, surfaceTensionForce},
-        0.0f,
-        thrust::maximum<float>()
-    );
-
-    return sqrtf(maxAcc);
-}

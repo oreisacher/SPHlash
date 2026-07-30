@@ -113,11 +113,4 @@ __global__ void topSurfaceParticlesKernel(
     const int* hashes, const int* offsets, float h
 );
 
-float calculateMaxAcceleration(
-    int numParticles,
-    const glm::vec3* pressureForce,
-    const glm::vec3* viscosityForce,
-    const glm::vec3* surfaceTensionForce
-);
-
 #endif

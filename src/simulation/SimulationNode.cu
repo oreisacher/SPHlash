@@ -191,23 +191,30 @@ void SimulationNode::update(const float deltaTime) {
     // --- Delta Time ---
     float dt = settings.useFixedTimeStep ? settings.fixedTimeStep / 1000.0f : deltaTime;
 
+    // --- Max external Force ---
+    float maxExternalForce = 0;
+
+    for (auto ffn : scene->getForceFields()) {
+        auto ff = ffn->getForceField();
+
+        if (!ff.active)
+            continue;
+
+        maxExternalForce = fmaxf(maxExternalForce, ff.strength);
+    }
+
+    maxExternalForce = fmaxf(maxExternalForce, fabsf(settings.gravity));
+
+    // --- CFL ---
+    float cs = fmaxf(10.0f * settings.maxVelocity, 0.1f);
+    settings.speedSound = cs;
+
+    float cflTimeStep = settings.safetyFactor * (settings.h / (cs * (1.0f + 0.6f * settings.alpha)));
+    float accTimeStep = 0.25f * (settings.h / maxExternalForce);
+    cfl = fminf(cflTimeStep, accTimeStep);
+
     for (int i = 0 ; i < settings.simulationSteps ; i++) {
         updateParticles();
-
-        // --- CFL ---
-        float cs = 10.0f * settings.maxVelocity;
-        settings.speedSound = cs;
-
-        float cflTimeStep = settings.safetyFactor * settings.h / (cs * (1.0f + 0.6f * settings.alpha));
-
-        float maxAcc = calculateMaxAcceleration(particleCount, particles.d_pressureForce, particles.d_viscosityForce, particles.d_surfaceTensionForce);
-
-        if (settings.enableGravity)
-            maxAcc = fminf(maxAcc, abs(settings.gravity));
-
-        float accTimeStep = 0.25f * sqrtf(settings.h / maxAcc);
-
-        cfl = fminf(cflTimeStep, accTimeStep);
 
         updateParticlesKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
             particles.d_pressureForce,
