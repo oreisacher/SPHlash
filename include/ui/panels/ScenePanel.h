@@ -20,6 +20,10 @@ public:
 private:
     Editor* editor;
     Renderer* renderer;
+
+    int _selected_scene = 0;
+    std::vector<std::string> _scene_list{};
+    void refreshSceneList();
 };
 
 #endif //SPHLASH_MODELSPANEL_H

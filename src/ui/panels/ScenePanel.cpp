@@ -10,8 +10,9 @@
 #include "imgui.h"
 
 ScenePanel::ScenePanel(Editor* editor, Renderer* renderer)
-    : UIPanel("Scene"), editor(editor), renderer(renderer)
-{ }
+    : UIPanel("Scene"), editor(editor), renderer(renderer) {
+    refreshSceneList();
+}
 
 void ScenePanel::update(double deltaTime) { }
 
@@ -157,6 +158,21 @@ void ScenePanel::draw() {
         ImGuiFileDialog::Instance()->Close();
     }
 
+    ImGui::SeparatorText("");
+
+    if (ImGui::BeginListBox("##listbox", ImVec2(-FLT_MIN, -FLT_MIN))) {
+        for (int i = 0; i < _scene_list.size(); i++) {
+            if (ImGui::Selectable(_scene_list[i].c_str(), i == _selected_scene))
+                _selected_scene = i;
+
+            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                editor->getScene()->loadScene("assets//scenes//" + _scene_list[i] + ".scene");
+        }
+
+        ImGui::EndListBox();
+    }
+
+
     ImGui::End();
 }
 
@@ -165,13 +181,13 @@ void ScenePanel::drawMenu() {
         if (ImGui::MenuItem("Load Scene")) {
             IGFD::FileDialogConfig config;
             config.path = ".";
-            ImGuiFileDialog::Instance()->OpenDialog("LoadScene", "Choose location", ".json", config);
+            ImGuiFileDialog::Instance()->OpenDialog("LoadScene", "Choose location", ".scene", config);
         }
 
         if (ImGui::MenuItem("Save Scene")) {
             IGFD::FileDialogConfig config;
             config.path = ".";
-            ImGuiFileDialog::Instance()->OpenDialog("SaveScene", "Choose location", ".json", config);
+            ImGuiFileDialog::Instance()->OpenDialog("SaveScene", "Choose location", ".scene", config);
         }
 
         if (ImGui::MenuItem("Reset Scene")) {
@@ -180,5 +196,20 @@ void ScenePanel::drawMenu() {
         }
 
         ImGui::EndMenu();
+    }
+}
+
+void ScenePanel::refreshSceneList() {
+    _scene_list.clear();
+
+    namespace fs = std::filesystem;
+    const fs::path dir = "assets//scenes//";
+    if (!fs::exists(dir) || !fs::is_directory(dir))
+        return;
+
+    for (const auto& entry : fs::directory_iterator(dir)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".scene") {
+            _scene_list.push_back(entry.path().stem().string());
+        }
     }
 }

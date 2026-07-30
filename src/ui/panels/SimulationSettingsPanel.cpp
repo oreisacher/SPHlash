@@ -138,7 +138,7 @@ void SimulationSettingsPanel::draw() {
     if (ImGui::Button("Save Settings", ImVec2(totalWidth, 0))) {
         IGFD::FileDialogConfig config;
         config.path = ".";
-        ImGuiFileDialog::Instance()->OpenDialog("SaveLocation", "Choose location", ".json", config);
+        ImGuiFileDialog::Instance()->OpenDialog("SaveLocation", "Choose location", ".para", config);
     }
 
     if (ImGuiFileDialog::Instance()->Display("SaveLocation")) {
@@ -153,7 +153,7 @@ void SimulationSettingsPanel::draw() {
     if (ImGui::Button("Load Settings", ImVec2(totalWidth, 0))) {
         IGFD::FileDialogConfig config;
         config.path = ".";
-        ImGuiFileDialog::Instance()->OpenDialog("LoadLocation", "Choose location", ".json", config);
+        ImGuiFileDialog::Instance()->OpenDialog("LoadLocation", "Choose location", ".para", config);
     }
 
     if (ImGuiFileDialog::Instance()->Display("LoadLocation")) {

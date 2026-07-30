@@ -1,0 +1,150 @@
+{
+    "nodes": [
+        {
+            "color": [
+                0.20000000298023224,
+                0.6000000238418579,
+                1.0
+            ],
+            "name": "Simulation Domain",
+            "position": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                8.140909194946289,
+                4.361243724822998,
+                2.0
+            ],
+            "tags": [
+                "simulation_Domain"
+            ],
+            "type": "SimulationDomainNode",
+            "visible": true
+        },
+        {
+            "boundary": true,
+            "name": "tube",
+            "path": "/home/ruut/CLionProjects/SPHlash/cmake-build-release/assets/models/tube.obj",
+            "position": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "tags": [],
+            "type": "ModelNode",
+            "visible": false
+        },
+        {
+            "boundary": true,
+            "name": "tube_plug",
+            "path": "/home/ruut/CLionProjects/SPHlash/cmake-build-release/assets/models/tube_plug.obj",
+            "position": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                1.0,
+                1.0,
+                1.0
+            ],
+            "tags": [],
+            "type": "ModelNode",
+            "visible": false
+        },
+        {
+            "boundary": false,
+            "color": [
+                1.0,
+                0.0,
+                0.0
+            ],
+            "name": "Particle Spawn",
+            "particleSpacing": 0.02500000037252903,
+            "path": "/home/ruut/CLionProjects/SPHlash/cmake-build-release/assets/models/tube_infill.obj",
+            "position": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "restDensity": 1000.0,
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ],
+            "scale": [
+                1.0,
+                0.7472632527351379,
+                1.0
+            ],
+            "tags": [],
+            "type": "ModelFluidSpawnNode",
+            "visible": false
+        },
+        {
+            "color": [
+                0.0,
+                0.0,
+                0.699999988079071
+            ],
+            "filter": 1,
+            "name": "QueryNode",
+            "position": [
+                0.0,
+                1.1625664234161377,
+                0.0
+            ],
+            "scale": [
+                2.166187047958374,
+                1.0,
+                2.275594472885132
+            ],
+            "tags": [],
+            "type": "QueryNode",
+            "visible": true
+        },
+        {
+            "color": [
+                0.0,
+                0.0,
+                0.699999988079071
+            ],
+            "filter": 0,
+            "name": "QueryNode",
+            "position": [
+                -0.9045617580413818,
+                -0.5,
+                0.0
+            ],
+            "scale": [
+                8.61524772644043,
+                0.10000000149011612,
+                2.5200047492980957
+            ],
+            "tags": [],
+            "type": "QueryNode",
+            "visible": true
+        }
+    ]
+}

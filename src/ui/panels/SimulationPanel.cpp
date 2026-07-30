@@ -2,15 +2,15 @@
 // Created by ruut on 3/14/26.
 //
 
-#include "../../../include/ui/panels/SimulationPanel.h"
+#include "ui/panels/SimulationPanel.h"
 #include "imgui.h"
 #include "ImGuizmo.h"
-#include "../../../include/rendering/Renderer.h"
+#include "rendering/Renderer.h"
 #include "glm/gtc/type_ptr.hpp"
 
 SimulationPanel::SimulationPanel(Editor* editor, Renderer* renderer)
-    : UIPanel("Simulation"), editor(editor), renderer(renderer)
-{ }
+    : UIPanel("Simulation"), editor(editor), renderer(renderer) {
+}
 
 void SimulationPanel::update(double deltaTime) {}
 
