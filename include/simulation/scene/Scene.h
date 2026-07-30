@@ -8,7 +8,7 @@
 #include <vector>
 #include <nlohmann/json_fwd.hpp>
 #include "nodes/CameraNode.h"
-#include "nodes/QueryNode.h"
+#include "nodes/QueryNode.cuh"
 
 class IParticleSpawn;
 class ForceFieldNode;

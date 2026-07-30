@@ -1,10 +1,8 @@
 #include "simulation/Particles.cuh"
-
 #include <cstdio>
 #include <thrust/transform_reduce.h>
 #include <thrust/iterator/counting_iterator.h>
-
-#include "../../include/simulation/scene/ForceField.h"
+#include "simulation/scene/ForceField.h"
 #include "rendering/RendererParticle.h"
 #include "simulation/AABB.cuh"
 #include "simulation/Kernels.cuh"

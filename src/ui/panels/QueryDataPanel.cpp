@@ -61,38 +61,57 @@ void QueryDataPanel::draw() {
 
     // Average Position
     if (ImGui::CollapsingHeader("Position")) {
-        plotVectorMetric("##Position", "Position", history, [] (const Metrics& m) { return m.position; });
+        plotVectorMetric("##AvgPosition", "Average Position", history, [] (const Metrics& m) { return m.position.avg; });
+        plotVectorMetric("##MinPosition", "Min Position", history, [] (const Metrics& m) { return m.position.min; });
+        plotVectorMetric("##MaxPosition", "Max Position", history, [] (const Metrics& m) { return m.position.max; });
     }
 
     // Average Velocity
     if (ImGui::CollapsingHeader("Velocity")) {
-        plotVectorMetric("##Velocity", "Velocity", history, [] (const Metrics& m) { return m.velocity; });
+        plotVectorMetric("##AvgVelocity", "Average Velocity", history, [] (const Metrics& m) { return m.velocity.avg; });
+        plotVectorMetric("##MinVelocity", "Min Velocity", history, [] (const Metrics& m) { return m.velocity.min; });
+        plotVectorMetric("##MaxVelocity", "Max Velocity", history, [] (const Metrics& m) { return m.velocity.max; });
     }
 
     // Density
     if (ImGui::CollapsingHeader("Density")) {
-        plotFloatMetric("##Density", "Density", history, [] (const Metrics& m) { return m.density; });
-        plotFloatMetric("##DensityError", "Error (%)", history, [] (const Metrics& m) { return m.densityError; });
+        plotFloatMetric("##AvgDensity", "Average Density", history, [] (const Metrics& m) { return m.density.avg; });
+        plotFloatMetric("##MinDensity", "Min Density", history, [] (const Metrics& m) { return m.density.min; });
+        plotFloatMetric("##MaxDensity", "Max Density", history, [] (const Metrics& m) { return m.density.max; });
+    }
+
+    if (ImGui::CollapsingHeader("Density Error")) {
+        plotFloatMetric("##AvgDensityError", "Average Error (%)", history, [] (const Metrics& m) { return m.densityError.avg; });
+        plotFloatMetric("##MinDensityError", "Min Error (%)", history, [] (const Metrics& m) { return m.densityError.min; });
+        plotFloatMetric("##MaxDensityError", "Max Error (%)", history, [] (const Metrics& m) { return m.densityError.max; });
     }
 
     // Pressure
     if (ImGui::CollapsingHeader("Pressure")) {
-        plotFloatMetric("##Pressure", "Pressure", history, [] (const Metrics& m) { return m.pressure; });
+        plotFloatMetric("##AvgPressure", "Average Pressure", history, [] (const Metrics& m) { return m.pressure.avg; });
+        plotFloatMetric("##MinPressure", "Min Pressure", history, [] (const Metrics& m) { return m.pressure.min; });
+        plotFloatMetric("##MaxPressure", "Max Pressure", history, [] (const Metrics& m) { return m.pressure.max; });
     }
 
     // Average Pressure Force
     if (ImGui::CollapsingHeader("Pressure Force")) {
-        plotVectorMetric("##Pressure Force", "Pressure Force", history, [] (const Metrics& m) { return m.pressureForce; });
+        plotVectorMetric("##AvgPressure Force", "Average Pressure Force", history, [] (const Metrics& m) { return m.pressureForce.avg; });
+        plotVectorMetric("##MinPressure Force", "Min Pressure Force", history, [] (const Metrics& m) { return m.pressureForce.min; });
+        plotVectorMetric("##MaxPressure Force", "Max Pressure Force", history, [] (const Metrics& m) { return m.pressureForce.max; });
     }
 
     // Average Viscosity Force
     if (ImGui::CollapsingHeader("Viscosity Force")) {
-        plotVectorMetric("##Viscosity Force", "Viscosity Force", history, [] (const Metrics& m) { return m.viscosityForce; });
+        plotVectorMetric("##AvgViscosity Force", "Average Viscosity Force", history, [] (const Metrics& m) { return m.viscosityForce.avg; });
+        plotVectorMetric("##MinViscosity Force", "Min Viscosity Force", history, [] (const Metrics& m) { return m.viscosityForce.min; });
+        plotVectorMetric("##MaxViscosity Force", "Max Viscosity Force", history, [] (const Metrics& m) { return m.viscosityForce.max; });
     }
 
     // Average Surface Tension Force
     if (ImGui::CollapsingHeader("Surface Tension Force")) {
-        plotVectorMetric("##Surface Tension Force", "Surface Tension Force", history, [] (const Metrics& m) { return m.surfaceTensionForce; });
+        plotVectorMetric("##AvgSurface Tension Force", "Average Surface Tension Force", history, [] (const Metrics& m) { return m.surfaceTensionForce.avg; });
+        plotVectorMetric("##MinSurface Tension Force", "Min Surface Tension Force", history, [] (const Metrics& m) { return m.surfaceTensionForce.min; });
+        plotVectorMetric("##MaxSurface Tension Force", "Max Surface Tension Force", history, [] (const Metrics& m) { return m.surfaceTensionForce.max; });
     }
 
     ImGui::End();

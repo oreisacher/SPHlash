@@ -93,7 +93,7 @@ Model::Model(const std::string& path, bool shaded) {
         auto mesh = std::make_unique<Mesh>(shape.name, vertices, indices);
 
         // Material
-        if (shape.mesh.material_ids[0] != -1) {
+        if (!shape.mesh.material_ids.empty() && shape.mesh.material_ids[0] != -1) {
             auto mat = materials[shape.mesh.material_ids[0]];
 
             // Create default material

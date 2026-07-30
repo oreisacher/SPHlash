@@ -2,13 +2,14 @@
 // Created by ruut on 7/24/26.
 //
 
-#include "simulation/scene/nodes/QueryNode.h"
+#include "simulation/scene/nodes/QueryNode.cuh"
 #include <cuda_runtime_api.h>
 #include <cub/device/device_reduce.cuh>
-#include "simulation/utils/SimulationMetrics.cuh"
 #include "utils/Logger.h"
 #include <fstream>
 #include "simulation/scene/Scene.h"
+#include <cub/cub.cuh>
+#include <thrust/iterator/transform_iterator.h>
 
 QueryNode::QueryNode()
     : BoundingBoxNode("QueryNode", glm::vec3(0.0, 0.0, 0.7))
@@ -29,7 +30,6 @@ void QueryNode::onAddedToScene() {
 
 void QueryNode::init() {
     // Free old memory
-    if (d_blockMetric)  cudaFree(d_blockMetric);
     if (d_result)       cudaFree(d_result);
     if (d_tempStorage)  cudaFree(d_tempStorage);
 
@@ -40,22 +40,21 @@ void QueryNode::init() {
     if (particleCount == 0)
         return;
 
-    // Allocate necessary blocks
-    allocatedBlocks = (particleCount + 255) / 256;
-    cudaMalloc(&d_blockMetric, allocatedBlocks * sizeof(Metrics));
-
     // Allocate reduction metric
     cudaMalloc(reinterpret_cast<void**>(&d_result), sizeof(Metrics));
 
-    // Query cub reduce storage size
+    thrust::counting_iterator<int> counting(0);
+    GatherParticleStats gather{};
+    auto in = thrust::make_transform_iterator(counting, gather);
+
     cub::DeviceReduce::Reduce(
         nullptr,
         tempStorageBytes,
-        d_blockMetric,
+        in,
         d_result,
-        allocatedBlocks,
-        MetricsAdd(),
-        Metrics{}
+        particleCount,
+        ParticleStatsOp{},
+        Metrics::identity()
     );
 
     cudaMalloc(&d_tempStorage, tempStorageBytes);
@@ -68,51 +67,32 @@ void QueryNode::update(float deltaTime) {
     int particleCount = simulation->getParticleCount();
     ParticlesGPU particles = simulation->getParticlesGPU();
 
-    metricsKernel<<<allocatedBlocks, 256>>>(
-        particleCount,
-        particles,
-        filter,
-        simulation->settings.p_0,
-        getWorldBoundingBox().getAABBView(),
-        d_blockMetric
-    );
+    thrust::counting_iterator<int> counting(0);
+    GatherParticleStats gather{ particles, simulation->settings.p_0, getWorldBoundingBox().getAABBView(), filter };
+    auto in = thrust::make_transform_iterator(counting, gather);
 
     cub::DeviceReduce::Reduce(
         d_tempStorage,
         tempStorageBytes,
-        d_blockMetric,
+        in,
         d_result,
-        allocatedBlocks,
-        MetricsAdd(),
-        Metrics{}
+        particleCount,
+        ParticleStatsOp{},
+        Metrics::identity()
     );
 
     Metrics result;
     cudaMemcpy(&result, d_result, sizeof(Metrics), cudaMemcpyDeviceToHost);
+    result.average();
 
-    if (result.count == 0) {
-        history.push_back(Metrics{});
-    } else {
-        // Calc average
-        result.position /= result.count;
-        result.velocity /= result.count;
-        result.pressureForce /= result.count;
-        result.viscosityForce /= result.count;
-        result.surfaceTensionForce /= result.count;
-        result.density /= result.count;
-        result.pressure /= result.count;
-
-        result.densityError /= result.count;
-
-        history.push_back(result);
-    }
+    history.push_back(result);
 }
 
 void QueryNode::reset() {
     history.clear();
 }
 
-void QueryNode::exportData(const std::string& path) {
+void QueryNode::exportData(const std::string& path) const {
     std::ofstream file(path);
     if (!file.is_open()) {
         LOG_ERROR("Could not open destination file.");
@@ -121,14 +101,38 @@ void QueryNode::exportData(const std::string& path) {
 
     file << "frame,"
             "count,"
-            "pos_x,pos_y,pos_z,"
-            "vel_x,vel_y,vel_z,"
-            "pressure_force_x,pressure_force_y,pressure_force_z,"
-            "viscosity_force_x,viscosity_force_y,viscosity_force_z,"
-            "surface_tension_force_x,surface_tension_force_y,surface_tension_force_z,"
-            "density,"
-            "densityError,"
-            "pressure\n";
+
+            "avg_pos_x,avg_pos_y,avg_pos_z,"
+            "min_pos_x,min_pos_y,min_pos_z,"
+            "max_pos_x,max_pos_y,max_pos_z,"
+
+            "avg_vel_x,avg_vel_y,avg_vel_z,"
+            "min_vel_x,min_vel_y,min_vel_z,"
+            "max_vel_x,max_vel_y,max_vel_z,"
+
+            "avg_pressure_force_x,avg_pressure_force_y,avg_pressure_force_z,"
+            "min_pressure_force_x,min_pressure_force_y,min_pressure_force_z,"
+            "max_pressure_force_x,max_pressure_force_y,max_pressure_force_z,"
+
+            "avg_viscosity_force_x,avg_viscosity_force_y,avg_viscosity_force_z,"
+            "min_viscosity_force_x,min_viscosity_force_y,min_viscosity_force_z,"
+            "max_viscosity_force_x,max_viscosity_force_y,max_viscosity_force_z,"
+
+            "avg_surface_tension_force_x,avg_surface_tension_force_y,avg_surface_tension_force_z,"
+            "min_surface_tension_force_x,min_surface_tension_force_y,min_surface_tension_force_z,"
+            "max_surface_tension_force_x,max_surface_tension_force_y,max_surface_tension_force_z,"
+
+            "avg_density,"
+            "min_density,"
+            "max_density,"
+
+            "avg_densityError,"
+            "min_densityError,"
+            "max_densityError,"
+
+            "avg_pressure,"
+            "min_pressure,"
+            "max_pressure\n";
 
     for (int i = 0 ; i < history.size(); i++)
         file << i << "," << history[i] << "\n";
