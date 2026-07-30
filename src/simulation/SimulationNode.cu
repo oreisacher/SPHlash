@@ -14,6 +14,8 @@
 #include "utils/CudaUtils.h"
 #include <cuda_gl_interop.h>
 #include <cub/device/device_radix_sort.cuh>
+
+#include "core/Input.h"
 #include "simulation/Particles.cuh"
 #include "simulation/ParticlesHost.h"
 #include "simulation/VoxelField.cuh"
@@ -178,7 +180,10 @@ void SimulationNode::updateParticles() {
 }
 
 void SimulationNode::update(const float deltaTime) {
-    if (state == UNINITIALIZED  || state == PAUSED)
+    if (state == UNINITIALIZED)
+        return;
+
+    if (state == PAUSED && !Input::Get()->isKeyPressed(Window::Key::P))
         return;
 
     updateForceFieldBuffer();
