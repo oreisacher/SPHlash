@@ -74,7 +74,7 @@ __global__ void densityPressureKernel(
     Hex32Field sdfMap,
     Hex32Field volumeMap,
     AABBView domain,
-    float h, float cs, float p_0
+    float h, float cs, float p_0, float ramp
 );
 
 __global__ void sphForcesKernel(

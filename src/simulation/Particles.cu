@@ -211,7 +211,8 @@ __global__ void densityPressureKernel(
     const AABBView domain,
     const float h,
     const float cs,
-    const float p_0
+    const float p_0,
+    const float ramp
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -303,11 +304,11 @@ __global__ void densityPressureKernel(
     properties[id].y = density;
 
     // Determine pressure based on Tait's Equation (7) of WCSPH paper
-    const float B = (cs * cs * p_0) / 7.0f;
+    const float B = ramp * (cs * cs * p_0) / 7.0f;
 
     // Clamp pressure to prevent tensile instability artifacts!
     // Not present in original WCSPH paper but other work does mention this
-    properties[id].z = fmaxf(0.0f, B * (pow((density / p_0), 7) - 1.0f));
+    properties[id].z = fmaxf(0.0f, B * (pow((density / p_0), 7.0f) - 1.0f));
 }
 
 __global__ void sphForcesKernel(

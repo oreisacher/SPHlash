@@ -126,7 +126,8 @@ void SimulationNode::updateParticles() {
         scene->getSimulationDomain()->getWorldBoundingBox().getAABBView(),
         settings.h,
         settings.speedSound,
-        settings.p_0
+        settings.p_0,
+        fminf(updateCount / 100.0f, 1.0f)
     );
 
 #ifdef DEBUG_CUDA
@@ -186,6 +187,8 @@ void SimulationNode::update(const float deltaTime) {
     if (state == PAUSED && !Input::Get()->isKeyPressed(Window::Key::P))
         return;
 
+    updateCount++;
+
     updateForceFieldBuffer();
 
     // --- Delta Time ---
@@ -206,7 +209,8 @@ void SimulationNode::update(const float deltaTime) {
     maxExternalForce = fmaxf(maxExternalForce, fabsf(settings.gravity));
 
     // --- CFL ---
-    float cs = fmaxf(10.0f * settings.maxVelocity, 0.1f);
+    // float cs = fmaxf(10.0f * settings.maxVelocity, 0.1f);
+    float cs = 10.0f * settings.maxVelocity;
     settings.speedSound = cs;
 
     float cflTimeStep = settings.safetyFactor * (settings.h / (cs * (1.0f + 0.6f * settings.alpha)));
@@ -295,6 +299,8 @@ void SimulationNode::pause() {
 
 void SimulationNode::reset() {
     state = PAUSED;
+
+    updateCount = 0;
 
     resetParticlesKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
         particles.d_position,

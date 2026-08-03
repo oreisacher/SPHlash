@@ -17,6 +17,8 @@ QueryNode::QueryNode()
 
 QueryNode::QueryNode(const nlohmann::json json) : BoundingBoxNode(json) {
     filter = json.value("filter", filter);
+    target = json.value("target", target);
+    heightDiff = json.value("heightDiff", heightDiff);
 }
 
 void QueryNode::onAddedToScene() {
@@ -64,6 +66,46 @@ void QueryNode::update(float deltaTime) {
     if (simulation->getState() != RUNNING)
         return;
 
+    if (name == "Depth" || name == "DepthHighRes") {
+        for (auto qn : scene->getQueryNodes()) {
+            if (qn->getName() == "Top") {
+                auto h = qn->getHistory();
+
+                if (h.empty())
+                    break;
+
+                // DO TARGET STUFF
+                setPosition({
+                    position.x,
+                    h.back().position.avg.y - heightDiff,
+                    position.z
+                });
+            }
+        }
+    }
+
+    if (name == "Depth" && target != "") {
+        for (auto qn : scene->getQueryNodes()) {
+            if (qn->getName() == "All") {
+                auto h = qn->getHistory();
+
+                if (h.empty())
+                    break;
+
+                vel.push_back(h.back().velocity.avg.y);
+            }
+
+            if (qn->getName() == "DepthHighRes") {
+                auto h = qn->getHistory();
+
+                if (h.empty())
+                    break;
+
+                pressures.push_back(h.back().pressure.avg);
+            }
+        }
+    }
+
     int particleCount = simulation->getParticleCount();
     ParticlesGPU particles = simulation->getParticlesGPU();
 
@@ -85,10 +127,64 @@ void QueryNode::update(float deltaTime) {
     cudaMemcpy(&result, d_result, sizeof(Metrics), cudaMemcpyDeviceToHost);
     result.average();
 
-    history.push_back(result);
+    result.deltaTime = deltaTime;
+    result.gravity = simulation->settings.gravity;
+
+    // AUTOMATIC MEASURING STUFF
+    if (getName() == "Depth") {
+        if (vel.size() < 100)
+            return;
+
+        float minHeight = std::numeric_limits<float>::infinity();
+        float maxHeight = -std::numeric_limits<float>::infinity();
+
+        int count = 0;
+        for (auto it = vel.rbegin() ; it != vel.rend() && count < 100; ++it, ++count) {
+            minHeight = std::min(minHeight, *it);
+            maxHeight = std::max(maxHeight, *it);
+        }
+
+        float avg = maxHeight - minHeight;
+
+
+        if (fabsf(avg) > threshold)
+            return;
+    }
+
+    if (name == "Depth") {
+        int count = std::min<int>(1000, pressures.size());
+
+        const auto begin = pressures.end() - count;
+        const float sum = std::accumulate(begin, pressures.end(), 0.0f);
+        result.pressure.avg = sum / static_cast<float>(count);
+
+        history.push_back(result);
+        std::cout << "Recorded " << history.size() << std::endl;
+
+        simulation->settings.gravity -= 0.2;
+
+        if (simulation->settings.gravity < -21) {
+            simulation->pause();
+            return;
+        }
+
+        simulation->reset();
+
+        for (const auto& node : scene->getQueryNodes())
+            node->reset();
+
+        simulation->start();
+        vel.clear();
+        pressures.clear();
+    } else {
+        history.push_back(result);
+    }
 }
 
 void QueryNode::reset() {
+    if (name == "Depth")
+        return;
+
     history.clear();
 }
 
@@ -101,6 +197,8 @@ void QueryNode::exportData(const std::string& path) const {
 
     file << "frame,"
             "count,"
+            "deltaTime,"
+            "gravity,"
 
             "avg_pos_x,avg_pos_y,avg_pos_z,"
             "min_pos_x,min_pos_y,min_pos_z,"
@@ -143,6 +241,24 @@ Properties QueryNode::buildProperties() {
 
     properties.addSection("Query");
 
+    properties.addProperty(std::make_unique<StringProperty>(
+       "Target",
+       [this] () { return target; },
+       [this] (std::string t) { target = t; }
+    ));
+
+    properties.addProperty(std::make_unique<FloatProperty>(
+       "Threshold",
+       [this] () { return threshold; },
+       [this] (float t) { threshold = t; }
+    ));
+
+    properties.addProperty(std::make_unique<FloatProperty>(
+        "Height Diff",
+        [this] () { return heightDiff; },
+        [this] (float t) { heightDiff = t; }
+    ));
+
     properties.addProperty(std::make_unique<EnumProperty>(
         "Filter",
         [this] () { return filter; },
@@ -176,6 +292,8 @@ nlohmann::json QueryNode::toJson() const {
     nlohmann::json j = BoundingBoxNode::toJson();
 
     j["filter"] = filter;
+    j["target"] = target;
+    j["heightDiff"] = heightDiff;
 
     return j;
 }

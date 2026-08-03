@@ -13,7 +13,7 @@ void FloatProperty::draw() {
     std::string id = "##" + name;
 
     float v = get();
-    if (ImGui::DragFloat(id.c_str(), &v, speed, min, max, "%.3f", ImGuiSliderFlags_AlwaysClamp))
+    if (ImGui::DragFloat(id.c_str(), &v, speed, min, max, "%.5f", ImGuiSliderFlags_AlwaysClamp))
         set(v);
 }
 
@@ -31,7 +31,7 @@ void Vec3Property::draw() {
     std::string id = "##" + name;
 
     glm::vec3 v = get();
-    if (ImGui::DragFloat3(id.c_str(), glm::value_ptr(v), 0.01f))
+    if (ImGui::DragFloat3(id.c_str(), glm::value_ptr(v), 0.01f, -INFINITY, INFINITY, "%.5f"))
         set(v);
 }
 

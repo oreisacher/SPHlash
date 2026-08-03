@@ -68,6 +68,8 @@ inline std::ostream& operator<<(std::ostream& os, const VecStat& s) {
 
 struct Metrics {
     int count = 0;
+    float deltaTime = 0;
+    float gravity = 0;
 
     VecStat position              = { };
     VecStat velocity              = { };
@@ -85,7 +87,7 @@ struct Metrics {
         VecStat lenV { glm::vec3(0), glm::vec3(FLT_MAX), glm::vec3(0) };
         FloatStat f { 0.0f, FLT_MAX, -FLT_MAX };
 
-        return { 0, v, lenV, lenV, lenV, lenV, f, f, f };
+        return { 0, 0, 0, v, lenV, lenV, lenV, lenV, f, f, f };
     }
 
     void average() {
@@ -102,6 +104,8 @@ struct Metrics {
 
 inline std::ostream& operator<<(std::ostream& os, const Metrics& m) {
     os  << m.count << ","
+        << m.deltaTime << ","
+        << m.gravity << ","
         << m.position << ","
         << m.velocity << ","
         << m.pressureForce << ","
@@ -137,6 +141,7 @@ struct GatherParticleStats {
 
         return {
             1,
+            0, 0,
             VecStat::fromValue(particles.d_position[i]),
             VecStat::fromValue(particles.d_velocity[i]),
             VecStat::fromValue(particles.d_pressureForce[i]),
@@ -154,6 +159,7 @@ struct ParticleStatsOp {
     Metrics operator()(const Metrics& a, const Metrics& b) const {
         return {
             a.count + b.count,
+            0, 0,
             VecStat::combine(a.position, b.position),
             VecStat::combineBySpeed(a.velocity, b.velocity),
             VecStat::combineBySpeed(a.pressureForce, b.pressureForce),
@@ -196,6 +202,14 @@ private:
     void* d_tempStorage     = nullptr;
     size_t tempStorageBytes = 0;
     int allocatedBlocks     = 0;
+
+    std::string target = "";
+
+    float heightDiff = 0.0f;
+    float threshold = 0.00002f;
+    float timeBetweenPoints = 1;
+    std::vector<float> vel;
+    std::vector<float> pressures;
 };
 
 #endif //SPHLASH_QUERYNODE_H

@@ -109,6 +109,7 @@ public:
 
 private:
     int particleCount = 0;
+    int updateCount = 0;
 
     float cfl = 0;
 
