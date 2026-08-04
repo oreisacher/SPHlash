@@ -11,6 +11,8 @@
 #include <cub/cub.cuh>
 #include <thrust/iterator/transform_iterator.h>
 
+#include "core/Input.h"
+
 QueryNode::QueryNode()
     : BoundingBoxNode("QueryNode", glm::vec3(0.0, 0.0, 0.7))
 { }
@@ -63,122 +65,280 @@ void QueryNode::init() {
 }
 
 void QueryNode::update(float deltaTime) {
-    if (simulation->getState() != RUNNING)
-        return;
+    if (simulation->getState() == RUNNING) {
+        // STABILIZING
+        if (name == "Depth" && target != "") {
+            for (auto qn : scene->getQueryNodes()) {
+                if (qn->getName() == "Top") {
+                    auto h = qn->getHistory();
 
-    if (name == "Depth" || name == "DepthHighRes") {
-        for (auto qn : scene->getQueryNodes()) {
-            if (qn->getName() == "Top") {
-                auto h = qn->getHistory();
+                    if (h.empty())
+                        break;
 
-                if (h.empty())
-                    break;
+                    surfaceHeight = h.back().position.avg.y;
 
-                // DO TARGET STUFF
+                    std::cout << surfaceHeight << std::endl;
+                }
+
+                if (qn->getName() == "All") {
+                    auto h = qn->getHistory();
+
+                    if (h.empty())
+                        break;
+
+                    vel.push_back(h.back().velocity.avg.y);
+                }
+            }
+
+            // Check stabil state
+            if (vel.size() < 100)
+                return;
+
+            float minHeight = std::numeric_limits<float>::infinity();
+            float maxHeight = -std::numeric_limits<float>::infinity();
+
+            int count = 0;
+            for (auto it = vel.rbegin() ; it != vel.rend() && count < 100; ++it, ++count) {
+                minHeight = std::min(minHeight, *it);
+                maxHeight = std::max(maxHeight, *it);
+            }
+
+            float avg = maxHeight - minHeight;
+
+
+            if (fabsf(avg) > threshold)
+                return;
+
+            simulation->pause();
+            std::cout << "Stabilized!" << std::endl;
+        } else {
+            int particleCount = simulation->getParticleCount();
+            ParticlesGPU particles = simulation->getParticlesGPU();
+
+            thrust::counting_iterator<int> counting(0);
+            GatherParticleStats gather{ particles, simulation->settings.p_0, getWorldBoundingBox().getAABBView(), filter };
+            auto in = thrust::make_transform_iterator(counting, gather);
+
+            cub::DeviceReduce::Reduce(
+                d_tempStorage,
+                tempStorageBytes,
+                in,
+                d_result,
+                particleCount,
+                ParticleStatsOp{},
+                Metrics::identity()
+            );
+
+            Metrics result;
+            cudaMemcpy(&result, d_result, sizeof(Metrics), cudaMemcpyDeviceToHost);
+            result.average();
+
+            result.deltaTime = deltaTime;
+            result.gravity = simulation->settings.gravity;
+
+            history.push_back(result);
+        }
+    } else {
+        if (Input::Get()->isKeyPressed(Window::Key::M) && name == "Depth") {
+            float d = 0.0;
+
+            while (d >= targetDepth) {
+                // Set depth
                 setPosition({
-                    position.x,
-                    h.back().position.avg.y - heightDiff,
-                    position.z
-                });
+                   position.x,
+                   surfaceHeight + d,
+                   position.z
+               });
+
+                // Measure
+                int particleCount = simulation->getParticleCount();
+                ParticlesGPU particles = simulation->getParticlesGPU();
+
+                thrust::counting_iterator<int> counting(0);
+                GatherParticleStats gather{ particles, simulation->settings.p_0, getWorldBoundingBox().getAABBView(), filter };
+                auto in = thrust::make_transform_iterator(counting, gather);
+
+                cub::DeviceReduce::Reduce(
+                    d_tempStorage,
+                    tempStorageBytes,
+                    in,
+                    d_result,
+                    particleCount,
+                    ParticleStatsOp{},
+                    Metrics::identity()
+                );
+
+                Metrics result;
+                cudaMemcpy(&result, d_result, sizeof(Metrics), cudaMemcpyDeviceToHost);
+                result.average();
+
+                result.deltaTime = deltaTime;
+                result.gravity = simulation->settings.gravity;
+                result.depth = d;
+
+                history.push_back(result);
+
+                d -= 0.01;
             }
         }
     }
 
-    if (name == "Depth" && target != "") {
-        for (auto qn : scene->getQueryNodes()) {
-            if (qn->getName() == "All") {
-                auto h = qn->getHistory();
+    // if (name == "Depth" || name == "DepthHighRes") {
+    //     for (auto qn : scene->getQueryNodes()) {
+    //         if (qn->getName() == "Top") {
+    //             auto h = qn->getHistory();
+    //
+    //             if (h.empty())
+    //                 break;
+    //
+    //             // DO TARGET STUFF
+    //             setPosition({
+    //                 position.x,
+    //                 h.back().position.avg.y - heightDiff,
+    //                 position.z
+    //             });
+    //         }
+    //     }
+    // }
+    // if (simulation->getState() != RUNNING) {
+    //     if (Input::Get()->isKeyPressed(Window::Key::L) && name == "Depth") {
+    //         float d = 0.0;
+    //         while (d >= targetDepth) {
+    //             // Set depth
+    //             setPosition({
+    //                position.x,
+    //                surfaceHeight + d,
+    //                position.z
+    //            });
+    //
+    //             // Measure
+    //             int particleCount = simulation->getParticleCount();
+    //             ParticlesGPU particles = simulation->getParticlesGPU();
+    //
+    //             thrust::counting_iterator<int> counting(0);
+    //             GatherParticleStats gather{ particles, simulation->settings.p_0, getWorldBoundingBox().getAABBView(), filter };
+    //             auto in = thrust::make_transform_iterator(counting, gather);
+    //
+    //             cub::DeviceReduce::Reduce(
+    //                 d_tempStorage,
+    //                 tempStorageBytes,
+    //                 in,
+    //                 d_result,
+    //                 particleCount,
+    //                 ParticleStatsOp{},
+    //                 Metrics::identity()
+    //             );
+    //
+    //             Metrics result;
+    //             cudaMemcpy(&result, d_result, sizeof(Metrics), cudaMemcpyDeviceToHost);
+    //             result.average();
+    //
+    //             result.deltaTime = deltaTime;
+    //             result.gravity = simulation->settings.gravity;
+    //
+    //             history.push_back(result);
+    //
+    //             d -= 0.01;
+    //         }
+    //     }
+    //
+    //     return;
+    // }
 
-                if (h.empty())
-                    break;
+    // if (name == "Depth") {
+    //     for (auto qn : scene->getQueryNodes()) {
+    //         if (qn->getName() == "Top") {
+    //             auto h = qn->getHistory();
+    //
+    //             if (h.empty())
+    //                 break;
+    //
+    //             surfaceHeight = h.back().position.avg.y;
+    //
+    //             std::cout << surfaceHeight << std::endl;
+    //         }
+    //     }
+    // }
 
-                vel.push_back(h.back().velocity.avg.y);
-            }
 
-            if (qn->getName() == "DepthHighRes") {
-                auto h = qn->getHistory();
 
-                if (h.empty())
-                    break;
 
-                pressures.push_back(h.back().pressure.avg);
-            }
-        }
-    }
-
-    int particleCount = simulation->getParticleCount();
-    ParticlesGPU particles = simulation->getParticlesGPU();
-
-    thrust::counting_iterator<int> counting(0);
-    GatherParticleStats gather{ particles, simulation->settings.p_0, getWorldBoundingBox().getAABBView(), filter };
-    auto in = thrust::make_transform_iterator(counting, gather);
-
-    cub::DeviceReduce::Reduce(
-        d_tempStorage,
-        tempStorageBytes,
-        in,
-        d_result,
-        particleCount,
-        ParticleStatsOp{},
-        Metrics::identity()
-    );
-
-    Metrics result;
-    cudaMemcpy(&result, d_result, sizeof(Metrics), cudaMemcpyDeviceToHost);
-    result.average();
-
-    result.deltaTime = deltaTime;
-    result.gravity = simulation->settings.gravity;
+    // int particleCount = simulation->getParticleCount();
+    // ParticlesGPU particles = simulation->getParticlesGPU();
+    //
+    // thrust::counting_iterator<int> counting(0);
+    // GatherParticleStats gather{ particles, simulation->settings.p_0, getWorldBoundingBox().getAABBView(), filter };
+    // auto in = thrust::make_transform_iterator(counting, gather);
+    //
+    // cub::DeviceReduce::Reduce(
+    //     d_tempStorage,
+    //     tempStorageBytes,
+    //     in,
+    //     d_result,
+    //     particleCount,
+    //     ParticleStatsOp{},
+    //     Metrics::identity()
+    // );
+    //
+    // Metrics result;
+    // cudaMemcpy(&result, d_result, sizeof(Metrics), cudaMemcpyDeviceToHost);
+    // result.average();
+    //
+    // result.deltaTime = deltaTime;
+    // result.gravity = simulation->settings.gravity;
 
     // AUTOMATIC MEASURING STUFF
-    if (getName() == "Depth") {
-        if (vel.size() < 100)
-            return;
+    // if (getName() == "Depth") {
+    //     if (vel.size() < 100)
+    //         return;
+    //
+    //     float minHeight = std::numeric_limits<float>::infinity();
+    //     float maxHeight = -std::numeric_limits<float>::infinity();
+    //
+    //     int count = 0;
+    //     for (auto it = vel.rbegin() ; it != vel.rend() && count < 100; ++it, ++count) {
+    //         minHeight = std::min(minHeight, *it);
+    //         maxHeight = std::max(maxHeight, *it);
+    //     }
+    //
+    //     float avg = maxHeight - minHeight;
+    //
+    //
+    //     if (fabsf(avg) > threshold)
+    //         return;
+    // }
 
-        float minHeight = std::numeric_limits<float>::infinity();
-        float maxHeight = -std::numeric_limits<float>::infinity();
+    // if (name == "Depth") {
+    //     int count = std::min<int>(1000, pressures.size());
+    //
+    //     const auto begin = pressures.end() - count;
+    //     const float sum = std::accumulate(begin, pressures.end(), 0.0f);
+    //     result.pressure.avg = sum / static_cast<float>(count);
+    //
+    //     history.push_back(result);
+    //     std::cout << "Recorded " << history.size() << std::endl;
+    //
+    //     simulation->settings.gravity -= 0.2;
+    //
+    //     if (simulation->settings.gravity < -21) {
+    //         simulation->pause();
+    //         return;
+    //     }
+    //
+    //     simulation->reset();
+    //
+    //     for (const auto& node : scene->getQueryNodes())
+    //         node->reset();
+    //
+    //     simulation->start();
+    //     vel.clear();
+    //     pressures.clear();
+    // } else {
+    //     history.push_back(result);
+    // }
 
-        int count = 0;
-        for (auto it = vel.rbegin() ; it != vel.rend() && count < 100; ++it, ++count) {
-            minHeight = std::min(minHeight, *it);
-            maxHeight = std::max(maxHeight, *it);
-        }
-
-        float avg = maxHeight - minHeight;
-
-
-        if (fabsf(avg) > threshold)
-            return;
-    }
-
-    if (name == "Depth") {
-        int count = std::min<int>(1000, pressures.size());
-
-        const auto begin = pressures.end() - count;
-        const float sum = std::accumulate(begin, pressures.end(), 0.0f);
-        result.pressure.avg = sum / static_cast<float>(count);
-
-        history.push_back(result);
-        std::cout << "Recorded " << history.size() << std::endl;
-
-        simulation->settings.gravity -= 0.2;
-
-        if (simulation->settings.gravity < -21) {
-            simulation->pause();
-            return;
-        }
-
-        simulation->reset();
-
-        for (const auto& node : scene->getQueryNodes())
-            node->reset();
-
-        simulation->start();
-        vel.clear();
-        pressures.clear();
-    } else {
-        history.push_back(result);
-    }
+    // if (name != "Depth")
+        // history.push_back(result);
 }
 
 void QueryNode::reset() {
@@ -199,6 +359,7 @@ void QueryNode::exportData(const std::string& path) const {
             "count,"
             "deltaTime,"
             "gravity,"
+            "depth,"
 
             "avg_pos_x,avg_pos_y,avg_pos_z,"
             "min_pos_x,min_pos_y,min_pos_z,"

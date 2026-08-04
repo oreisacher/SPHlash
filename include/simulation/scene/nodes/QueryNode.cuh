@@ -70,6 +70,7 @@ struct Metrics {
     int count = 0;
     float deltaTime = 0;
     float gravity = 0;
+    float depth = 0;
 
     VecStat position              = { };
     VecStat velocity              = { };
@@ -87,7 +88,7 @@ struct Metrics {
         VecStat lenV { glm::vec3(0), glm::vec3(FLT_MAX), glm::vec3(0) };
         FloatStat f { 0.0f, FLT_MAX, -FLT_MAX };
 
-        return { 0, 0, 0, v, lenV, lenV, lenV, lenV, f, f, f };
+        return { 0, 0, 0, 0, v, lenV, lenV, lenV, lenV, f, f, f };
     }
 
     void average() {
@@ -106,6 +107,7 @@ inline std::ostream& operator<<(std::ostream& os, const Metrics& m) {
     os  << m.count << ","
         << m.deltaTime << ","
         << m.gravity << ","
+        << m.depth << ","
         << m.position << ","
         << m.velocity << ","
         << m.pressureForce << ","
@@ -141,7 +143,7 @@ struct GatherParticleStats {
 
         return {
             1,
-            0, 0,
+            0, 0, 0,
             VecStat::fromValue(particles.d_position[i]),
             VecStat::fromValue(particles.d_velocity[i]),
             VecStat::fromValue(particles.d_pressureForce[i]),
@@ -159,7 +161,7 @@ struct ParticleStatsOp {
     Metrics operator()(const Metrics& a, const Metrics& b) const {
         return {
             a.count + b.count,
-            0, 0,
+            0, 0, 0,
             VecStat::combine(a.position, b.position),
             VecStat::combineBySpeed(a.velocity, b.velocity),
             VecStat::combineBySpeed(a.pressureForce, b.pressureForce),
@@ -204,6 +206,9 @@ private:
     int allocatedBlocks     = 0;
 
     std::string target = "";
+
+    float targetDepth = -1.0f;
+    float surfaceHeight = 0.0;
 
     float heightDiff = 0.0f;
     float threshold = 0.00002f;
