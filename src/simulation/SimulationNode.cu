@@ -531,53 +531,55 @@ bool SimulationNode::initParticles() {
         ParticlesHost spawnParticlesHost;
         spawnParticles.copyToHost(spawnParticlesHost, spawnParticleCount);
 
-        float kernelSum = 0.0f;
-        int sampleCount = 0;
+        std::cout << spawnParticleCount * spawnParticlesHost.properties[0].x << std::endl;
 
-        const float supportRadius = settings.h * 2.0;
-        const float supportRadiusSq = supportRadius * supportRadius;
-
-        // Only use particles sufficiently far from all fluid boundaries
-        for (int i = 0; i < spawnParticleCount; ++i) {
-            const glm::vec3 pos = spawnParticlesHost.position[i];
-
-            const bool interior =
-                pos.x > cudaSpawn.area.min.x + supportRadius &&
-                pos.x < cudaSpawn.area.max.x - supportRadius &&
-                pos.y > cudaSpawn.area.min.y + supportRadius &&
-                pos.y < cudaSpawn.area.max.y - supportRadius &&
-                pos.z > cudaSpawn.area.min.z + supportRadius &&
-                pos.z < cudaSpawn.area.max.z - supportRadius;
-
-            if (!interior)
-                continue;
-
-            float localKernelSum = 0.0f;
-
-            for (int j = 0; j < spawnParticleCount; ++j) {
-                const glm::vec3 diff = spawnParticlesHost.position[i] - spawnParticlesHost.position[j];
-
-                // Fast squared distance check
-                const float r2 = glm::dot(diff, diff);
-
-                if (r2 < supportRadiusSq) {
-                    const float r = std::sqrt(r2);
-                    localKernelSum += CubicSpline::W(r, settings.h);
-                }
-            }
-
-            kernelSum += localKernelSum;
-            sampleCount++;
-        }
-
-        const float averageKernelSum = kernelSum / static_cast<float>(sampleCount);
-
-        std::cout << averageKernelSum << std::endl;
-
-        float m = 1000.0f / averageKernelSum;
-
-        for (auto& p : spawnParticlesHost.properties)
-            p.x = m;
+        // float kernelSum = 0.0f;
+        // int sampleCount = 0;
+        //
+        // const float supportRadius = settings.h * 2.0;
+        // const float supportRadiusSq = supportRadius * supportRadius;
+        //
+        // // Only use particles sufficiently far from all fluid boundaries
+        // for (int i = 0; i < spawnParticleCount; ++i) {
+        //     const glm::vec3 pos = spawnParticlesHost.position[i];
+        //
+        //     const bool interior =
+        //         pos.x > cudaSpawn.area.min.x + supportRadius &&
+        //         pos.x < cudaSpawn.area.max.x - supportRadius &&
+        //         pos.y > cudaSpawn.area.min.y + supportRadius &&
+        //         pos.y < cudaSpawn.area.max.y - supportRadius &&
+        //         pos.z > cudaSpawn.area.min.z + supportRadius &&
+        //         pos.z < cudaSpawn.area.max.z - supportRadius;
+        //
+        //     if (!interior)
+        //         continue;
+        //
+        //     float localKernelSum = 0.0f;
+        //
+        //     for (int j = 0; j < spawnParticleCount; ++j) {
+        //         const glm::vec3 diff = spawnParticlesHost.position[i] - spawnParticlesHost.position[j];
+        //
+        //         // Fast squared distance check
+        //         const float r2 = glm::dot(diff, diff);
+        //
+        //         if (r2 < supportRadiusSq) {
+        //             const float r = std::sqrt(r2);
+        //             localKernelSum += CubicSpline::W(r, settings.h);
+        //         }
+        //     }
+        //
+        //     kernelSum += localKernelSum;
+        //     sampleCount++;
+        // }
+        //
+        // const float averageKernelSum = kernelSum / static_cast<float>(sampleCount);
+        //
+        // std::cout << averageKernelSum << std::endl;
+        //
+        // float m = 1000.0f / averageKernelSum;
+        //
+        // for (auto& p : spawnParticlesHost.properties)
+        //     p.x = m;
 
         allParticles.append(spawnParticlesHost);
 

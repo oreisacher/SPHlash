@@ -74,13 +74,18 @@ __global__ void initParticlesKernel(
                 sdfCell->nodes
             );
 
-            if (interpolatedSDF < 0.0)
+            if (interpolatedSDF < h)
                 return;
         }
     }
 
     if (spawn.hasShape && calculateSDF(pos, spawn.triangleCount, spawn.d_shapeTriangles) > 0.0)
         return;
+
+    float mass = spawn.restDensity * spawn.particleSpacing * spawn.particleSpacing * spawn.particleSpacing;
+
+    // glm::vec3 pC = spawn.area.size / glm::vec3(spawn.particleSpacing) + glm::vec3(1.0);
+    // float mass = (spawn.restDensity * spawn.area.size.x * spawn.area.size.y * spawn.area.size.z) / (pC.x * pC.y * pC.z);
 
     int slot = atomicAdd(particleCount, 1);
 
@@ -90,7 +95,7 @@ __global__ void initParticlesKernel(
     particles.d_pressureForce[slot]         = glm::vec3(0.0);
     particles.d_viscosityForce[slot]        = glm::vec3(0.0);
     particles.d_surfaceTensionForce[slot]   = glm::vec3(0.0);
-    particles.d_properties[slot]            = glm::vec4(1.0f, 0.0, 0.0, static_cast<float>(slot));
+    particles.d_properties[slot]            = glm::vec4(mass, 0.0, 0.0, static_cast<float>(slot));
     particles.d_flags[slot]                 = glm::vec4(false);
     particles.d_color[slot]                 = spawn.color;
 }
