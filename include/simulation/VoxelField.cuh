@@ -5,6 +5,7 @@
 #ifndef SPHLASH_VOXELFIELD_CUH
 #define SPHLASH_VOXELFIELD_CUH
 
+#include "Kernels.cuh"
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
 
@@ -18,8 +19,10 @@ __global__ void voxelFieldKernel(
     const glm::vec3* position,
     const glm::vec4* properties,
     const int* hashes,
+    int tableSize,
     const int* offsets,
-    float h
+    float h,
+    KernelSettings kernelSettings
 );
 
 #endif //SPHLASH_VOXELFIELD_CUH

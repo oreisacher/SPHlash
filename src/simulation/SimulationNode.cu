@@ -77,7 +77,8 @@ void SimulationNode::updateParticles() {
         particles.d_position,
         d_particleHashes,
         d_particleIndices,
-        settings.supportRadius,
+        settings.h,
+        settings.kernelSettings,
         tableSize
     );
 
@@ -129,7 +130,7 @@ void SimulationNode::updateParticles() {
         volumeMap,
         scene->getSimulationDomain()->getWorldBoundingBox().getAABBView(),
         settings.h,
-        settings.supportRadius,
+        settings.kernelSettings,
         settings.speedSound,
         settings.p_0
     );
@@ -146,7 +147,7 @@ void SimulationNode::updateParticles() {
         tableSize,
         d_offsets,
         settings.h,
-        settings.supportRadius
+        settings.kernelSettings
     );
 
     sphForcesKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
@@ -166,7 +167,7 @@ void SimulationNode::updateParticles() {
         volumeMap,
         scene->getSimulationDomain()->getWorldBoundingBox().getAABBView(),
         settings.h,
-        settings.supportRadius,
+        settings.kernelSettings,
         settings.alpha,
         settings.speedSound,
         settings.surfaceTension,
@@ -442,8 +443,10 @@ bool SimulationNode::computeVoxelField(const VoxelField& field) const {
         particles.d_position,
         particles.d_properties,
         d_sortedParticleHashes,
+        tableSize,
         d_offsets,
-        settings.h
+        settings.h,
+        settings.kernelSettings
     );
 
 #ifdef DEBUG_CUDA
@@ -531,19 +534,20 @@ bool SimulationNode::initParticles() {
         float kernelSum = 0.0f;
         int sampleCount = 0;
 
-        const float supportRadiusSq = settings.supportRadius * settings.supportRadius;
+        const float supportRadius = settings.h * 2.0;
+        const float supportRadiusSq = supportRadius * supportRadius;
 
         // Only use particles sufficiently far from all fluid boundaries
         for (int i = 0; i < spawnParticleCount; ++i) {
             const glm::vec3 pos = spawnParticlesHost.position[i];
 
             const bool interior =
-                pos.x > cudaSpawn.area.min.x + settings.supportRadius &&
-                pos.x < cudaSpawn.area.max.x - settings.supportRadius &&
-                pos.y > cudaSpawn.area.min.y + settings.supportRadius &&
-                pos.y < cudaSpawn.area.max.y - settings.supportRadius &&
-                pos.z > cudaSpawn.area.min.z + settings.supportRadius &&
-                pos.z < cudaSpawn.area.max.z - settings.supportRadius;
+                pos.x > cudaSpawn.area.min.x + supportRadius &&
+                pos.x < cudaSpawn.area.max.x - supportRadius &&
+                pos.y > cudaSpawn.area.min.y + supportRadius &&
+                pos.y < cudaSpawn.area.max.y - supportRadius &&
+                pos.z > cudaSpawn.area.min.z + supportRadius &&
+                pos.z < cudaSpawn.area.max.z - supportRadius;
 
             if (!interior)
                 continue;
@@ -558,7 +562,7 @@ bool SimulationNode::initParticles() {
 
                 if (r2 < supportRadiusSq) {
                     const float r = std::sqrt(r2);
-                    localKernelSum += cubicSplineKernel(r, settings.h);
+                    localKernelSum += CubicSpline::W(r, settings.h);
                 }
             }
 

@@ -8,6 +8,7 @@
 #include "simulation/AABB.cuh"
 #include "simulation/Kernels.cuh"
 #include "simulation/ParticlesGPU.h"
+#include "simulation/SimulationNode.h"
 #include "simulation/boundaries/Hex32Field.h"
 #include "simulation/scene/IParticleSpawn.h"
 #include "simulation/utils/Cell.cuh"
@@ -144,13 +145,16 @@ __global__ void hashParticlesKernel(
     const glm::vec3* position,
     int* particleHashValue,
     int* particleIndex,
-    const float supportRadius,
+    const float h,
+    const KernelSettings kernelSettings,
     const int tableSize
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
 
     if (id >= numParticles)
         return;
+
+    float supportRadius = h * getMaxSupportRadius(kernelSettings);
 
     // Get cell of particle
     glm::ivec3 cell = glm::floor(position[id] / supportRadius);
@@ -211,7 +215,7 @@ __global__ void densityPressureKernel(
     const Hex32Field volumeMap,
     const AABBView domain,
     const float h,
-    const float supportRadius,
+    const KernelSettings kernelSettings,
     const float cs,
     const float p_0
 ) {
@@ -220,11 +224,13 @@ __global__ void densityPressureKernel(
     if (id >= numParticles)
         return;
 
+    const float supportRadius = h * getMaxSupportRadius(kernelSettings);
+    const float supportRadius2 = supportRadius * supportRadius;
+
     // Get cell of particle
     glm::ivec3 cell = glm::floor(position[id] / supportRadius);
 
     float density = 0.0f;
-    const float supportRadius2 = supportRadius * supportRadius;
 
     // Find neighbors
     for (int dx = -1; dx <= 1; dx++) {
@@ -249,7 +255,7 @@ __global__ void densityPressureKernel(
                     // Check if within radius
                     float distSq = glm::dot(diff, diff);
                     if (distSq < supportRadius2) {
-                        density += properties[neighborIndex].x * cubicSplineKernel(sqrtf(distSq), h);
+                        density += properties[neighborIndex].x * evaluateKernel(kernelSettings.density, sqrtf(distSq), h);
                     }
                 }
             }
@@ -298,7 +304,7 @@ __global__ void densityPressureKernel(
 
             float absDist = fabsf(interpolatedSDF);
             if (absDist < supportRadius) {
-                density += interpolatedVolume * p_0 * cubicSplineKernel(absDist, h);
+                density += interpolatedVolume * p_0 * evaluateKernel(kernelSettings.density, absDist, h);
             }
         }
     }
@@ -331,7 +337,7 @@ __global__ void sphForcesKernel(
     const Hex32Field volumeMap,
     const AABBView domain,
     const float h,
-    const float supportRadius,
+    const KernelSettings kernelSettings,
     const float alpha,
     const float cs,
     const float tension,
@@ -341,6 +347,9 @@ __global__ void sphForcesKernel(
 
     if (id >= numParticles)
         return;
+
+    const float supportRadius = h * getMaxSupportRadius(kernelSettings);
+    const float supportRadius2 = supportRadius * supportRadius;
 
     // Get cell of particle
     glm::ivec3 cell = glm::floor(position[id] / supportRadius);
@@ -357,8 +366,6 @@ __global__ void sphForcesKernel(
     glm::vec3 pForce(0.0);
     glm::vec3 vForce(0.0);
     glm::vec3 stForce(0.0);
-
-    float supportRadius2 = supportRadius * supportRadius;
 
     // Find neighbors
     for (int dx = -1; dx <= 1; dx++) {
@@ -389,7 +396,7 @@ __global__ void sphForcesKernel(
                         continue;
 
                     const glm::vec4 prop_j = properties[neighborIndex];
-                    const glm::vec3 gradW = cubicSplineKernelGradient(diff, h);
+                    const glm::vec3 gradW = evaluateKernelGradient(kernelSettings.pressure, diff, h);
 
                     // Pressure
                     const float pressureTermJ = prop_j.z / (prop_j.y * prop_j.y + 1e-6f);
@@ -409,11 +416,11 @@ __global__ void sphForcesKernel(
                         const float pi_ab =
                             -nu * (dotTerm / (distSq + eps * h * h));
 
-                        vForce += prop_j.x * pi_ab * cubicSplineKernelGradient(diff, h);
+                        vForce += prop_j.x * pi_ab * evaluateKernelGradient(kernelSettings.viscosity, diff, h);
                     }
 
                     // Surface Tension
-                    stForce += prop_j.x * cubicSplineKernel(sqrtf(distSq), h) * diff;
+                    stForce += prop_j.x * evaluateKernel(kernelSettings.surfaceTension, sqrtf(distSq), h) * diff;
                 }
             }
         }
@@ -478,7 +485,7 @@ __global__ void sphForcesKernel(
                     glm::vec3 normal = gradSDF / gradLen;
 
                     float r = fabsf(interpolatedSDF);
-                    glm::vec3 gradW = cubicSplineKernelGradient(normal * r, h);
+                    glm::vec3 gradW = evaluateKernelGradient(kernelSettings.pressure, normal * r, h);
 
                     float p_i = properties[id].z;
                     float rho_i = properties[id].y;
@@ -603,20 +610,21 @@ __global__ void topSurfaceParticlesKernel(
     int tableSize,
     const int* offsets,
     const float h,
-    const float supportRadius
+    const KernelSettings kernelSettings
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
 
     if (id >= numParticles)
         return;
 
+    const float supportRadius = h * getMaxSupportRadius(kernelSettings);
+    const float supportRadius2 = supportRadius * supportRadius;
+
     // Get cell of particle
     glm::ivec3 cell = glm::floor(position[id] / supportRadius);
 
     const float verticalClearanceThreshold = -0.25f * h * 2;
     constexpr float coneAngleRatio = 1.5f;
-
-    float supportRadius2 = supportRadius * supportRadius;
 
     // Find neighbors
     for (int dx = -1; dx <= 1; dx++) {

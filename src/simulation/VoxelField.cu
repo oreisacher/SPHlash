@@ -5,7 +5,10 @@
 #include "simulation/VoxelField.cuh"
 #include "simulation/VoxelField.h"
 
+#include <c++/16/cstdio>
+
 #include "glm/common.hpp"
+#include "glm/detail/func_geometric.inl"
 #include "simulation/AABB.cuh"
 #include "simulation/Kernels.cuh"
 #include "simulation/utils/Cell.cuh"
@@ -17,8 +20,10 @@ __global__ void voxelFieldKernel(
     const glm::vec3* position,
     const glm::vec4* properties,
     const int* hashes,
+    int tableSize,
     const int* offsets,
-    const float h
+    const float h,
+    const KernelSettings kernelSettings
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
     const int cellCount = field.resolution.x * field.resolution.y * field.resolution.z;
@@ -34,8 +39,11 @@ __global__ void voxelFieldKernel(
     glm::vec3 cellSizes = domain.size / static_cast<glm::vec3>(field.resolution - 1);
     glm::vec3 samplePosition = glm::vec3(x, y, z) * cellSizes + domain.min;
 
+    const float supportRadius = h * getMaxSupportRadius(kernelSettings);
+    const float supportRadius2 = supportRadius * supportRadius;
+
     // Get cell of sample point
-    glm::ivec3 cell = glm::floor(samplePosition / h);
+    glm::ivec3 cell = glm::floor(samplePosition / supportRadius);
 
     glm::vec3 n(0.0f);
     float c = 0.0f;
@@ -45,7 +53,7 @@ __global__ void voxelFieldKernel(
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             for (int dz = -1; dz <= 1; dz++) {
-                uint hash = hashCell(cell + glm::ivec3(dx, dy, dz), numParticles);
+                uint hash = hashCell(cell + glm::ivec3(dx, dy, dz), tableSize);
                 int offset = offsets[hash];
 
                 if (offset == -1)
@@ -63,12 +71,12 @@ __global__ void voxelFieldKernel(
 
                     // Check if within radius
                     float distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
-                    if (distSq < h2) {
+                    if (distSq < supportRadius2) {
                         float invDensity = 1.0f / (properties[neighborIndex].y + 1e-6f);
 
                         // Color field
-                        n += properties[neighborIndex].x * invDensity * poly6KernelGradient(diff, h);
-                        c += properties[neighborIndex].x * invDensity * poly6Kernel(diff, h);
+                        n += properties[neighborIndex].x * invDensity * evaluateKernelGradient(kernelSettings.density, diff, h);
+                        c += properties[neighborIndex].x * invDensity * evaluateKernel(kernelSettings.density, sqrtf(distSq), h);
                     }
                 }
             }

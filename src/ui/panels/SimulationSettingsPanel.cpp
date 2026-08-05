@@ -34,11 +34,6 @@ void SimulationSettingsPanel::draw() {
             ImGui::SetTooltip("Size of Kernel");
         ImGui::DragFloat("##H", &simulation->settings.h, 0.0001, 0.0001, 1.0, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 
-        ImGui::Text("Support Radius:");
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Max distance kernel is non-zero");
-        ImGui::DragFloat("##SR", &simulation->settings.supportRadius, 0.0001, 0.0001, 1.0, "%.5f", ImGuiSliderFlags_AlwaysClamp);
-
         ImGui::Text("P_0:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Rest Density");
@@ -58,6 +53,40 @@ void SimulationSettingsPanel::draw() {
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Surface Tension Strength");
         ImGui::DragFloat("##T", &simulation->settings.surfaceTension, 0.001f, 0.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+    }
+
+    if (ImGui::CollapsingHeader("Kernels")) {
+        ImGui::Text("Density Kernel:");
+        int currentDensityKernel = static_cast<int>(simulation->settings.kernelSettings.density);
+        if (ImGui::Combo("##DK", &currentDensityKernel, kernelNames, IM_ARRAYSIZE(kernelNames))) {
+            simulation->settings.kernelSettings.density = static_cast<KernelType>(currentDensityKernel);
+        }
+
+        ImGui::Spacing();
+
+        ImGui::Text("Pressure Kernel:");
+        int currentPressureKernel = static_cast<int>(simulation->settings.kernelSettings.pressure);
+        if (ImGui::Combo("##PK", &currentPressureKernel, kernelNames, IM_ARRAYSIZE(kernelNames))) {
+            simulation->settings.kernelSettings.pressure = static_cast<KernelType>(currentPressureKernel);
+        }
+
+        ImGui::Spacing();
+
+        ImGui::Text("Viscosity Kernel:");
+        int currentViscosityKernel = static_cast<int>(simulation->settings.kernelSettings.viscosity);
+        if (ImGui::Combo("##VK", &currentViscosityKernel, kernelNames, IM_ARRAYSIZE(kernelNames))) {
+            simulation->settings.kernelSettings.viscosity = static_cast<KernelType>(currentViscosityKernel);
+        }
+
+        ImGui::Spacing();
+
+        ImGui::Text("Surface Tension Kernel:");
+        int currentSurfaceTensionKernel = static_cast<int>(simulation->settings.kernelSettings.surfaceTension);
+        if (ImGui::Combo("##STK", &currentSurfaceTensionKernel, kernelNames, IM_ARRAYSIZE(kernelNames))) {
+            simulation->settings.kernelSettings.surfaceTension = static_cast<KernelType>(currentSurfaceTensionKernel);
+        }
+
+        ImGui::Spacing();
     }
 
     if (ImGui::CollapsingHeader("Gravity Settings")) {

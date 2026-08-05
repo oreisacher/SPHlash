@@ -5,6 +5,7 @@
 #ifndef FLUIDSIMSPH_FLUIDSIMULATIONGPU_H
 #define FLUIDSIMSPH_FLUIDSIMULATIONGPU_H
 
+#include "Kernels.cuh"
 #include "ParticleHost.h"
 #include "ParticlesGPU.h"
 #include "boundaries/Hex32Field.h"
@@ -36,13 +37,16 @@ struct SimulationSettings {
     float h = 0.05f;
 
     // Max distance kernel is non-zero
-    float supportRadius = 0.1f;
+    // float supportRadius = 0.1f;
 
     float p_0 = 1000.0f;
     float maxVelocity = 6.0f;
     float speedSound = 10.0f;
     float alpha = 0.05f;
     float surfaceTension = 0.22f;
+
+    // Kernels
+    KernelSettings kernelSettings;
 
     // Gravity
     bool enableGravity = true;
