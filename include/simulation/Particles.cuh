@@ -1,6 +1,7 @@
 #ifndef FLUIDSIMSPH_PARTICLES_H
 #define FLUIDSIMSPH_PARTICLES_H
 
+#include "Kernels.cuh"
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
 
@@ -48,7 +49,9 @@ __global__ void hashParticlesKernel(
     const glm::vec3* position,
     int* particleHashValue,
     int* particleIndex,
-    float h
+    float h,
+    KernelSettings kernelSettings,
+    int tableSize
 );
 
 __global__ void buildOffsetsKernel(
@@ -69,12 +72,15 @@ __global__ void densityPressureKernel(
     const glm::vec3* position,
     glm::vec4* properties,
     const int* hashes,
+    int tableSize,
     const int* offsets,
     bool hasBoundary,
     Hex32Field sdfMap,
     Hex32Field volumeMap,
     AABBView domain,
-    float h, float cs, float p_0, float ramp
+    float h,
+    KernelSettings kernelSettings,
+    float cs, float p_0
 );
 
 __global__ void sphForcesKernel(
@@ -87,12 +93,15 @@ __global__ void sphForcesKernel(
     glm::vec3* surfaceTensionForce,
     glm::vec4* flags,
     const int* hashes,
+    int tableSize,
     const int* offsets,
     bool hasBoundary,
     Hex32Field sdfMap,
     Hex32Field volumeMap,
     AABBView domain,
-    float h, float alpha, float cs, float tension, float p_0
+    float h,
+    KernelSettings kernelSettings,
+    float alpha, float cs, float tension, float p_0
 );
 
 __global__ void updateParticlesKernel(
@@ -110,7 +119,8 @@ __global__ void topSurfaceParticlesKernel(
     int numParticles,
     const glm::vec3* position,
     glm::vec4* flags,
-    const int* hashes, const int* offsets, float h
+    const int* hashes, int tableSize, const int* offsets, float h,
+    KernelSettings kernelSettings
 );
 
 #endif

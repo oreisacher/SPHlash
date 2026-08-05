@@ -21,7 +21,7 @@ __device__ inline uint floorMod(int a, int b) {
     if ((r != 0) && ((r < 0) != (b < 0)))
         r += b;
 
-    return (uint)r;
+    return static_cast<uint>(r);
 }
 
 __device__ inline uint hashCell(glm::ivec3 cell, int hashTableSize) {
