@@ -16,6 +16,8 @@
 #include <cub/device/device_radix_sort.cuh>
 
 #include "core/Input.h"
+#include "glm/ext/scalar_integer.hpp"
+#include "simulation/Kernels.cuh"
 #include "simulation/Particles.cuh"
 #include "simulation/ParticlesHost.h"
 #include "simulation/VoxelField.cuh"
@@ -75,7 +77,8 @@ void SimulationNode::updateParticles() {
         particles.d_position,
         d_particleHashes,
         d_particleIndices,
-        settings.h
+        settings.supportRadius,
+        tableSize
     );
 
 #ifdef DEBUG_CUDA
@@ -119,12 +122,14 @@ void SimulationNode::updateParticles() {
         sortedParticles.d_position,
         sortedParticles.d_properties,
         d_sortedParticleHashes,
+        tableSize,
         d_offsets,
         sdfMap.d_cells != nullptr,
         sdfMap,
         volumeMap,
         scene->getSimulationDomain()->getWorldBoundingBox().getAABBView(),
         settings.h,
+        settings.supportRadius,
         settings.speedSound,
         settings.p_0
     );
@@ -138,8 +143,10 @@ void SimulationNode::updateParticles() {
         sortedParticles.d_position,
         sortedParticles.d_flags,
         d_sortedParticleHashes,
+        tableSize,
         d_offsets,
-        settings.h
+        settings.h,
+        settings.supportRadius
     );
 
     sphForcesKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
@@ -152,12 +159,14 @@ void SimulationNode::updateParticles() {
         sortedParticles.d_surfaceTensionForce,
         sortedParticles.d_flags,
         d_sortedParticleHashes,
+        tableSize,
         d_offsets,
         sdfMap.d_cells != nullptr,
         sdfMap,
         volumeMap,
         scene->getSimulationDomain()->getWorldBoundingBox().getAABBView(),
         settings.h,
+        settings.supportRadius,
         settings.alpha,
         settings.speedSound,
         settings.surfaceTension,
@@ -518,6 +527,54 @@ bool SimulationNode::initParticles() {
         // Copy spawn particles back to host and append
         ParticlesHost spawnParticlesHost;
         spawnParticles.copyToHost(spawnParticlesHost, spawnParticleCount);
+
+        float kernelSum = 0.0f;
+        int sampleCount = 0;
+
+        const float supportRadiusSq = settings.supportRadius * settings.supportRadius;
+
+        // Only use particles sufficiently far from all fluid boundaries
+        for (int i = 0; i < spawnParticleCount; ++i) {
+            const glm::vec3 pos = spawnParticlesHost.position[i];
+
+            const bool interior =
+                pos.x > cudaSpawn.area.min.x + settings.supportRadius &&
+                pos.x < cudaSpawn.area.max.x - settings.supportRadius &&
+                pos.y > cudaSpawn.area.min.y + settings.supportRadius &&
+                pos.y < cudaSpawn.area.max.y - settings.supportRadius &&
+                pos.z > cudaSpawn.area.min.z + settings.supportRadius &&
+                pos.z < cudaSpawn.area.max.z - settings.supportRadius;
+
+            if (!interior)
+                continue;
+
+            float localKernelSum = 0.0f;
+
+            for (int j = 0; j < spawnParticleCount; ++j) {
+                const glm::vec3 diff = spawnParticlesHost.position[i] - spawnParticlesHost.position[j];
+
+                // Fast squared distance check
+                const float r2 = glm::dot(diff, diff);
+
+                if (r2 < supportRadiusSq) {
+                    const float r = std::sqrt(r2);
+                    localKernelSum += cubicSplineKernel(r, settings.h);
+                }
+            }
+
+            kernelSum += localKernelSum;
+            sampleCount++;
+        }
+
+        const float averageKernelSum = kernelSum / static_cast<float>(sampleCount);
+
+        std::cout << averageKernelSum << std::endl;
+
+        float m = 1000.0f / averageKernelSum;
+
+        for (auto& p : spawnParticlesHost.properties)
+            p.x = m;
+
         allParticles.append(spawnParticlesHost);
 
         spawnParticles.free();
@@ -530,6 +587,8 @@ bool SimulationNode::initParticles() {
         return false;
     }
 
+    tableSize = glm::nextPowerOfTwo(particleCount * 2);
+
     // Allocate memory on gpu
     particles.allocate(particleCount);
     sortedParticles.allocate(particleCount);
@@ -538,7 +597,7 @@ bool SimulationNode::initParticles() {
     cudaMalloc(reinterpret_cast<void**>(&d_sortedParticleHashes), particleCount * sizeof(int));
     cudaMalloc(reinterpret_cast<void**>(&d_particleIndices), particleCount * sizeof(int));
     cudaMalloc(reinterpret_cast<void**>(&d_sortedParticleIndices), particleCount * sizeof(int));
-    cudaMalloc(reinterpret_cast<void**>(&d_offsets), particleCount * sizeof(int));
+    cudaMalloc(reinterpret_cast<void**>(&d_offsets), tableSize * sizeof(int));
 
     // Allocate memory for CUB sorting
     cub::DeviceRadixSort::SortPairs(

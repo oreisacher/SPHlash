@@ -2,7 +2,73 @@
 
 #include <math_constants.h>
 
-__device__ inline float poly6Kernel(glm::vec3 dist, float h) {
+#include "glm/ext/quaternion_geometric.hpp"
+
+__device__ __host__ inline float cubicSplineKernel(float r, float h)
+{
+    float q = r / h;
+
+    float sigma = 1.0f / (CUDART_PI_F * h * h * h);
+
+    float value;
+
+    if (q < 1.0f)
+    {
+        value = 1.0f
+              - 1.5f * q * q
+              + 0.75f * q * q * q;
+    }
+    else if (q < 2.0f)
+    {
+        float t = 2.0f - q;
+        value = 0.25f * t * t * t;
+    }
+    else
+    {
+        value = 0.0f;
+    }
+
+    return sigma * value;
+}
+
+__device__ __host__ inline glm::vec3 cubicSplineKernelGradient(glm::vec3 r, float h)
+{
+    float dist = sqrtf(
+        r.x * r.x +
+        r.y * r.y +
+        r.z * r.z
+    );
+
+    if (dist < 1e-6f)
+        return glm::vec3(0.0f);
+
+    float q = dist / h;
+
+    float factor = 0.0f;
+
+    if (q < 1.0f)
+    {
+        // d/dq (1 - 1.5q^2 + 0.75q^3)
+        factor = -3.0f * q + 2.25f * q * q;
+    }
+    else if (q < 2.0f)
+    {
+        // d/dq (0.25(2-q)^3)
+        float t = 2.0f - q;
+        factor = -0.75f * t * t;
+    }
+    else
+    {
+        return glm::vec3(0.0f);
+    }
+
+    // 3D normalization
+    float sigma = 1.0f / (CUDART_PI_F * h * h * h * h);
+
+    return sigma * factor * (r / dist);
+}
+
+__device__ __host__ inline float poly6Kernel(glm::vec3 dist, float h) {
     float r2 = dist.x * dist.x + dist.y * dist.y + dist.z * dist.z;
     float h2 = h * h;
 

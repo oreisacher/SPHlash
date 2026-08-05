@@ -32,8 +32,12 @@ struct SimulationSettings {
     // Simulation
     int simulationSteps = 1;
 
-    // Particles
+    // Controls size of smoothing area
     float h = 0.05f;
+
+    // Max distance kernel is non-zero
+    float supportRadius = 0.1f;
+
     float p_0 = 1000.0f;
     float maxVelocity = 6.0f;
     float speedSound = 10.0f;
@@ -111,6 +115,8 @@ private:
     int particleCount = 0;
 
     float cfl = 0;
+
+    int tableSize = 0;
 
     // --- Simulation State ---
     SimulationState state = UNINITIALIZED;
