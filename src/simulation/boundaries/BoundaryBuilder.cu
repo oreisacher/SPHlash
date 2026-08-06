@@ -57,7 +57,7 @@ bool BoundaryBuilder::constructSDFMap(const Scene* scene, AABB domain, float h, 
     return true;
 }
 
-bool BoundaryBuilder::constructVolumeMap(Hex32Field sdfHexField, AABB domain, float h, Hex32Field& volumeMap) const {
+bool BoundaryBuilder::constructVolumeMap(Hex32Field sdfHexField, AABB domain, float h, KernelSettings kernelSettings, Hex32Field& volumeMap) const {
     volumeMap.resolution = sdfHexField.resolution;
     cudaMalloc(&(volumeMap.d_cells), sdfHexField.resolution.x * sdfHexField.resolution.y * sdfHexField.resolution.z * sizeof(Hex32Cell));
 
@@ -71,7 +71,8 @@ bool BoundaryBuilder::constructVolumeMap(Hex32Field sdfHexField, AABB domain, fl
         sdfHexField,
         volumeMap,
         domain.getAABBView(),
-        h
+        h,
+        kernelSettings
     );
 
 #ifdef DEBUG_CUDA
@@ -85,8 +86,9 @@ bool BoundaryBuilder::constructVolumeMap(Hex32Field sdfHexField, AABB domain, fl
     std::vector<float> cellData;
     cellData.reserve(volumeMap.resolution.x * volumeMap.resolution.y * volumeMap.resolution.z);
 
-    for (auto& cell : cells)
+    for (auto& cell : cells) {
         cellData.push_back(cell.nodes[0] * 1000.0f);    // Normalize value between [0, 1] to ensure proper rendering
+    }
 
     glGenTextures(1, &volumeMap.texture);
     glBindTexture(GL_TEXTURE_3D, volumeMap.texture);

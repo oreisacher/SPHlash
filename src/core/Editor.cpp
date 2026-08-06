@@ -121,7 +121,7 @@ void Editor::buildBoundaryDensityMap() const {
     }
 
     Hex32Field volumeMap;
-    if (!boundryBuilder.constructVolumeMap(sdfMap, scene->getSimulationDomain()->getWorldBoundingBox(), simulation->settings.h, volumeMap)) {
+    if (!boundryBuilder.constructVolumeMap(sdfMap, scene->getSimulationDomain()->getWorldBoundingBox(), simulation->settings.h, simulation->settings.kernelSettings, volumeMap)) {
         // Clear current boundaries of simulation if error occurred during construction
         simulation->clearBoundaryField();
         return;

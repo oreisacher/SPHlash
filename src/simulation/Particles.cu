@@ -35,7 +35,7 @@ __global__ void initParticlesKernel(
     const int gy = (id / gridCount.x) % gridCount.y;
     const int gz = id / (gridCount.x * gridCount.y);
 
-    glm::vec3 pos = spawn.area.min + glm::vec3(gx, gy, gz) * spawn.particleSpacing;
+    glm::vec3 pos = spawn.area.min + glm::vec3(gx + 0.5, gy + 0.5, gz + 0.5) * spawn.particleSpacing;
 
     // Skip particles which would spawn outside the simulation domain
     if ( pos.x < domain.min.x || pos.y < domain.min.y || pos.z < domain.min.z
@@ -83,9 +83,6 @@ __global__ void initParticlesKernel(
         return;
 
     float mass = spawn.restDensity * spawn.particleSpacing * spawn.particleSpacing * spawn.particleSpacing;
-
-    // glm::vec3 pC = spawn.area.size / glm::vec3(spawn.particleSpacing) + glm::vec3(1.0);
-    // float mass = (spawn.restDensity * spawn.area.size.x * spawn.area.size.y * spawn.area.size.z) / (pC.x * pC.y * pC.z);
 
     int slot = atomicAdd(particleCount, 1);
 
@@ -495,16 +492,9 @@ __global__ void sphForcesKernel(
                     float p_i = properties[id].z;
                     float rho_i = properties[id].y;
 
-                    // Boundary pressure: assume p_b = p_i (or static head p_0)
                     float pressureTerm = (p_i / (rho_i * rho_i + 1e-6f)) + (p_i / (p_0 * p_0 + 1e-6f));
 
                     pForce -= (interpolatedVolume * p_0) * pressureTerm * gradW;
-
-                    if (interpolatedSDF < 0.0f) {
-                        float penetrationDepth = fabsf(interpolatedSDF);
-                        // Strong spring-like repulsive force to push particle back out
-                        pForce += normal * (1000.0f * penetrationDepth / (h + 1e-6f));
-                    }
                 }
             }
         }

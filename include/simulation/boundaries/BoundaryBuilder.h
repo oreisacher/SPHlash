@@ -8,6 +8,7 @@
 #include "glm/vec3.hpp"
 #include "../AABB.cuh"
 #include "Hex32Field.h"
+#include "simulation/Kernels.cuh"
 
 class Scene;
 
@@ -19,7 +20,7 @@ struct BoundarySettings {
 class BoundaryBuilder {
 public:
     bool constructSDFMap(const Scene* scene, AABB domain, float h, Hex32Field& sdfMap) const;
-    bool constructVolumeMap(Hex32Field sdfHexField, AABB domain, float h, Hex32Field& volumeMap) const;
+    bool constructVolumeMap(Hex32Field sdfHexField, AABB domain, float h, KernelSettings kernelSettings, Hex32Field& volumeMap) const;
 
     BoundarySettings settings;
 };
