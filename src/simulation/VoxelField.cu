@@ -47,7 +47,6 @@ __global__ void voxelFieldKernel(
 
     glm::vec3 n(0.0f);
     float c = 0.0f;
-    float h2 = h * h;
 
     // Find neighbors
     for (int dx = -1; dx <= 1; dx++) {

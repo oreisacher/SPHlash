@@ -3,6 +3,7 @@
 #include <cstdio>
 
 #include "simulation/AABB.cuh"
+#include "simulation/Kernels.cuh"
 #include "simulation/utils/Hex32.cuh"
 #include "simulation/utils/SDF.cuh"
 #include "simulation/boundaries/Hex32Field.h"
@@ -82,7 +83,8 @@ __global__ void volumeMapKernel(
     const Hex32Field sdfField,
     const Hex32Field volumeField,
     const AABBView domain,
-    const float h
+    const float h,
+    const KernelSettings kernelSettings
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
     const int cellCount = sdfField.resolution.x * sdfField.resolution.y * sdfField.resolution.z;
@@ -137,6 +139,8 @@ __global__ void volumeMapKernel(
 
         float volume = 0.0f;
 
+        const float supportRadius = h * getMaxSupportRadius(kernelSettings);
+
         for (int z = 0 ; z < 5 ; z++) {
             for (int y = 0 ; y < 5 ; y++) {
                 for (int x = 0 ; x < 5 ; x++) {
@@ -181,7 +185,7 @@ __global__ void volumeMapKernel(
                         sampleCell->nodes
                     );
 
-                    float gamma = gammaStar(interpolatedSDF, h);
+                    float gamma = gammaStar(interpolatedSDF, supportRadius);
                     volume += gamma * w[x] * w[y] * w[z];
                 }
             }
