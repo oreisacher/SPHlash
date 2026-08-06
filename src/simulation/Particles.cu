@@ -222,8 +222,7 @@ __global__ void densityPressureKernel(
     const float h,
     const KernelSettings kernelSettings,
     const float cs,
-    const float p_0,
-    const float ramp
+    const float p_0
 ) {
     const uint id = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -319,7 +318,7 @@ __global__ void densityPressureKernel(
     properties[id].y = density;
 
     // Determine pressure based on Tait's Equation (7) of WCSPH paper
-    const float B = ramp * (cs * cs * p_0) / 7.0f;
+    const float B = (cs * cs * p_0) / 7.0f;
 
     // Clamp pressure to prevent tensile instability artifacts!
     // Not present in original WCSPH paper but other work does mention this
