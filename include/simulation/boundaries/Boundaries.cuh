@@ -4,6 +4,7 @@
 
 #ifndef SPHLASH_BOUNDARIES_H
 #define SPHLASH_BOUNDARIES_H
+#include "simulation/Kernels.cuh"
 
 struct AABBView;
 struct Hex32Field;
@@ -21,7 +22,8 @@ __global__ void volumeMapKernel(
     Hex32Field sdfField,
     Hex32Field volumeField,
     AABBView domain,
-    float h
+    float h,
+    KernelSettings kernelSettings
 );
 
 #endif //SPHLASH_BOUNDARIES_H
