@@ -132,8 +132,7 @@ void SimulationNode::updateParticles() {
         settings.h,
         settings.kernelSettings,
         settings.speedSound,
-        settings.p_0,
-        fminf(updateCount / 100.0f, 1.0f)
+        settings.p_0
     );
 
 #ifdef DEBUG_CUDA

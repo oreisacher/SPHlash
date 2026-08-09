@@ -7,6 +7,8 @@
 #include <cub/device/device_reduce.cuh>
 #include "utils/Logger.h"
 #include <fstream>
+#include <c++/16/thread>
+
 #include "simulation/scene/Scene.h"
 #include <cub/cub.cuh>
 #include <thrust/iterator/transform_iterator.h>
@@ -90,7 +92,7 @@ void QueryNode::update(float deltaTime) {
                 }
             }
 
-            // Check stabil state
+            // Check stable state
             if (vel.size() < 100)
                 return;
 
@@ -104,7 +106,6 @@ void QueryNode::update(float deltaTime) {
             }
 
             float avg = maxHeight - minHeight;
-
 
             if (fabsf(avg) > threshold)
                 return;
