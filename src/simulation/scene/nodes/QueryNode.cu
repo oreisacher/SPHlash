@@ -11,6 +11,8 @@
 #include <cub/cub.cuh>
 #include <thrust/iterator/transform_iterator.h>
 
+#include "core/Input.h"
+
 QueryNode::QueryNode()
     : BoundingBoxNode("QueryNode", glm::vec3(0.0, 0.0, 0.7))
 { }
@@ -84,6 +86,13 @@ void QueryNode::update(float deltaTime) {
         }
     }
 
+    if (name == "DepthHighRes") {
+        c++;
+
+        if (c < 200)
+            return;
+    }
+
     if (name == "Depth" && target != "") {
         for (auto qn : scene->getQueryNodes()) {
             if (qn->getName() == "All") {
@@ -130,8 +139,15 @@ void QueryNode::update(float deltaTime) {
     result.deltaTime = deltaTime;
     result.gravity = simulation->settings.gravity;
 
+    int count = std::min<int>(1000, pressures.size());
+
     // AUTOMATIC MEASURING STUFF
     if (getName() == "Depth") {
+        const auto begin = pressures.end() - count;
+        const float sum = std::accumulate(begin, pressures.end(), 0.0f);
+        float a = sum / static_cast<float>(count);
+        std::cout << a << std::endl;
+
         if (vel.size() < 100)
             return;
 
@@ -146,6 +162,8 @@ void QueryNode::update(float deltaTime) {
 
         float avg = maxHeight - minHeight;
 
+        if (Input::Get()->isKeyDown(Window::Key::F8))
+            avg = 0.0f;
 
         if (fabsf(avg) > threshold)
             return;
@@ -161,7 +179,7 @@ void QueryNode::update(float deltaTime) {
         history.push_back(result);
         std::cout << "Recorded " << history.size() << std::endl;
 
-        simulation->settings.gravity -= 0.2;
+        simulation->settings.gravity -= 0.5;
 
         if (simulation->settings.gravity < -21) {
             simulation->pause();

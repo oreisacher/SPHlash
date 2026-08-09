@@ -205,6 +205,7 @@ private:
 
     std::string target = "";
 
+    int c = 0;
     float heightDiff = 0.0f;
     float threshold = 0.00002f;
     float timeBetweenPoints = 1;
