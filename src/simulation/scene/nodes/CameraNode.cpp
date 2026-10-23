@@ -3,6 +3,9 @@
 //
 
 #include "../../../../include/simulation/scene/nodes/CameraNode.h"
+
+#include <iostream>
+
 #include "../../../../include/core/Input.h"
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/matrix_transform.hpp"
@@ -66,34 +69,33 @@ void CameraNode::update(float deltaTime) {
     if (Input::Get()->isKeyDown(Window::Key::Q))
         position -= worldUp * velocity;
 
-    // Mouse Look (Keyboard)
-    if (Input::Get()->isKeyDown(Window::Key::Up))
-        pitch += keyboardSensitivity * deltaTime;
-    if (Input::Get()->isKeyDown(Window::Key::Down))
-        pitch -= keyboardSensitivity * deltaTime;
-    if (Input::Get()->isKeyDown(Window::Key::Left))
-        yaw -= keyboardSensitivity * deltaTime;
-    if (Input::Get()->isKeyDown(Window::Key::Right))
-        yaw += keyboardSensitivity * deltaTime;
+    auto eulerRotation = getEulerRotation();
 
     // Axis aligned presets
     if (Input::Get()->isKeyPressed(Window::Key::F1)) {
         position = { 0.0, 0.0, position.z == 0.0 ? 2.0f : position.z };
-        pitch   = 0.0f;
-        yaw     = -90.f;
+        eulerRotation = glm::vec3(0.0, 0.0, 0.0);
     }
 
     if (Input::Get()->isKeyPressed(Window::Key::F2)) {
         position = { position.x == 0.0 ? -2.0f : position.x, 0.0, 0.0 };
-        pitch   = 0.0f;
-        yaw     = 0.0f;
+        eulerRotation = glm::vec3(0.0, -90.0f, 0.0);
     }
 
     if (Input::Get()->isKeyPressed(Window::Key::F3)) {
         position = { 0.0, position.y == 0.0 ? 2.0f : position.y, 0.0 };
-        pitch   = -89.99f;
-        yaw     = -90.0f;
+        eulerRotation = glm::vec3(-89.99f, -90.0f, 0.0);
     }
+
+    // Mouse Look (Keyboard)
+    if (Input::Get()->isKeyDown(Window::Key::Up))
+        eulerRotation.x += keyboardSensitivity * deltaTime;
+    if (Input::Get()->isKeyDown(Window::Key::Down))
+        eulerRotation.x -= keyboardSensitivity * deltaTime;
+    if (Input::Get()->isKeyDown(Window::Key::Left))
+        eulerRotation.y += keyboardSensitivity * deltaTime;
+    if (Input::Get()->isKeyDown(Window::Key::Right))
+        eulerRotation.y -= keyboardSensitivity * deltaTime;
 
     if (Input::Get()->isKeyPressed(Window::Key::F5))
         mode = Mode::PERSPECTIVE;
@@ -112,8 +114,11 @@ void CameraNode::update(float deltaTime) {
         window->setCursorMode(Window::CursorMode::CURSOR_NORMAL);
     }
 
-    if (!updateMouse && !mouseDragging)
+    if (!updateMouse && !mouseDragging) {
+        setEulerRotation(eulerRotation);
+        updateVectors();
         return;
+    }
 
     auto mousePos = Input::Get()->getMousePosition();
 
@@ -125,11 +130,13 @@ void CameraNode::update(float deltaTime) {
         yDelta = 0;
     }
 
+    prevMousePosition = Input::Get()->getMousePosition();
+
     // Mouse Look (MOUSE)
     if (Input::Get()->isMouseButtonDown(Window::MouseButton::RIGHT)) {
-        yaw -= xDelta * mouseSensitivity;
-        pitch += yDelta * mouseSensitivity;
-        pitch = glm::clamp(pitch, -89.99f, 89.99f);
+        eulerRotation.y += xDelta * mouseSensitivity;
+        eulerRotation.x += yDelta * mouseSensitivity;
+        eulerRotation.x = glm::clamp(eulerRotation.x, -89.99f, 89.99f);
     }
 
     // Mouse Pan
@@ -137,8 +144,6 @@ void CameraNode::update(float deltaTime) {
         position += right * xDelta * orthoScale * orthoSensitivity;
         position -= up    * yDelta * orthoScale * orthoSensitivity;
     }
-
-    prevMousePosition = Input::Get()->getMousePosition();
 
     // Mouse Scroll
     glm::vec2 mouseScroll = Input::Get()->getSrollDelta();
@@ -149,6 +154,7 @@ void CameraNode::update(float deltaTime) {
             orthoScale -= mouseScroll.y * orthoScrollSensitivity;
     }
 
+    setEulerRotation(eulerRotation);
     updateVectors();
 }
 
@@ -200,6 +206,12 @@ Properties CameraNode::buildProperties() {
         [this] (glm::vec3 position) { setPosition(position); }
     ));
 
+    properties.addProperty(std::make_unique<Vec3Property>(
+        "Rotation",
+        [this] () { return getEulerRotation(); },
+        [this] (glm::vec3 rotation) { setEulerRotation(rotation); updateVectors(); }
+    ));
+
     properties.addSection("Camera");
     properties.addProperty(std::make_unique<FloatProperty>(
         "FOV",
@@ -214,6 +226,12 @@ Properties CameraNode::buildProperties() {
         [this] (bool enabled) { setMode(enabled ? Mode::ORTHOGRAPHIC : Mode::PERSPECTIVE); }
     ));
 
+    properties.addProperty(std::make_unique<FloatProperty>(
+       "Ortho Scale",
+       [this] () { return orthoScale; },
+       [this] (float scale) { this->orthoScale = scale; }
+    ));
+
     return properties;
 }
 
@@ -222,11 +240,7 @@ std::string CameraNode::getDefaultName() const {
 }
 
 void CameraNode::updateVectors() {
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front = glm::normalize(front);
-
-    right = glm::normalize(glm::cross(front, worldUp));
-    up = glm::normalize(glm::cross(right, front));
+    front = glm::normalize(rotation * glm::vec3(0.0f, 0.0f, -1.0f));
+    up    = glm::normalize(rotation * glm::vec3(0.0f, 1.0f, 0.0f));
+    right = glm::normalize(rotation * glm::vec3(1.0f, 0.0f, 0.0f));
 }

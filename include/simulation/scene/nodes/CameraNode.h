@@ -60,9 +60,6 @@ private:
 
     float fov = 90.0f;
     float orthoScale = 3.0f;
-
-    float yaw = -90.0f;
-    float pitch = 0.0f;
     float aspect = 1.0f;
 
     Mode mode = Mode::PERSPECTIVE;
