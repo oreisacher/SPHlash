@@ -5,6 +5,8 @@
 #ifndef SPHLASH_QUERYNODE_H
 #define SPHLASH_QUERYNODE_H
 
+#include <fstream>
+
 #include "BoundingBoxNode.h"
 #include "simulation/SimulationNode.h"
 
@@ -68,6 +70,7 @@ inline std::ostream& operator<<(std::ostream& os, const VecStat& s) {
 
 struct Metrics {
     int count = 0;
+    float deltaTime = 0.0f;
 
     VecStat position              = { };
     VecStat velocity              = { };
@@ -85,7 +88,7 @@ struct Metrics {
         VecStat lenV { glm::vec3(0), glm::vec3(FLT_MAX), glm::vec3(0) };
         FloatStat f { 0.0f, FLT_MAX, -FLT_MAX };
 
-        return { 0, v, lenV, lenV, lenV, lenV, f, f, f };
+        return { 0, 0.0, v, lenV, lenV, lenV, lenV, f, f, f };
     }
 
     void average() {
@@ -102,6 +105,7 @@ struct Metrics {
 
 inline std::ostream& operator<<(std::ostream& os, const Metrics& m) {
     os  << m.count << ","
+        << m.deltaTime << ","
         << m.position << ","
         << m.velocity << ","
         << m.pressureForce << ","
@@ -136,7 +140,7 @@ struct GatherParticleStats {
         float pressure = particles.d_properties[i].z;
 
         return {
-            1,
+            1, 0,
             VecStat::fromValue(particles.d_position[i]),
             VecStat::fromValue(particles.d_velocity[i]),
             VecStat::fromValue(particles.d_pressureForce[i]),
@@ -153,7 +157,7 @@ struct ParticleStatsOp {
     __host__ __device__ __forceinline__
     Metrics operator()(const Metrics& a, const Metrics& b) const {
         return {
-            a.count + b.count,
+            a.count + b.count, 0,
             VecStat::combine(a.position, b.position),
             VecStat::combineBySpeed(a.velocity, b.velocity),
             VecStat::combineBySpeed(a.pressureForce, b.pressureForce),
@@ -179,6 +183,9 @@ public:
     void reset();
     void exportData(const std::string& path) const;
 
+    void startExporting(const std::string& path);
+    void stopExporting();
+
     std::vector<Metrics>& getHistory();
 
     Properties buildProperties() override;
@@ -196,6 +203,8 @@ private:
     void* d_tempStorage     = nullptr;
     size_t tempStorageBytes = 0;
     int allocatedBlocks     = 0;
+
+    std::ofstream streamOutput;
 };
 
 #endif //SPHLASH_QUERYNODE_H

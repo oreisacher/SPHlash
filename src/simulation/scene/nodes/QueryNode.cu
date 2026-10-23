@@ -85,7 +85,16 @@ void QueryNode::update(float deltaTime) {
     cudaMemcpy(&result, d_result, sizeof(Metrics), cudaMemcpyDeviceToHost);
     result.average();
 
+    result.deltaTime = deltaTime;
+
     history.push_back(result);
+
+    if (streamOutput.is_open()) {
+        streamOutput << history.size() - 1 << ","
+                 << result << "\n";
+
+        streamOutput.flush();
+    }
 }
 
 void QueryNode::reset() {
@@ -101,6 +110,7 @@ void QueryNode::exportData(const std::string& path) const {
 
     file << "frame,"
             "count,"
+            "deltaTime,"
 
             "avg_pos_x,avg_pos_y,avg_pos_z,"
             "min_pos_x,min_pos_y,min_pos_z,"
@@ -136,6 +146,56 @@ void QueryNode::exportData(const std::string& path) const {
 
     for (int i = 0 ; i < history.size(); i++)
         file << i << "," << history[i] << "\n";
+
+
+}
+
+void QueryNode::startExporting(const std::string& path) {
+    streamOutput.open(path);
+
+    if (!streamOutput.is_open()) {
+        LOG_ERROR("Could not open destination file.");
+        return;
+    }
+
+    streamOutput << "frame,"
+                    "count,"
+
+                    "avg_pos_x,avg_pos_y,avg_pos_z,"
+                    "min_pos_x,min_pos_y,min_pos_z,"
+                    "max_pos_x,max_pos_y,max_pos_z,"
+
+                    "avg_vel_x,avg_vel_y,avg_vel_z,"
+                    "min_vel_x,min_vel_y,min_vel_z,"
+                    "max_vel_x,max_vel_y,max_vel_z,"
+
+                    "avg_pressure_force_x,avg_pressure_force_y,avg_pressure_force_z,"
+                    "min_pressure_force_x,min_pressure_force_y,min_pressure_force_z,"
+                    "max_pressure_force_x,max_pressure_force_y,max_pressure_force_z,"
+
+                    "avg_viscosity_force_x,avg_viscosity_force_y,avg_viscosity_force_z,"
+                    "min_viscosity_force_x,min_viscosity_force_y,min_viscosity_force_z,"
+                    "max_viscosity_force_x,max_viscosity_force_y,max_viscosity_force_z,"
+
+                    "avg_surface_tension_force_x,avg_surface_tension_force_y,avg_surface_tension_force_z,"
+                    "min_surface_tension_force_x,min_surface_tension_force_y,min_surface_tension_force_z,"
+                    "max_surface_tension_force_x,max_surface_tension_force_y,max_surface_tension_force_z,"
+
+                    "avg_density,"
+                    "min_density,"
+                    "max_density,"
+
+                    "avg_densityError,"
+                    "min_densityError,"
+                    "max_densityError,"
+
+                    "avg_pressure,"
+                    "min_pressure,"
+                    "max_pressure\n";
+}
+
+void QueryNode::stopExporting() {
+    streamOutput.close();
 }
 
 Properties QueryNode::buildProperties() {
@@ -163,6 +223,21 @@ Properties QueryNode::buildProperties() {
             exportData(path);
         },
         ".csv"
+    ));
+
+    properties.addProperty(std::make_unique<DialogProperty>(
+        "Start stream export",
+        [this](const std::string& path) {
+            startExporting(path);
+        },
+        ".csv"
+    ));
+
+    properties.addProperty(std::make_unique<ButtonProperty>(
+        "Stop stream export",
+        [this] {
+            stopExporting();
+        }
     ));
 
     return properties;
