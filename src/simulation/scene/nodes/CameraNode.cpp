@@ -2,14 +2,11 @@
 // Created by ruut on 3/26/26.
 //
 
-#include "../../../../include/simulation/scene/nodes/CameraNode.h"
-
-#include <iostream>
-
-#include "../../../../include/core/Input.h"
+#include "simulation/scene/nodes/CameraNode.h"
+#include "core/Input.h"
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/matrix_transform.hpp"
-#include "../../../../include/simulation/scene/Properties.h"
+#include "simulation/scene/Properties.h"
 
 CameraNode::CameraNode(Window* window, glm::vec3 position) : window(window) {
     this->name = "Camera";
@@ -41,6 +38,7 @@ CameraNode::CameraNode(Window* window, glm::vec3 position) : window(window) {
     }
 
     this->position = position;
+    Transform::setEulerRotation(glm::vec3(0.0, 0.0, 0.0));
     updateVectors();
 }
 
