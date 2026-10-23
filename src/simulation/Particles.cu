@@ -2,6 +2,9 @@
 #include <cstdio>
 #include <thrust/transform_reduce.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
+
+#include "glm/gtx/compatibility.hpp"
 #include "glm/gtx/norm.inl"
 #include "simulation/scene/ForceField.h"
 #include "rendering/RendererParticle.h"
@@ -311,6 +314,10 @@ __global__ void densityPressureKernel(
         }
     }
 
+    if (!isfinite(density) || density < 0.0f || density > p_0 * 3) {
+        density = p_0;
+    }
+
     // Assign density to particle
     properties[id].y = density;
 
@@ -550,6 +557,11 @@ __global__ void updateParticlesKernel(
         return;
 
     const glm::vec3 force = pressureForce[id] + viscosityForce[id] + surfaceTensionForce[id];
+
+    if (!glm::all(glm::isfinite(force))) {
+        return;
+    }
+
     glm::vec3 acceleration = force + glm::vec3(0.0f, gravity, 0.0f);
 
     // Check force fields
@@ -562,8 +574,19 @@ __global__ void updateParticlesKernel(
         }
     }
 
-    velocity[id] += deltaTime * acceleration;
-    position[id] += deltaTime * velocity[id];
+    if (!glm::all(glm::isfinite(acceleration))) {
+        return;
+    }
+
+    glm::vec3 newVelocity = velocity[id] + deltaTime * acceleration;
+    glm::vec3 newPosition = position[id] + deltaTime * newVelocity;
+
+    if (!glm::all(glm::isfinite(newVelocity)) || !glm::all(glm::isfinite(newPosition))) {
+        return;
+    }
+
+    velocity[id] = newVelocity;
+    position[id] = newPosition;
 
     // Domain boundaries
     if (position[id].x < domain.min.x) {

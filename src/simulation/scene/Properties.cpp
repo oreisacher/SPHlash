@@ -13,7 +13,7 @@ void FloatProperty::draw() {
     std::string id = "##" + name;
 
     float v = get();
-    if (ImGui::DragFloat(id.c_str(), &v, speed, min, max, "%.3f", ImGuiSliderFlags_AlwaysClamp))
+    if (ImGui::DragFloat(id.c_str(), &v, speed, min, max, "%.7f", ImGuiSliderFlags_AlwaysClamp))
         set(v);
 }
 

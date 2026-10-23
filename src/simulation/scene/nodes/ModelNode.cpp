@@ -54,6 +54,7 @@ void ModelNode::onAddedToScene() {
     boundingBox->setTarget(this);
     boundingBox->setVisible(false);
     boundingBox->setSceneGraphVisible(false);
+    boundingBox->setSavable(false);
     scene->addSceneNode(std::move(bbNode));
 }
 

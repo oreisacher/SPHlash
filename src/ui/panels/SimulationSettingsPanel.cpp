@@ -32,7 +32,7 @@ void SimulationSettingsPanel::draw() {
         ImGui::Text("H:");
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Size of Kernel");
-        ImGui::DragFloat("##H", &simulation->settings.h, 0.0001, 0.0001, 1.0, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("##H", &simulation->settings.h, 0.0001, 0.0001, 1.0, "%.7f", ImGuiSliderFlags_AlwaysClamp);
 
         ImGui::Text("P_0:");
         if (ImGui::IsItemHovered())

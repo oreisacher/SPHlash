@@ -31,7 +31,7 @@ public:
 
 protected:
     glm::vec3 position = { 0.0, 0.0, 0.0 };
-    glm::quat rotation = { 0.0, 0.0, 0.0, 0.0 };
+    glm::quat rotation = { 0.0, 0.0, 0.0, 1.0 };
     glm::vec3 scale = { 1.0, 1.0, 1.0 };
 
     glm::mat4 transform = glm::mat4(1.0);

@@ -196,6 +196,11 @@ void SimulationNode::update(const float deltaTime) {
     if (state == PAUSED && !Input::Get()->isKeyPressed(Window::Key::P))
         return;
 
+    if (deltaTime > 10000) {
+        state = PAUSED;
+        return;
+    }
+
     updateForceFieldBuffer();
 
     // --- Delta Time ---
