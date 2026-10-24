@@ -2,11 +2,11 @@
 // Created by ruut on 3/26/26.
 //
 
-#include "simulation/scene/nodes/CameraNode.h"
-#include "core/Input.h"
+#include "../../../../include/simulation/scene/nodes/CameraNode.h"
+#include "../../../../include/core/Input.h"
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/matrix_transform.hpp"
-#include "simulation/scene/Properties.h"
+#include "../../../../include/simulation/scene/Properties.h"
 
 CameraNode::CameraNode(Window* window, glm::vec3 position) : window(window) {
     this->name = "Camera";
@@ -38,7 +38,6 @@ CameraNode::CameraNode(Window* window, glm::vec3 position) : window(window) {
     }
 
     this->position = position;
-    Transform::setEulerRotation(glm::vec3(0.0, 0.0, 0.0));
     updateVectors();
 }
 
@@ -67,33 +66,34 @@ void CameraNode::update(float deltaTime) {
     if (Input::Get()->isKeyDown(Window::Key::Q))
         position -= worldUp * velocity;
 
-    auto eulerRotation = getEulerRotation();
+    // Mouse Look (Keyboard)
+    if (Input::Get()->isKeyDown(Window::Key::Up))
+        pitch += keyboardSensitivity * deltaTime;
+    if (Input::Get()->isKeyDown(Window::Key::Down))
+        pitch -= keyboardSensitivity * deltaTime;
+    if (Input::Get()->isKeyDown(Window::Key::Left))
+        yaw -= keyboardSensitivity * deltaTime;
+    if (Input::Get()->isKeyDown(Window::Key::Right))
+        yaw += keyboardSensitivity * deltaTime;
 
     // Axis aligned presets
     if (Input::Get()->isKeyPressed(Window::Key::F1)) {
         position = { 0.0, 0.0, position.z == 0.0 ? 2.0f : position.z };
-        eulerRotation = glm::vec3(0.0, 0.0, 0.0);
+        pitch   = 0.0f;
+        yaw     = -90.f;
     }
 
     if (Input::Get()->isKeyPressed(Window::Key::F2)) {
         position = { position.x == 0.0 ? -2.0f : position.x, 0.0, 0.0 };
-        eulerRotation = glm::vec3(0.0, -90.0f, 0.0);
+        pitch   = 0.0f;
+        yaw     = 0.0f;
     }
 
     if (Input::Get()->isKeyPressed(Window::Key::F3)) {
         position = { 0.0, position.y == 0.0 ? 2.0f : position.y, 0.0 };
-        eulerRotation = glm::vec3(-89.99f, -90.0f, 0.0);
+        pitch   = -89.99f;
+        yaw     = -90.0f;
     }
-
-    // Mouse Look (Keyboard)
-    if (Input::Get()->isKeyDown(Window::Key::Up))
-        eulerRotation.x += keyboardSensitivity * deltaTime;
-    if (Input::Get()->isKeyDown(Window::Key::Down))
-        eulerRotation.x -= keyboardSensitivity * deltaTime;
-    if (Input::Get()->isKeyDown(Window::Key::Left))
-        eulerRotation.y += keyboardSensitivity * deltaTime;
-    if (Input::Get()->isKeyDown(Window::Key::Right))
-        eulerRotation.y -= keyboardSensitivity * deltaTime;
 
     if (Input::Get()->isKeyPressed(Window::Key::F5))
         mode = Mode::PERSPECTIVE;
@@ -113,7 +113,12 @@ void CameraNode::update(float deltaTime) {
     }
 
     if (!updateMouse && !mouseDragging) {
-        setEulerRotation(eulerRotation);
+        if (yaw < 0.0) {
+            yaw += 360.0f;
+        } else if (yaw > 360.0f) {
+            yaw -= 360.0f;
+        }
+
         updateVectors();
         return;
     }
@@ -128,13 +133,10 @@ void CameraNode::update(float deltaTime) {
         yDelta = 0;
     }
 
-    prevMousePosition = Input::Get()->getMousePosition();
-
     // Mouse Look (MOUSE)
     if (Input::Get()->isMouseButtonDown(Window::MouseButton::RIGHT)) {
-        eulerRotation.y += xDelta * mouseSensitivity;
-        eulerRotation.x += yDelta * mouseSensitivity;
-        eulerRotation.x = glm::clamp(eulerRotation.x, -89.99f, 89.99f);
+        yaw -= xDelta * mouseSensitivity;
+        pitch += yDelta * mouseSensitivity;
     }
 
     // Mouse Pan
@@ -142,6 +144,8 @@ void CameraNode::update(float deltaTime) {
         position += right * xDelta * orthoScale * orthoSensitivity;
         position -= up    * yDelta * orthoScale * orthoSensitivity;
     }
+
+    prevMousePosition = Input::Get()->getMousePosition();
 
     // Mouse Scroll
     glm::vec2 mouseScroll = Input::Get()->getSrollDelta();
@@ -152,7 +156,14 @@ void CameraNode::update(float deltaTime) {
             orthoScale -= mouseScroll.y * orthoScrollSensitivity;
     }
 
-    setEulerRotation(eulerRotation);
+    // Clamp values nicely
+    if (yaw < 0.0) {
+        yaw += 360.0f;
+    } else if (yaw > 360.0f) {
+        yaw -= 360.0f;
+    }
+    pitch = glm::clamp(pitch, -89.99f, 89.99f);
+
     updateVectors();
 }
 
@@ -204,13 +215,30 @@ Properties CameraNode::buildProperties() {
         [this] (glm::vec3 position) { setPosition(position); }
     ));
 
-    properties.addProperty(std::make_unique<Vec3Property>(
-        "Rotation",
-        [this] () { return getEulerRotation(); },
-        [this] (glm::vec3 rotation) { setEulerRotation(rotation); updateVectors(); }
+    properties.addSection("Camera");
+    properties.addProperty(std::make_unique<FloatProperty>(
+        "Pitch",
+        [this] () { return pitch; },
+        [this] (float pitch) { this->pitch = pitch; updateVectors(); },
+        -89.99f, 89.99f, 1.0f
     ));
 
-    properties.addSection("Camera");
+    properties.addProperty(std::make_unique<FloatProperty>(
+        "Yaw",
+        [this] () { return yaw; },
+        [this] (float yaw) {
+            float newYaw = yaw;
+            if (newYaw < 0.0) {
+                newYaw += 360.0f;
+            } else if (newYaw > 360.0f) {
+                newYaw -= 360.0f;
+            }
+
+            this->yaw = newYaw;
+            updateVectors();
+        }
+    ));
+
     properties.addProperty(std::make_unique<FloatProperty>(
         "FOV",
         [this] () { return fov; },
@@ -225,9 +253,10 @@ Properties CameraNode::buildProperties() {
     ));
 
     properties.addProperty(std::make_unique<FloatProperty>(
-       "Ortho Scale",
-       [this] () { return orthoScale; },
-       [this] (float scale) { this->orthoScale = scale; }
+        "Ortho Scale",
+        [this] () { return orthoScale; },
+        [this] (float orthoScale) { this->orthoScale = orthoScale; },
+        0.0f
     ));
 
     return properties;
@@ -238,7 +267,11 @@ std::string CameraNode::getDefaultName() const {
 }
 
 void CameraNode::updateVectors() {
-    front = glm::normalize(rotation * glm::vec3(0.0f, 0.0f, -1.0f));
-    up    = glm::normalize(rotation * glm::vec3(0.0f, 1.0f, 0.0f));
-    right = glm::normalize(rotation * glm::vec3(1.0f, 0.0f, 0.0f));
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front = glm::normalize(front);
+
+    right = glm::normalize(glm::cross(front, worldUp));
+    up = glm::normalize(glm::cross(right, front));
 }

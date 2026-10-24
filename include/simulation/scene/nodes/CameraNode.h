@@ -58,6 +58,9 @@ private:
     float perspectiveScrollSensitivity = 0.1f;
     float speedMultiplier = 2.0f;
 
+    float pitch = 0.0f;
+    float yaw = 0.0f;
+
     float fov = 90.0f;
     float orthoScale = 3.0f;
     float aspect = 1.0f;
