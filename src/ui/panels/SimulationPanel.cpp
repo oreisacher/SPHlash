@@ -7,6 +7,7 @@
 #include "ImGuizmo.h"
 #include "rendering/Renderer.h"
 #include "glm/gtc/type_ptr.hpp"
+#include <iostream>
 
 SimulationPanel::SimulationPanel(Editor* editor, Renderer* renderer)
     : UIPanel("Simulation"), editor(editor), renderer(renderer) {
@@ -20,22 +21,55 @@ void SimulationPanel::draw() {
 
     ImGui::Begin(name.c_str());
 
+    auto framebuffer = renderer->getFramebuffer();
+    glm::vec2 fbSize = framebuffer->getSize();
+
     ImVec2 size = ImGui::GetContentRegionAvail();
 
-    ImGui::Image(
-        (void *)static_cast<intptr_t>(renderer->getTextureId()),
-        ImVec2(viewportSize.x, viewportSize.y),
-        ImVec2(0, 1),
-        ImVec2(1, 0)
-    );
-
     // Check if resized
-    if (viewportSize.x != size.x || viewportSize.y != size.y) {
-        viewportSize = { size.x, size.y };
-        pendingResize = true;
+    if (renderer->settings.autoResizeViewport && (
+        renderer->settings.viewportWidth != size.x ||
+        renderer->settings.viewportHeight != size.y)
+    ) {
+        renderer->settings.viewportWidth = size.x;
+        renderer->settings.viewportHeight = size.y;
+        editor->updateRenderingSize(
+            renderer->settings.viewportScaling * size.x,
+            renderer->settings.viewportScaling * size.y
+        );
+        renderer->updateSize();
         ImGui::End();
         return;
     }
+
+    float textureAspect = fbSize.x / fbSize.y;
+    float windowAspect = size.x / size.y;
+
+    ImVec2 imageSize;
+
+    if (windowAspect > textureAspect) {
+        imageSize.x = size.y * textureAspect;
+        imageSize.y = size.y;
+    } else {
+        imageSize.x = size.x;
+        imageSize.y = size.x / textureAspect;
+    }
+
+    float offsetX = (size.x - imageSize.x) * 0.5f;
+    float offsetY = (size.y - imageSize.y) * 0.5f;
+
+    ImGui::SetCursorPos(ImVec2(
+            ImGui::GetCursorPosX() + offsetX,
+            ImGui::GetCursorPosY() + offsetY
+        )
+    );
+
+    ImGui::Image(
+        (void *)static_cast<intptr_t>(renderer->getTextureId()),
+        imageSize,
+        ImVec2(0, 1),
+        ImVec2(1, 0)
+    );
 
     editor->getScene()->getCamera()->setHover(ImGui::IsWindowHovered());
 
@@ -103,16 +137,4 @@ void SimulationPanel::draw() {
     }
 
     ImGui::End();
-}
-
-void SimulationPanel::postDraw(double deltaTime) {
-    if (pendingResize) {
-        pendingResize = false;
-
-        // Update systems
-        ImVec2 size = { viewportSize.x, viewportSize.y };
-        renderer->setSize(size.x, size.y);
-        editor->updateRenderingSize(size.x, size.y);
-        editor->getScene()->getCamera()->setAspectRatio(size.x / size.y);
-    }
 }

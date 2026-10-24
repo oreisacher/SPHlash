@@ -89,6 +89,7 @@ public:
     void pause();
     void reset();
     SimulationState getState() const;
+    float getSimulationTime() const;
 
     bool initParticles();
 
@@ -119,6 +120,7 @@ private:
     int particleCount = 0;
 
     float cfl = 0;
+    float simulationTime = 0.0f;
 
     int tableSize = 0;
 

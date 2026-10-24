@@ -15,7 +15,6 @@ public:
 
     void update(double deltaTime) override;
     void draw() override;
-    void postDraw(double deltaTime) override;
 
     static inline CameraNode* camera = nullptr;
 
@@ -23,9 +22,6 @@ private:
     Editor* editor;
     Renderer* renderer;
 
-    bool pendingResize = false;
-
-    glm::vec2 viewportSize = { 0, 0 };
     glm::vec2 mousePosition = { 0, 0 };
     bool dragging = false;
 };

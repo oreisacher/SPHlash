@@ -74,9 +74,11 @@ void Editor::addQuery() {
 }
 
 void Editor::updateRenderingSize(int width, int height) const {
+    scene->getCamera()->setAspectRatio((float)width / height);
+
     for (auto* node : scene->getSceneNodes())
         if (auto *r = dynamic_cast<IRenderable*>(node))
-            r->updateSize(width, height);
+            r->updateRenderSize(width, height);
 }
 
 void Editor::addBoundary(const std::string& path) {

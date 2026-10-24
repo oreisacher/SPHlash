@@ -13,6 +13,14 @@
 class Scene;
 class SimulationNode;
 
+struct RendererSettings {
+    bool autoResizeViewport = true;
+
+    float viewportScaling = 1.0f;
+    int viewportWidth = 1280;
+    int viewportHeight = 720;
+};
+
 class Renderer {
 public:
     Renderer(Scene* scene);
@@ -22,7 +30,12 @@ public:
 
     // Framebuffer texture
     GLuint getTextureId() const;
+    Framebuffer* getFramebuffer() const;
+
     void setSize(int width, int height) const;
+    void updateSize() const;
+
+    RendererSettings settings;
 
 private:
     void renderNode(IRenderable* renderable, const glm::mat4& view, const glm::mat4& projection);

@@ -71,7 +71,7 @@ public:
     FluidSurfaceScreenSpace* getSurfaceScreenSpace();
 
     int getRenderPriority() const override;
-    void updateSize(int width, int height) override;
+    void updateRenderSize(int width, int height) override;
 
     SceneNode* getNode() override;
 

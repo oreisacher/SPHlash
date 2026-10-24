@@ -50,6 +50,12 @@ add_executable(SPHlash
         src/simulation/ParticlesHost.cpp
         src/simulation/ParticlesGPU.cpp
         src/simulation/VoxelField.cu
+        src/ui/panels/RecordingPanel.cpp
+        include/ui/panels/RecordingPanel.h
+        src/utils/VideoWriter.cpp
+        include/utils/VideoWriter.h
+        src/ui/panels/RenderSettingsPanel.cpp
+        include/ui/panels/RenderSettingsPanel.h
 )
 
 target_compile_options(SPHlash PRIVATE
@@ -82,6 +88,9 @@ target_include_directories(implot PUBLIC external/implot)
 
 find_package(CUDAToolkit REQUIRED)
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil libswscale libswresample)
+
 add_subdirectory("external/glfw")
 add_subdirectory("external/glm")
 add_subdirectory("external/json")
@@ -113,6 +122,7 @@ target_link_libraries(SPHlash
     PRIVATE tinyobjloader
     PRIVATE imguizmo
     PRIVATE implot
+    PRIVATE PkgConfig::FFMPEG
 )
 
 set_target_properties(SPHlash PROPERTIES

@@ -77,8 +77,19 @@ GLuint Renderer::getTextureId() const {
     return framebuffer->getColorAttachment(0);
 }
 
+Framebuffer* Renderer::getFramebuffer() const {
+    return framebuffer;
+}
+
 void Renderer::setSize(int width, int height) const {
     auto size = framebuffer->getSize();
     if (size.x != width || size.y != height)
         framebuffer->resize(width, height);
+}
+
+void Renderer::updateSize() const {
+    framebuffer->resize(
+        settings.viewportScaling * settings.viewportWidth,
+        settings.viewportScaling * settings.viewportHeight
+    );
 }

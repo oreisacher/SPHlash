@@ -5,7 +5,7 @@
 #ifndef FLUIDSIMSPH_CAMERA_H
 #define FLUIDSIMSPH_CAMERA_H
 
-#include "../../../core/Config.h"
+#include "core/Config.h"
 #include "glm/glm.hpp"
 #include "../Transform.h"
 #include "SceneNode.h"
@@ -59,7 +59,7 @@ private:
     float speedMultiplier = 2.0f;
 
     float pitch = 0.0f;
-    float yaw = 0.0f;
+    float yaw = -90.0f;
 
     float fov = 90.0f;
     float orthoScale = 3.0f;

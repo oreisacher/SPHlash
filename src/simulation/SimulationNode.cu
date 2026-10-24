@@ -228,6 +228,9 @@ void SimulationNode::update(const float deltaTime) {
     float accTimeStep = 0.25f * (settings.h / maxExternalForce);
     cfl = fminf(cflTimeStep, accTimeStep);
 
+    float simulationTimeStep = settings.useCFL ? fminf(cfl, dt) : dt;
+    simulationTime += simulationTimeStep * settings.simulationSteps;
+
     for (int i = 0 ; i < settings.simulationSteps ; i++) {
         updateParticles();
 
@@ -240,7 +243,7 @@ void SimulationNode::update(const float deltaTime) {
             particleCount,
             d_forceFields,
             scene->getForceFields().size(),
-            settings.useCFL ? fminf(cfl, dt) : dt,
+            simulationTimeStep,
             scene->getSimulationDomain()->getWorldBoundingBox().getAABBView(),
             settings.enableGravity ? settings.gravity : 0.0f
         );
@@ -310,6 +313,7 @@ void SimulationNode::pause() {
 
 void SimulationNode::reset() {
     state = PAUSED;
+    simulationTime = 0.0f;
 
     resetParticlesKernel<<<BLOCK_COUNT(particleCount), THREADS_PER_BLOCK>>>(
         particles.d_position,
@@ -346,6 +350,10 @@ void SimulationNode::reset() {
 
 SimulationState SimulationNode::getState() const {
     return state;
+}
+
+float SimulationNode::getSimulationTime() const {
+    return simulationTime;
 }
 
 void SimulationNode::setRendererVBO(const GLuint vbo) {

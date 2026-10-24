@@ -132,7 +132,7 @@ SceneNode* ParticlesNode::getNode() {
     return this;
 }
 
-void ParticlesNode::updateSize(int width, int height) {
+void ParticlesNode::updateRenderSize(int width, int height) {
     screenSpace.resizeBuffers(width, height);
 }
 

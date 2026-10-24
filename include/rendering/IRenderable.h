@@ -14,7 +14,7 @@ public:
     virtual ~IRenderable() = default;
 
     virtual void draw(const glm::mat4& view, const glm::mat4& projection) const = 0;
-    virtual void updateSize(int width, int height) {};
+    virtual void updateRenderSize(int width, int height) {};
     virtual int getRenderPriority() const { return 0; };
 
     virtual SceneNode* getNode() = 0;

@@ -14,6 +14,8 @@
 #include "ui/panels/SimulationPanel.h"
 #include "ui/panels/ParticlesPanel.h"
 #include "ui/panels/QueryDataPanel.h"
+#include "ui/panels/RecordingPanel.h"
+#include "ui/panels/RenderSettingsPanel.h"
 #include "ui/panels/SimulationSettingsPanel.h"
 #include "ui/panels/StatisticsPanel.h"
 #include "utils/Logger.h"
@@ -26,6 +28,8 @@
 #define SIM_UNITS_PER_PIXEL (1.0 / 600)
 
 Application::Application() {
+    Logger::activateLevel(Logger::Info);
+
     // Window creation
     Window::Init();
     _window = new Window(WINDOW_SIZE_X, WINDOW_SIZE_Y, std::format("SPHlash {}", VERSION).c_str());
@@ -58,6 +62,8 @@ Application::Application() {
     _ui->addPanel(new ParticlesPanel             (_editor));
     _ui->addPanel(new PropertiesPanel            (_editor));
     _ui->addPanel(new ScenePanel                 (_editor, _renderer));
+    _ui->addPanel(new RecordingPanel             (_editor, _renderer));
+    _ui->addPanel(new RenderSettingsPanel        (_editor, _renderer));
 }
 
 Application::~Application() {
