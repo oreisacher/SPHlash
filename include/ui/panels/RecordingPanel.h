@@ -25,6 +25,7 @@ private:
 
     bool isRecording = false;
     int frameCounter = 0;
+    float duration = 0.0f;
 
     std::string filename = "recording.mp4";
     float framerate = 60;

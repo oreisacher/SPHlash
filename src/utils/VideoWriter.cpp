@@ -41,6 +41,15 @@ bool VideoWriter::open(const std::string& filename, int width, int height, int f
     codec->gop_size = fps * 2;
     codec->max_b_frames = 0;
 
+    codec->colorspace      = AVCOL_SPC_BT709;
+    codec->color_primaries = AVCOL_PRI_BT709;
+    codec->color_trc       = AVCOL_TRC_BT709;
+    codec->color_range     = AVCOL_RANGE_MPEG;
+
+    av_opt_set(codec->priv_data, "crf", "14", 0);        // 14-18; lower = better
+    av_opt_set(codec->priv_data, "preset", "slow", 0);   // "medium"/"fast" for realtime capture
+    av_opt_set(codec->priv_data, "profile", "high", 0);
+
     if (format->oformat->flags & AVFMT_GLOBALHEADER)
         codec->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 

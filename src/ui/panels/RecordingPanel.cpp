@@ -17,6 +17,9 @@ RecordingPanel::RecordingPanel(const Editor* editor, Renderer* renderer) : UIPan
 }
 
 void RecordingPanel::update(double deltaTime) {
+    if (!isRecording)
+        return;
+
     if (simulation->getSimulationTime() < nextFrameTime)
         return;
 
@@ -45,11 +48,20 @@ void RecordingPanel::update(double deltaTime) {
 
     if (writer.writeFrame(pixels.data())) {
         frameCounter++;
-        LOG_INFO(std::format("Captured Frame #{} - Runtime: {:.3f} s", frameCounter, frameCounter * 1.0f / framerate));
+
+        float runtime = frameCounter * 1.0f / framerate;
+        LOG_INFO(std::format("Captured Frame #{} - Runtime: {:.3f} s", frameCounter, runtime));
         nextFrameTime += 1.0f / framerate;
+
+        if (duration != 0.0f && runtime >= duration) {
+            writer.close();
+            isRecording = false;
+            simulation->pause();
+        }
     } else {
         writer.close();
         isRecording = false;
+        simulation->pause();
     }
 }
 
@@ -67,10 +79,13 @@ void RecordingPanel::draw() {
     ImGui::Text("Framerate:");
     ImGui::DragFloat("###framerate", &framerate, 0.001, 1.0f, 1000);
 
+    ImGui::Text("Duration:");
+    ImGui::DragFloat("###duration", &duration, 0.001, 0.0f);
+
     ImGui::BeginDisabled(isRecording);
 
     if (ImGui::Button("Start Recording", ImVec2(totalWidth, 0))) {
-        nextFrameTime = 0.0f;
+        nextFrameTime = simulation->getSimulationTime();
         frameCounter = 0;
 
         glm::vec2 size = buffer->getSize();
