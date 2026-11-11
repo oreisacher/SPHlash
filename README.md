@@ -1,3 +1,7 @@
+<p align="center">
+  <img width="1968" height="1080" alt="SPHlashTitle" src="https://github.com/user-attachments/assets/54aa9760-2e69-4434-b1e0-7f4bbbb2ccc6" />
+</p>
+
 **SPHlash** is a real-time, CUDA-based **Smoothed Particle Hydrodynamics (SPH)** fluid simulator with an interactive editor.
 
 TODO PAPER
