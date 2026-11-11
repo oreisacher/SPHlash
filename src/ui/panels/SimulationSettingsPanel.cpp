@@ -208,17 +208,32 @@ void SimulationSettingsPanel::saveSettings(const std::string& path) const {
     // Particles
     config.set("h",                 simulation->settings.h,             "particles");
     config.set("p_0",               simulation->settings.p_0,           "particles");
-    config.set("alpha",             simulation->settings.alpha,         "particles");
     config.set("speedOfSound",      simulation->settings.speedSound,    "particles");
+    config.set("alpha",             simulation->settings.alpha,         "particles");
     config.set("surfaceTension",    simulation->settings.surfaceTension,"particles");
+
+    // Kernels
+    config.set("density",           simulation->settings.kernelSettings.density, "kernels");
+    config.set("pressure",          simulation->settings.kernelSettings.pressure, "kernels");
+    config.set("viscosity",         simulation->settings.kernelSettings.viscosity, "kernels");
+    config.set("surfaceTension",    simulation->settings.kernelSettings.surfaceTension, "kernels");
 
     // Gravity
     config.set("enabled",           simulation->settings.enableGravity,  "gravity");
     config.set("force",             simulation->settings.gravity,        "gravity");
 
+    // Simulation
+    config.set("stepsPerFrame",     simulation->settings.simulationSteps, "simulation");
+    config.set("useFixedTimeStep",  simulation->settings.useFixedTimeStep, "simulation");
+    config.set("fixedTimeStep",     simulation->settings.fixedTimeStep, "simulation");
+
     // CFL
     config.set("enabled",           simulation->settings.useCFL,        "CFL");
     config.set("factor",            simulation->settings.safetyFactor,  "CFL");
+
+    // Boundaries
+    config.set("buildOnInit",       boundaryBuilder->settings.buildOnInit, "boundaries");
+    config.set<nlohmann::json>("resolution", { boundaryBuilder->settings.resolution.x, boundaryBuilder->settings.resolution.y, boundaryBuilder->settings.resolution.z }, "boundaries");
 
     config.save(path);
 }
@@ -230,14 +245,32 @@ void SimulationSettingsPanel::loadSettings(const std::string& path) const {
         // Particles
         simulation->settings.h              = config.get<float>("h",                simulation->settings.h,                 "particles");
         simulation->settings.p_0            = config.get<float>("p_0",              simulation->settings.p_0,               "particles");
-        simulation->settings.alpha          = config.get<float>("alpha",            simulation->settings.alpha,             "particles");
         simulation->settings.speedSound     = config.get<float>("speedOfSound",     simulation->settings.speedSound,        "particles");
+        simulation->settings.alpha          = config.get<float>("alpha",            simulation->settings.alpha,             "particles");
         simulation->settings.surfaceTension = config.get<float>("surfaceTension",   simulation->settings.surfaceTension,    "particles");
 
+        // Kernels
+        simulation->settings.kernelSettings.density = config.get("density", simulation->settings.kernelSettings.density, "kernels");
+        simulation->settings.kernelSettings.pressure = config.get("pressure", simulation->settings.kernelSettings.pressure, "kernels");
+        simulation->settings.kernelSettings.viscosity = config.get("viscosity", simulation->settings.kernelSettings.viscosity, "kernels");
+        simulation->settings.kernelSettings.surfaceTension = config.get("surfaceTension", simulation->settings.kernelSettings.surfaceTension, "kernels");
+
+        // Gravity
         simulation->settings.enableGravity  = config.get<bool> ("enabled",          simulation->settings.enableGravity,     "gravity");
         simulation->settings.gravity        = config.get<float>("force",            simulation->settings.gravity,           "gravity");
 
+        // Simulation
+        simulation->settings.simulationSteps = config.get("stepsPerFrame",     simulation->settings.simulationSteps, "simulation");
+        simulation->settings.useFixedTimeStep = config.get("useFixedTimeStep",  simulation->settings.useFixedTimeStep, "simulation");
+        simulation->settings.fixedTimeStep = config.get("fixedTimeStep",     simulation->settings.fixedTimeStep, "simulation");
+
+        // CFL
         simulation->settings.useCFL         = config.get<bool> ("enabled",          simulation->settings.useCFL,            "CFL");
         simulation->settings.safetyFactor   = config.get<float>("factor",           simulation->settings.safetyFactor,      "CFL");
+
+        // Boundaries
+        boundaryBuilder->settings.buildOnInit = config.get("buildOnInit",       boundaryBuilder->settings.buildOnInit, "boundaries");
+        nlohmann::json res = config.get<nlohmann::json>("resolution", { boundaryBuilder->settings.resolution.x, boundaryBuilder->settings.resolution.y, boundaryBuilder->settings.resolution.z }, "boundaries");
+        boundaryBuilder->settings.resolution = glm::ivec3(res[0], res[1], res[2]);
     }
 }

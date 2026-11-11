@@ -12,14 +12,6 @@ ModelNode::ModelNode(const std::string& name, const std::shared_ptr<Model>& mode
     this->model = model;
 
     ModelNode::updateTransform();
-
-    // Add bounding box node as child
-    // auto bbNode = std::make_unique<BoundingBoxNode>("Bounding Box", glm::vec4(1.0f));
-    // boundingBox = bbNode.get();
-    // boundingBox->setTarget(this);
-    // boundingBox->setVisible(false);
-    // scene->addSceneNode(std::move(bbNode));
-    // children.push_back(std::move(bbNode));
 }
 
 ModelNode::ModelNode(const nlohmann::json json) : SceneNode(json) {
@@ -36,13 +28,6 @@ ModelNode::ModelNode(const nlohmann::json json) : SceneNode(json) {
     // ModelNode
     boundary = json.value("boundary", boundary);
     model = std::make_shared<Model>(json.value("path", "assets/models/suzanne.obj"));
-
-    // auto bbNode = std::make_unique<BoundingBoxNode>("Bounding Box", glm::vec4(1.0f));
-    // boundingBox = bbNode.get();
-    // boundingBox->setTarget(this);
-    // boundingBox->setVisible(false);
-    // scene->addSceneNode(std::move(bbNode));
-    // children.push_back(std::move(bbNode));
 
     ModelNode::updateTransform();
 }
