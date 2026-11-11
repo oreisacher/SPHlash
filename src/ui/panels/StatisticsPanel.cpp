@@ -38,7 +38,7 @@ void StatisticsPanel::draw() {
     if (!visible)
         return;
 
-    ImGui::Begin(name.c_str());
+    ImGui::Begin(name.c_str(), &visible);
     ImGui::PushItemWidth(-FLT_MIN);
     ImGui::Text("FPS: %d", fps);
     ImGui::Text("Frame Time: %.3f ms", frameTime * 1000.0f);

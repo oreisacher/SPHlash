@@ -19,7 +19,7 @@ void SimulationPanel::draw() {
     if (!visible)
         return;
 
-    ImGui::Begin(name.c_str());
+    ImGui::Begin(name.c_str(), &visible);
 
     auto framebuffer = renderer->getFramebuffer();
     glm::vec2 fbSize = framebuffer->getSize();

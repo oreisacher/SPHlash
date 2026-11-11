@@ -24,7 +24,7 @@ void SimulationSettingsPanel::draw() {
     if (!visible)
         return;
 
-    ImGui::Begin(name.c_str());
+    ImGui::Begin(name.c_str(), &visible);
     ImGui::PushItemWidth(-FLT_MIN);
     float totalWidth = ImGui::GetContentRegionAvail().x;
 

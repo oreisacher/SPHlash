@@ -2,6 +2,8 @@
 // Created by ruut on 10/23/26.
 //
 
+#ifdef HAS_FFMPEG
+
 #include "ui/panels/RecordingPanel.h"
 
 #include <format>
@@ -69,7 +71,7 @@ void RecordingPanel::draw() {
     if (!visible)
         return;
 
-    ImGui::Begin(name.c_str());
+    ImGui::Begin(name.c_str(), &visible);
     ImGui::PushItemWidth(-FLT_MIN);
     float totalWidth = ImGui::GetContentRegionAvail().x;
 
@@ -110,3 +112,5 @@ void RecordingPanel::draw() {
 
     ImGui::End();
 }
+
+#endif

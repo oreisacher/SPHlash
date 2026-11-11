@@ -62,8 +62,11 @@ Application::Application() {
     _ui->addPanel(new ParticlesPanel             (_editor));
     _ui->addPanel(new PropertiesPanel            (_editor));
     _ui->addPanel(new ScenePanel                 (_editor, _renderer));
-    _ui->addPanel(new RecordingPanel             (_editor, _renderer));
     _ui->addPanel(new RenderSettingsPanel        (_editor, _renderer));
+
+#ifdef HAS_FFMPEG
+    _ui->addPanel(new RecordingPanel             (_editor, _renderer));
+#endif
 }
 
 Application::~Application() {

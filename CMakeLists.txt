@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.24)
 
 project(SPHlash LANGUAGES CXX C CUDA)
 
@@ -6,7 +6,7 @@ option(ENABLE_CUDA_DEBUG "Enable Cuda debug checks for kernel calls" OFF)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CUDA_STANDARD 17)
-set(CMAKE_CUDA_ARCHITECTURES 61)
+set(CMAKE_CUDA_ARCHITECTURES native)
 
 # --- Update submodules ---
 find_package(Git QUIET)
@@ -45,17 +45,6 @@ add_executable(SPHlash
 
     # External
     external/glad/src/gl.c
-    external/ImGuiFileDialog/ImGuiFileDialog.cpp
-        src/simulation/ParticlesHost.cpp
-        src/simulation/ParticlesHost.cpp
-        src/simulation/ParticlesGPU.cpp
-        src/simulation/VoxelField.cu
-        src/ui/panels/RecordingPanel.cpp
-        include/ui/panels/RecordingPanel.h
-        src/utils/VideoWriter.cpp
-        include/utils/VideoWriter.h
-        src/ui/panels/RenderSettingsPanel.cpp
-        include/ui/panels/RenderSettingsPanel.h
 )
 
 target_compile_options(SPHlash PRIVATE
@@ -63,6 +52,13 @@ target_compile_options(SPHlash PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
 )
 
+set_target_properties(SPHlash PROPERTIES
+    CUDA_SEPARATE_COMPILATION ON
+    CUDA_STANDARD 17
+    CUDA_STANDARD_REQUIRED ON
+)
+
+# DearImGUI
 add_library(imgui
     external/imgui/imgui.cpp
     external/imgui/imgui_draw.cpp
@@ -71,6 +67,7 @@ add_library(imgui
     external/imgui/backends/imgui_impl_glfw.cpp
     external/imgui/backends/imgui_impl_opengl3.cpp
     external/imgui/misc/cpp/imgui_stdlib.cpp
+    external/ImGuiFileDialog/ImGuiFileDialog.cpp
 )
 
 target_include_directories(imgui PUBLIC
@@ -79,6 +76,7 @@ target_include_directories(imgui PUBLIC
     external/imgui/misc/cpp
 )
 
+# Implot
 add_library(implot STATIC
     external/implot/implot.cpp
     external/implot/implot_items.cpp
@@ -88,48 +86,28 @@ target_include_directories(implot PUBLIC external/implot)
 
 find_package(CUDAToolkit REQUIRED)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil libswscale libswresample)
+# FFmpeg
+find_package(PkgConfig QUIET)
 
-add_subdirectory("external/glfw")
-add_subdirectory("external/glm")
-add_subdirectory("external/json")
-add_subdirectory("external/tinyobjloader")
-add_subdirectory("external/ImGuizmo")
-target_link_libraries(imguizmo PUBLIC imgui)
-target_link_libraries(implot PUBLIC imgui)
+if(PkgConfig_FOUND)
+    pkg_check_modules(FFMPEG QUIET IMPORTED_TARGET
+        libavformat
+        libavcodec
+        libavutil
+        libswscale
+        libswresample
+    )
+endif()
 
-target_compile_definitions(SPHlash PRIVATE USE_STD_FILESYSTEM)
+if(FFMPEG_FOUND)
+    target_link_libraries(SPHlash PRIVATE PkgConfig::FFMPEG)
 
-target_include_directories(SPHlash PUBLIC
-    src
-    include
-    ${CMAKE_BINARY_DIR}/generated
-    external/glad/include
-    external/ImGuiFileDialog
-    external/tinyobjloader
-    external/ImGuizmo/src
-    external/stb
-    external/implot
-)
+    target_compile_definitions(SPHlash PRIVATE HAS_FFMPEG)
 
-target_link_libraries(SPHlash
-    PRIVATE imgui
-    PRIVATE glfw
-    PRIVATE glm
-    PRIVATE nlohmann_json::nlohmann_json
-    PRIVATE CUDA::cudart
-    PRIVATE tinyobjloader
-    PRIVATE imguizmo
-    PRIVATE implot
-    PRIVATE PkgConfig::FFMPEG
-)
-
-set_target_properties(SPHlash PROPERTIES
-    CUDA_SEPARATE_COMPILATION ON
-    CUDA_STANDARD 17
-    CUDA_STANDARD_REQUIRED ON
-)
+    message(STATUS "FFmpeg found")
+else()
+    message(WARNING "FFmpeg not found. Video recording will be disabled")
+endif()
 
 if (ENABLE_CUDA_DEBUG)
     target_compile_definitions(SPHlash PRIVATE DEBUG_CUDA)
@@ -143,15 +121,42 @@ if (METRIC_AVG_HEIGHT)
     target_compile_definitions(SPHlash PRIVATE METRIC_AVG_HEIGHT)
 endif()
 
-# --- Copy assets to build directory ---
-add_custom_command(
-    TARGET SPHlash POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/assets
-        ${CMAKE_BINARY_DIR}/assets
-    COMMENT "Copying assets to build directory..."
+add_subdirectory("external/glfw")
+add_subdirectory("external/glm")
+add_subdirectory("external/json")
+add_subdirectory("external/tinyobjloader")
+add_subdirectory("external/ImGuizmo")
+target_link_libraries(imguizmo PUBLIC imgui)
+target_link_libraries(implot PUBLIC imgui)
+
+target_compile_definitions(SPHlash PRIVATE USE_STD_FILESYSTEM)
+
+target_include_directories(SPHlash PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_BINARY_DIR}/generated
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/external
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/glm
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/glad/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/ImGuiFileDialog
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/tinyobjloader
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/ImGuizmo/src
+#    ${CMAKE_CURRENT_SOURCE_DIR}/external/stb
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/implot
 )
 
+target_link_libraries(SPHlash
+    PRIVATE imgui
+    PRIVATE glfw
+    PRIVATE glm
+    PRIVATE nlohmann_json::nlohmann_json
+    PRIVATE CUDA::cudart
+    PRIVATE tinyobjloader
+    PRIVATE imguizmo
+    PRIVATE implot
+)
+
+# --- Copy assets to build directory ---
 add_custom_target(CopyAssets ALL
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_SOURCE_DIR}/assets

@@ -34,7 +34,7 @@ void ParticlesPanel::draw() {
     if (!visible)
         return;
 
-    ImGui::Begin(name.c_str());
+    ImGui::Begin(name.c_str(), &visible);
 
     int particleCount = simulation->getParticleCount();
 
