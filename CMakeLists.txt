@@ -113,14 +113,6 @@ if (ENABLE_CUDA_DEBUG)
     target_compile_definitions(SPHlash PRIVATE DEBUG_CUDA)
 endif()
 
-if (METRIC_DENSITY)
-    target_compile_definitions(SPHlash PRIVATE METRIC_DENSITY)
-endif()
-
-if (METRIC_AVG_HEIGHT)
-    target_compile_definitions(SPHlash PRIVATE METRIC_AVG_HEIGHT)
-endif()
-
 add_subdirectory("external/glfw")
 add_subdirectory("external/glm")
 add_subdirectory("external/json")

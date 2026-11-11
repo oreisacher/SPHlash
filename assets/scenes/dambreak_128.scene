@@ -1,0 +1,122 @@
+{
+    "nodes": [
+        {
+            "color": [
+                0.20000000298023224,
+                0.6000000238418579,
+                1.0
+            ],
+            "name": "Simulation Domain",
+            "position": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                4.0,
+                2.0,
+                1.0
+            ],
+            "tags": [
+                "simulation_Domain"
+            ],
+            "type": "SimulationDomainNode",
+            "visible": true
+        },
+        {
+            "color": [
+                1.0,
+                0.0,
+                0.0
+            ],
+            "name": "Particle Spawn",
+            "particleSpacing": 0.0078125,
+            "position": [
+                -1.5,
+                -0.25,
+                0.0
+            ],
+            "restDensity": 1000.0,
+            "scale": [
+                1.0,
+                1.5,
+                1.0
+            ],
+            "tags": [],
+            "type": "BoundingBoxFluidSpawnNode",
+            "visible": true
+        },
+        {
+            "boundary": true,
+            "name": "Bottom Boundary Fix",
+            "path": "assets/models/Cube.obj",
+            "position": [
+                0.0,
+                -1.0779999494552612,
+                0.0
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ],
+            "scale": [
+                4.099999904632568,
+                0.20000000298023224,
+                1.100000023841858
+            ],
+            "tags": [],
+            "type": "ModelNode",
+            "visible": false
+        },
+        {
+            "boundary": true,
+            "name": "Left Boundary Fix",
+            "path": "assets/models/Cube.obj",
+            "position": [
+                -2.078000068664551,
+                0.0,
+                0.0
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+            ],
+            "scale": [
+                0.20000000298023224,
+                2.0,
+                1.0
+            ],
+            "tags": [],
+            "type": "ModelNode",
+            "visible": false
+        },
+        {
+            "boundary": true,
+            "name": "Right Boundary Fix",
+            "path": "assets/models/Cube.obj",
+            "position": [
+                2.078000068664551,
+                0.0,
+                0.0
+            ],
+            "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            "scale": [
+                0.20000000298023224,
+                2.0,
+                1.0
+            ],
+            "tags": [],
+            "type": "ModelNode",
+            "visible": false
+        }
+    ]
+}
