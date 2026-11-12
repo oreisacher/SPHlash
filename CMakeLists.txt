@@ -156,3 +156,19 @@ add_custom_target(CopyAssets ALL
 )
 
 add_dependencies(SPHlash CopyAssets)
+
+# --- Licenses ---
+file(GLOB LICENSE_FILES external/*/LICENSE* external/*/COPYING* external/*/copying*)
+set(OUT ${CMAKE_BINARY_DIR}/THIRD_PARTY_LICENSES.txt)
+file(WRITE ${OUT} "")
+
+foreach(license ${LICENSE_FILES})
+    if(IS_DIRECTORY "${license}")
+        continue()
+    endif()
+
+    get_filename_component(dir ${license} DIRECTORY)
+    get_filename_component(name ${license} NAME)
+    file(READ ${license} text)
+    file(APPEND ${OUT} "=== ${name} ===\n${text}\n\n")
+endforeach()
